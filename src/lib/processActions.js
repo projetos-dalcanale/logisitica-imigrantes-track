@@ -1,13 +1,14 @@
 import { addDoc, collection, deleteDoc, doc, updateDoc } from 'firebase/firestore'
 import { db } from './firebase'
 import { novoChecklistImport } from './processos'
+import { trackSave } from './saveStatus'
 
 // Gravações no Firestore relacionadas aos processos.
 
 const processRef = (id) => doc(db, 'processes', id)
 
 export const criarProcesso = (data) => addDoc(collection(db, 'processes'), data)
-export const atualizarProcesso = (id, data) => updateDoc(processRef(id), data)
+export const atualizarProcesso = (id, data) => trackSave(updateDoc(processRef(id), data))
 export const excluirProcesso = (id) => deleteDoc(processRef(id))
 
 // Contêiner "zerado" para o tipo de processo.

@@ -1,39 +1,52 @@
 import { createContext, useCallback, useContext, useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
+import { CircleAlert, CircleCheck, Info } from 'lucide-react'
 
 const ToastContext = createContext(null)
 
 const TOAST_STYLES = {
-  success: { icon: 'fa-circle-check', classes: 'border-emerald-500 text-emerald-500' },
-  error: { icon: 'fa-circle-exclamation', classes: 'border-red-400 text-red-400' },
-  info: { icon: 'fa-circle-info', classes: 'border-blue-500 text-blue-500' },
+  success: { icon: CircleCheck, color: 'text-emerald-500' },
+  error: { icon: CircleAlert, color: 'text-red-400' },
+  info: { icon: Info, color: 'text-blue-500' },
 }
 
 let nextId = 0
 
-// NOTIFICAÇÕES RÁPIDAS (TOAST): feedback curto depois de uma ação, no canto
-// inferior direito, sem interromper o uso como um alert(). Some sozinho.
+// NOTIFICAÇÕES RÁPIDAS (TOAST): feedback curto depois de uma ação, sem
+// interromper o uso. Some sozinho. Embaixo no centro (celular) ou à direita.
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([])
 
   const showToast = useCallback((message, type = 'success') => {
     const id = ++nextId
-    setToasts((t) => [...t, { id, message, type }])
+    setToasts((t) => [...t.slice(-2), { id, message, type }])
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3200)
   }, [])
 
   return (
     <ToastContext.Provider value={showToast}>
       {children}
-      <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 items-end pointer-events-none max-w-[calc(100vw-2rem)]">
-        {toasts.map(({ id, message, type }) => {
-          const cfg = TOAST_STYLES[type] || TOAST_STYLES.success
-          return (
-            <div key={id} className={`toast-item pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-lg text-sm font-semibold bg-navy-800 ${cfg.classes}`}>
-              <i className={`fas ${cfg.icon}`} />
-              <span className="text-ink">{message}</span>
-            </div>
-          )
-        })}
+      <div className="pointer-events-none fixed inset-x-0 bottom-20 z-[100] flex flex-col items-center gap-2 px-4 lg:bottom-5 lg:items-end lg:px-5">
+        <AnimatePresence initial={false}>
+          {toasts.map(({ id, message, type }) => {
+            const cfg = TOAST_STYLES[type] || TOAST_STYLES.success
+            const Icon = cfg.icon
+            return (
+              <motion.div
+                key={id}
+                layout
+                initial={{ opacity: 0, y: 16, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.15 } }}
+                transition={{ type: 'spring', stiffness: 500, damping: 34 }}
+                className="pointer-events-auto flex max-w-sm items-center gap-2.5 rounded-2xl border border-slate-700/80 bg-navy-800/95 px-4 py-3 text-sm font-medium text-ink shadow-lift backdrop-blur"
+              >
+                <Icon className={`size-[18px] shrink-0 ${cfg.color}`} strokeWidth={2.25} />
+                <span>{message}</span>
+              </motion.div>
+            )
+          })}
+        </AnimatePresence>
       </div>
     </ToastContext.Provider>
   )

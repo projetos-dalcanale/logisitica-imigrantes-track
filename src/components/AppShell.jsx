@@ -1,4 +1,6 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { AnimatePresence } from 'motion/react'
+import { Archive, ArrowDownToLine, ArrowUpFromLine, LogOut, Moon, Search, Settings, Sun, X } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../hooks/useTheme'
 import { useProcesses } from '../hooks/useProcesses'
@@ -6,112 +8,209 @@ import ProcessList from './ProcessList'
 import ProcessModal from './ProcessModal'
 import NewProcessForm from './NewProcessForm'
 import RegistriesModal from './RegistriesModal'
+import CommandPalette from './CommandPalette'
+import BottomNav from './BottomNav'
+import Logo from './Logo'
+import Modal from './ui/Modal'
+import Segmented from './ui/Segmented'
+import { IconButton } from './ui/Tooltip'
 
-const TABS = [
-  { id: 'import', short: 'Importação', long: 'Importações Ativas' },
-  { id: 'export', short: 'Exportação', long: 'Exportações Ativas' },
-  { id: 'archive', short: 'Arquivados', long: 'Arquivados' },
+export const TABS = [
+  { value: 'import', label: 'Importações', short: 'Importação', icon: ArrowDownToLine },
+  { value: 'export', label: 'Exportações', short: 'Exportação', icon: ArrowUpFromLine },
+  { value: 'archive', label: 'Arquivados', short: 'Arquivados', icon: Archive },
 ]
 
-// Tela logada: menu lateral (formulário de novo processo) + painel principal
-// com abas, resumo e lista de processos; modais de detalhes e de cadastros.
+const isTyping = (el) => el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))
+const isMobile = () => window.matchMedia('(max-width: 1023px)').matches
+
+// Tela logada. Desktop: menu lateral com o formulário de novo processo +
+// painel principal. Celular: cabeçalho compacto + navegação inferior, e o
+// formulário abre em tela cheia.
 export default function AppShell() {
   const { user, logout } = useAuth()
   const { isDark, toggleTheme } = useTheme()
-  const [sidebarOpen, setSidebarOpen] = useState(false) // só no celular
-  const [activeTab, setActiveTab] = useState('import')
   const { processes, loading } = useProcesses(user.uid)
+  const [activeTab, setActiveTab] = useState('import')
   const [openId, setOpenId] = useState(null)
+  const [registriesOpen, setRegistriesOpen] = useState(false)
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  const [newOpen, setNewOpen] = useState(false) // só no celular
+  const searchRef = useRef(null)
+
   const closeProcess = useCallback(() => setOpenId(null), [])
   // Sempre a versão mais recente do Firestore; some sozinho se for excluído.
   const openProc = processes.find((p) => p.id === openId)
-  const [registriesOpen, setRegistriesOpen] = useState(false)
-  const closeRegistries = useCallback(() => setRegistriesOpen(false), [])
+
+  const novoProcesso = useCallback(() => {
+    if (isMobile()) setNewOpen(true)
+    else document.getElementById('np-nome')?.focus()
+  }, [])
+
+  const counts = {
+    import: processes.filter((p) => p.status === 'active' && p.type === 'import').length,
+    export: processes.filter((p) => p.status === 'active' && p.type === 'export').length,
+    archive: processes.filter((p) => p.status === 'archived').length,
+  }
+
+  // ATALHOS DE TECLADO: Ctrl/⌘+K busca rápida, "/" busca na lista,
+  // N novo processo, 1/2/3 trocam de aba.
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setPaletteOpen((o) => !o)
+        return
+      }
+      if (e.ctrlKey || e.metaKey || e.altKey || isTyping(document.activeElement)) return
+      if (document.querySelector('[role="dialog"]')) return
+      if (e.key === '/') {
+        e.preventDefault()
+        searchRef.current?.focus()
+      } else if (e.key.toLowerCase() === 'n') {
+        e.preventDefault()
+        novoProcesso()
+      } else if (['1', '2', '3'].includes(e.key)) {
+        setActiveTab(TABS[Number(e.key) - 1].value)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [novoProcesso])
+
+  const onCreated = (type) => {
+    setActiveTab(type) // mostra a aba onde o processo novo aparece
+    setNewOpen(false)
+  }
+
+  const tabOptions = TABS.map((t) => ({
+    value: t.value,
+    label: (
+      <>
+        {t.label}
+        <span className={`ml-0.5 rounded-full px-1.5 text-[11px] tabular-nums ${activeTab === t.value ? 'bg-blue-600/10 text-blue-500' : 'bg-slate-500/10 text-slate-500'}`}>
+          {counts[t.value]}
+        </span>
+      </>
+    ),
+  }))
 
   return (
-    <div className="h-screen flex overflow-hidden">
-      <aside
-        className={`fixed inset-y-0 left-0 z-40 w-[340px] max-w-[85vw] transition-transform duration-300 ease-in-out lg:static lg:z-auto lg:translate-x-0 bg-navy-800 shadow-2xl flex flex-col h-full border-r border-slate-700 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
-      >
-        <div className="p-5 border-b border-slate-700 flex justify-between items-center bg-navy-900">
+    <div className="flex h-dvh overflow-hidden">
+      {/* MENU LATERAL (desktop) */}
+      <aside className="hidden w-[350px] shrink-0 flex-col border-r border-slate-700/70 bg-navy-800 lg:flex">
+        <div className="flex h-16 items-center justify-between border-b border-slate-700/70 px-5">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-600/15 border border-blue-800/60 flex items-center justify-center">
-              <i className="fas fa-truck-fast text-blue-400 text-sm" />
+            <Logo />
+            <div className="leading-tight">
+              <div className="text-[15px] font-bold tracking-tight text-ink">LogiTrack</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Gestão Logística</div>
             </div>
-            <h1 className="text-base font-bold text-ink tracking-tight">LogiTrack</h1>
           </div>
-          <div className="flex items-center gap-1">
-            <button onClick={() => setSidebarOpen(false)} title="Fechar menu" className="lg:hidden w-8 h-8 rounded-lg text-slate-400 hover:text-ink hover:bg-navy-700 transition flex items-center justify-center">
-              <i className="fas fa-xmark text-sm" />
-            </button>
-            <button onClick={logout} title="Sair" className="w-8 h-8 rounded-lg text-slate-400 hover:text-ink hover:bg-navy-700 transition flex items-center justify-center">
-              <i className="fas fa-sign-out-alt text-sm" />
-            </button>
-          </div>
+          <IconButton icon={LogOut} label="Sair" onClick={logout} />
         </div>
-        <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
-          <h2 className="text-[11px] font-bold mb-4 text-slate-500 uppercase tracking-widest">Novo Processo</h2>
-          <NewProcessForm
-            uid={user.uid}
-            processes={processes}
-            onCreated={(type) => {
-              setActiveTab(type) // mostra a aba onde o processo novo aparece
-              setSidebarOpen(false) // no celular, fecha a gaveta
-            }}
-          />
+        <div className="custom-scrollbar flex-1 overflow-y-auto px-5 py-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-[13px] font-semibold text-ink">Novo processo</h2>
+            <span className="kbd">N</span>
+          </div>
+          <NewProcessForm uid={user.uid} processes={processes} onCreated={onCreated} />
         </div>
       </aside>
 
-      {sidebarOpen && (
-        <div onClick={() => setSidebarOpen(false)} className="fixed inset-0 bg-black/50 z-30 lg:hidden" />
-      )}
-
-      <main className="flex-1 flex flex-col h-full min-w-0">
-        <header className="bg-navy-800 shadow-md border-b border-slate-700 px-4 sm:px-8 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <button onClick={() => setSidebarOpen(true)} title="Abrir menu" className="lg:hidden shrink-0 w-9 h-9 rounded-lg text-slate-400 hover:text-ink hover:bg-navy-900 transition flex items-center justify-center border border-slate-700">
-              <i className="fas fa-bars text-sm" />
-            </button>
-            <div className="grid grid-cols-3 gap-2 w-full sm:flex sm:w-auto sm:gap-8 sm:overflow-x-auto">
-              {TABS.map((tab) => {
-                const active = tab.id === activeTab
-                const activeClass = tab.id === 'archive' ? 'text-emerald-500 border-emerald-500' : 'text-blue-400 border-blue-400'
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`shrink-0 text-center sm:text-left text-sm font-bold border-b-2 pb-2 transition-colors ${active ? activeClass : 'text-slate-500 hover:text-slate-300 border-transparent'}`}
-                  >
-                    <span className="sm:hidden">{tab.short}</span>
-                    <span className="hidden sm:inline">{tab.long}</span>
-                  </button>
-                )
-              })}
-            </div>
+      <main className="flex min-w-0 flex-1 flex-col">
+        <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-700/70 bg-navy-800/80 px-4 backdrop-blur sm:px-6 lg:px-8">
+          <div className="flex items-center gap-2.5 lg:hidden">
+            <Logo />
+            <span className="text-[15px] font-bold tracking-tight text-ink">LogiTrack</span>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button onClick={() => setRegistriesOpen(true)} title="Gerenciar Cadastros" className="w-9 h-9 rounded-full text-slate-400 hover:text-ink hover:bg-navy-900 transition flex items-center justify-center border border-slate-700">
-              <i className="fas fa-gear text-sm" />
+          <Segmented className="hidden lg:flex" options={tabOptions} value={activeTab} onChange={setActiveTab} />
+
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setPaletteOpen(true)}
+              className="hidden h-9 w-60 items-center gap-2 rounded-[10px] border border-slate-700/80 bg-navy-900/60 px-3 text-sm text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-400 md:flex"
+            >
+              <Search className="size-4" />
+              <span className="flex-1 text-left">Buscar processo…</span>
+              <span className="kbd">Ctrl K</span>
             </button>
-            <button onClick={toggleTheme} title="Alternar modo claro/escuro" className="w-9 h-9 rounded-full text-slate-400 hover:text-ink hover:bg-navy-900 transition flex items-center justify-center border border-slate-700">
-              <i className={`fas ${isDark ? 'fa-sun' : 'fa-moon'} text-sm`} />
-            </button>
-            <div className="flex items-center gap-2 text-sm text-slate-300 bg-navy-900 pl-2 pr-3.5 py-1.5 rounded-full border border-slate-700">
-              <span className="w-5 h-5 rounded-full bg-blue-600/20 text-blue-400 text-[10px] font-bold flex items-center justify-center">
-                {(user.email || '?').charAt(0).toUpperCase()}
-              </span>
-              <span>{user.email}</span>
+            <IconButton icon={Search} label="Buscar" className="md:hidden" onClick={() => setPaletteOpen(true)} />
+            <IconButton icon={Settings} label="Gerenciar cadastros" onClick={() => setRegistriesOpen(true)} />
+            <IconButton icon={isDark ? Sun : Moon} label={isDark ? 'Modo claro' : 'Modo escuro'} onClick={toggleTheme} />
+            <IconButton icon={LogOut} label="Sair" className="lg:hidden" onClick={logout} />
+            <div
+              title={user.email}
+              className="ml-1.5 hidden size-9 items-center justify-center rounded-full bg-blue-600/12 text-sm font-semibold text-blue-500 ring-1 ring-blue-600/20 sm:flex"
+            >
+              {(user.email || '?').charAt(0).toUpperCase()}
             </div>
           </div>
         </header>
 
-        <div className="flex-1 p-4 sm:p-8 overflow-y-auto custom-scrollbar">
-          <ProcessList processes={processes} loading={loading} tab={activeTab} onOpen={setOpenId} />
+        <div className="custom-scrollbar flex-1 overflow-y-auto">
+          <div className="mx-auto w-full max-w-6xl px-4 pb-28 pt-5 sm:px-6 lg:px-8 lg:pb-10 lg:pt-7">
+            <ProcessList
+              processes={processes}
+              loading={loading}
+              tab={activeTab}
+              onOpen={setOpenId}
+              searchRef={searchRef}
+              onNew={novoProcesso}
+            />
+          </div>
         </div>
       </main>
 
-      {openProc && <ProcessModal key={openProc.id} proc={openProc} processes={processes} onClose={closeProcess} />}
-      {registriesOpen && <RegistriesModal onClose={closeRegistries} />}
+      <BottomNav tabs={TABS} counts={counts} active={activeTab} onChange={setActiveTab} onNew={() => setNewOpen(true)} onSearch={() => setPaletteOpen(true)} />
+
+      <AnimatePresence>
+        {openProc && <ProcessModal key={openProc.id} proc={openProc} processes={processes} onClose={closeProcess} />}
+      </AnimatePresence>
+      <AnimatePresence>{registriesOpen && <RegistriesModal key="reg" onClose={() => setRegistriesOpen(false)} />}</AnimatePresence>
+      <AnimatePresence>
+        {paletteOpen && (
+          <CommandPalette
+            key="palette"
+            processes={processes}
+            onClose={() => setPaletteOpen(false)}
+            onOpenProcess={(id) => {
+              setPaletteOpen(false)
+              setOpenId(id)
+            }}
+            actions={{
+              novo: () => {
+                setPaletteOpen(false)
+                setTimeout(novoProcesso, 50)
+              },
+              tema: toggleTheme,
+              cadastros: () => {
+                setPaletteOpen(false)
+                setRegistriesOpen(true)
+              },
+              aba: (tab) => {
+                setPaletteOpen(false)
+                setActiveTab(tab)
+              },
+              sair: logout,
+            }}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {newOpen && (
+          <Modal key="new" onClose={() => setNewOpen(false)} title="Novo processo" fullscreenMobile size="md">
+            <div className="flex h-14 shrink-0 items-center justify-between border-b border-slate-700/70 px-4">
+              <h2 className="text-base font-semibold text-ink">Novo processo</h2>
+              <IconButton icon={X} label="Fechar" onClick={() => setNewOpen(false)} />
+            </div>
+            <div className="custom-scrollbar flex-1 overflow-y-auto px-4 py-5 pb-10">
+              <NewProcessForm uid={user.uid} processes={processes} onCreated={onCreated} />
+            </div>
+          </Modal>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
