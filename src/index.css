@@ -1,0 +1,167 @@
+@import "tailwindcss";
+
+/* Paleta baseada na assinatura de e-mail da Transportes Imigrantes.
+   Mesmos nomes de classe do app original (navy-*, slate-*, blue-*), só que
+   cada cor aponta pra uma variável CSS com um valor no tema claro e outro
+   no escuro. O Tailwind v4 continua aceitando opacidade (ex: bg-blue-600/20). */
+@theme {
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+
+  --color-navy-900: rgb(var(--navy-900)); /* fundo da página */
+  --color-navy-800: rgb(var(--navy-800)); /* superfície dos cards/painéis */
+  --color-navy-700: rgb(var(--navy-700)); /* preenchimento dos campos */
+
+  --color-slate-200: rgb(var(--slate-200));
+  --color-slate-300: rgb(var(--slate-300));
+  --color-slate-400: rgb(var(--slate-400));
+  --color-slate-500: rgb(var(--slate-500));
+  --color-slate-600: rgb(var(--slate-600));
+  --color-slate-700: rgb(var(--slate-700));
+
+  /* "blue" é a cor de destaque -> vermelho da marca */
+  --color-blue-300: rgb(var(--blue-300));
+  --color-blue-400: rgb(var(--blue-400));
+  --color-blue-500: rgb(var(--blue-500));
+  --color-blue-600: rgb(var(--blue-600));
+  --color-blue-800: rgb(var(--blue-800));
+  --color-blue-900: rgb(var(--blue-900));
+
+  --color-red-400: rgb(var(--red-400));
+  --color-emerald-400: rgb(var(--emerald-400));
+  --color-yellow-400: rgb(var(--yellow-400));
+  --color-yellow-500: rgb(var(--yellow-500));
+  --color-ink: rgb(var(--ink));
+}
+
+/* Tema CLARO (padrão), em "R G B". */
+:root {
+  --navy-900: 244 242 238;
+  --navy-800: 254 253 251;
+  --navy-700: 236 232 226;
+  --slate-200: 31 31 31;
+  --slate-300: 42 42 42;
+  --slate-400: 92 90 87;
+  --slate-500: 110 108 107;
+  --slate-600: 216 212 206;
+  --slate-700: 234 231 226;
+  --blue-300: 140 2 6;
+  --blue-400: 193 8 11;
+  --blue-500: 214 42 46;
+  --blue-600: 177 0 4;
+  --blue-800: 178 50 57;
+  --blue-900: 122 2 9;
+  --red-400: 200 39 45;
+  --emerald-400: 11 125 84;
+  --yellow-400: 146 64 14;
+  --yellow-500: 180 83 9;
+  --ink: 26 26 26;
+}
+
+/* Tema ESCURO — ativado com data-theme="dark" na tag <html>. */
+:root[data-theme="dark"] {
+  --navy-900: 18 22 31;
+  --navy-800: 27 33 48;
+  --navy-700: 38 46 66;
+  --slate-200: 236 237 238;
+  --slate-300: 211 214 218;
+  --slate-400: 155 163 176;
+  --slate-500: 124 135 151;
+  --slate-600: 55 65 90;
+  --slate-700: 44 52 72;
+  --blue-300: 194 58 65;
+  --blue-400: 226 58 62;
+  --blue-500: 229 72 77;
+  --blue-600: 217 31 36;
+  --blue-800: 140 42 48;
+  --blue-900: 92 18 22;
+  --red-400: 255 107 110;
+  --emerald-400: 52 211 153;
+  --yellow-400: 251 191 36;
+  --yellow-500: 245 158 11;
+  --ink: 243 241 238;
+}
+
+/* Transição suave ao alternar entre tema claro/escuro. */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+  transition-duration: .25s;
+  transition-timing-function: ease;
+}
+
+/* Tailwind v4 usa "currentColor" como borda padrão; o app original
+   (Tailwind v3) usava cinza claro. */
+@layer base {
+  *, ::after, ::before { border-color: var(--color-slate-700); }
+  button:not(:disabled) { cursor: pointer; }
+  /* Placeholder com cor fixa da paleta (no v4 ele derivava da cor do texto). */
+  input::placeholder, textarea::placeholder { color: rgb(var(--slate-500)); opacity: 1; }
+}
+
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: rgb(var(--navy-900)); }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgb(var(--slate-600)); border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgb(var(--slate-500)); }
+
+/* Controles nativos (calendário, select, checkbox) na variante do tema. */
+input, select { color-scheme: light; }
+:root[data-theme="dark"] input, :root[data-theme="dark"] select { color-scheme: dark; }
+
+/* Select com seta própria, na mesma paleta. */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%235C5A57'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.19l3.71-3.96a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.65rem center;
+  background-size: 1.1em;
+  padding-right: 2.25rem;
+}
+:root[data-theme="dark"] select {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%239BA3B0'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.19l3.71-3.96a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
+}
+
+button:focus-visible, a:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(var(--navy-900)), 0 0 0 4px rgb(var(--blue-600));
+  border-radius: 0.5rem;
+}
+
+@keyframes modal-in {
+  from { opacity: 0; transform: scale(.97) translateY(4px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.modal-in { animation: modal-in .18s ease-out; }
+
+/* Toasts entram deslizando de baixo. */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.toast-item { animation: toast-in .25s ease; }
+
+/* Exportar processo em PDF: #print-area fica escondida na tela e é a única
+   coisa visível na impressão, em preto no branco (independe do tema). */
+#print-area { display: none; }
+@media print {
+  body * { visibility: hidden; }
+  #print-area, #print-area * { visibility: visible; }
+  #print-area {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: #fff;
+    color: #111;
+    padding: 24px;
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
