@@ -93,6 +93,8 @@
 @layer base {
   *, ::after, ::before { border-color: var(--color-slate-700); }
   button:not(:disabled) { cursor: pointer; }
+  /* Placeholder com cor fixa da paleta (no v4 ele derivava da cor do texto). */
+  input::placeholder, textarea::placeholder { color: rgb(var(--slate-500)); opacity: 1; }
 }
 
 .custom-scrollbar::-webkit-scrollbar { width: 6px; }
