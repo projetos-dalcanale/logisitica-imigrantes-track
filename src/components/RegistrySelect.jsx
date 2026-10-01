@@ -1,29 +1,21 @@
 import { REGISTRY_CONFIG, useRegistries } from '../contexts/RegistriesContext'
+import Combobox from './ui/Combobox'
 
-// Select ligado a uma lista compartilhada (terminal, armador, tipo), com a
-// opção "+ Adicionar novo..." no fim. Valores antigos que não estão mais na
-// lista continuam aparecendo, marcados como "(não cadastrado)".
-export default function RegistrySelect({ cat, value = '', onChange, ...rest }) {
+// Seleção ligada a uma lista compartilhada (terminal, armador, tipo), com
+// busca e criação de item novo direto do texto digitado.
+export default function RegistrySelect({ cat, value = '', onChange, disabled, size }) {
   const { lists, adicionar } = useRegistries()
-  const lista = lists[cat] || []
-
-  const handleChange = async (e) => {
-    if (e.target.value === '__novo__') {
-      const novo = await adicionar(cat)
-      if (novo) onChange(novo)
-    } else {
-      onChange(e.target.value)
-    }
-  }
-
+  const cfg = REGISTRY_CONFIG[cat]
   return (
-    <select value={value} onChange={handleChange} {...rest}>
-      <option value="">Selecione...</option>
-      {lista.map((nome) => (
-        <option key={nome} value={nome}>{nome}</option>
-      ))}
-      {value && !lista.includes(value) && <option value={value}>{value} (não cadastrado)</option>}
-      <option value="__novo__">+ Adicionar novo {REGISTRY_CONFIG[cat].novo}...</option>
-    </select>
+    <Combobox
+      value={value}
+      options={lists[cat] || []}
+      onChange={onChange}
+      onCreate={(nome) => adicionar(cat, nome)}
+      searchPlaceholder={`Buscar ${cfg.novo}...`}
+      createLabel={`Adicionar ${cfg.novo}`}
+      disabled={disabled}
+      size={size}
+    />
   )
 }

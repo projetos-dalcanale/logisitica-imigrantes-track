@@ -1,5 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
+import { Archive, ArchiveRestore, ArrowDownToLine, ArrowUpFromLine, FileText, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { useToast } from '../contexts/ToastContext'
+import { useDialog } from '../contexts/DialogContext'
 import {
   draftAlertConfig,
   getDraftDeadlineInfo,
@@ -19,29 +22,51 @@ import {
 import { exportarProcessoPDF } from '../lib/exportar'
 import AutoSaveInput from './AutoSaveInput'
 import RegistrySelect from './RegistrySelect'
+import SaveIndicator from './SaveIndicator'
+import { DraftIcon } from './ProcessCard'
+import Modal from './ui/Modal'
+import Button from './ui/Button'
+import Checkbox from './ui/Checkbox'
+import DateTimeField from './ui/DateTimeField'
+import Segmented from './ui/Segmented'
+import Tooltip, { IconButton } from './ui/Tooltip'
 
-const fieldClass = 'w-full bg-navy-800 border border-slate-600 rounded-lg p-2 text-sm text-ink focus:border-blue-500 outline-none transition'
-const editClass = 'w-full bg-navy-900 border border-slate-600 rounded-lg p-2 text-sm text-ink focus:border-blue-500 outline-none transition'
-const smallClass = 'w-full bg-navy-900 border border-slate-600 rounded-md p-2 text-xs text-ink focus:border-blue-500 outline-none transition'
-const labelClass = 'block text-[10px] uppercase text-slate-500 mb-1'
+export const DOC_TIPOS = [
+  { value: 'DI', label: 'DI' },
+  { value: 'DTA', label: 'DTA' },
+  { value: 'DUIMP', label: 'DUIMP' },
+]
+export const DESTINOS = [
+  { value: 'devolucao', label: 'Devolução de vazio' },
+  { value: 'baixa', label: 'Baixa' },
+]
 
-function Label({ children }) {
-  return <label className={labelClass}>{children}</label>
+function Field({ label, children, className = '' }) {
+  return (
+    <div className={className}>
+      <label className="label">{label}</label>
+      {children}
+    </div>
+  )
 }
 
-// "Chips" do cabeçalho (rótulo + valor), com "—" no lugar de campo vazio.
-function HeaderChips({ pares }) {
-  return pares.map(({ label, value }) => (
-    <span key={label} className="inline-flex items-center gap-1 bg-navy-900 border border-slate-700 rounded-md px-2 py-1 text-xs text-slate-300">
-      <span className="text-slate-500">{label}:</span> {value || '—'}
-    </span>
-  ))
+function Section({ title, action, children }) {
+  return (
+    <section className="mb-7">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-[13px] font-semibold text-ink">{title}</h3>
+        {action}
+      </div>
+      {children}
+    </section>
+  )
 }
 
 // Edição dos dados do cabeçalho: Documento/Armador/Terminais/Destino na
 // importação; Booking/Ref/Navio/Armador na exportação.
 function HeaderEdit({ proc, onDone }) {
   const isImport = proc.type === 'import'
+  const [saving, setSaving] = useState(false)
   const [form, setForm] = useState(() =>
     isImport
       ? {
@@ -52,174 +77,115 @@ function HeaderEdit({ proc, onDone }) {
           termVazio: proc.termVazio || '',
           finalizacaoVazio: proc.finalizacaoVazio === 'baixa' ? 'baixa' : 'devolucao',
         }
-      : {
-          booking: proc.booking || '',
-          referencia: proc.referencia || '',
-          navio: proc.navio || '',
-          armador: proc.armador || '',
-        }
+      : { booking: proc.booking || '', referencia: proc.referencia || '', navio: proc.navio || '', armador: proc.armador || '' }
   )
   const set = (field) => (value) => setForm((f) => ({ ...f, [field]: value }))
-  const setFromEvent = (field) => (e) => set(field)(e.target.value)
+  const bind = (field) => ({ value: form[field], onChange: (e) => set(field)(e.target.value), maxLength: 150, className: 'field' })
 
   const save = async () => {
-    await atualizarProcesso(proc.id, form)
-    onDone()
+    setSaving(true)
+    try {
+      await atualizarProcesso(proc.id, form)
+      onDone()
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
-    <div className="mt-2 bg-navy-800 border border-slate-600 rounded-lg p-3 max-w-xl">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {isImport ? (
-          <>
-            <div>
-              <Label>Tipo de Documento</Label>
-              <select value={form.documentoTipo} onChange={setFromEvent('documentoTipo')} className={editClass}>
-                <option value="">Tipo</option>
-                <option value="DI">DI</option>
-                <option value="DTA">DTA</option>
-                <option value="DUIMP">DUIMP</option>
-              </select>
-            </div>
-            <div>
-              <Label>Número do Documento</Label>
-              <input type="text" maxLength={150} value={form.documentoNumero} onChange={setFromEvent('documentoNumero')} className={editClass} />
-            </div>
-            <div>
-              <Label>Armador</Label>
-              <RegistrySelect cat="armador" value={form.armador} onChange={set('armador')} className={editClass} />
-            </div>
-            <div />
-            <div>
-              <Label>Terminal de Carregamento</Label>
-              <RegistrySelect cat="cheio" value={form.termCarga} onChange={set('termCarga')} className={editClass} />
-            </div>
-            <div>
-              <Label>Terminal de Vazio</Label>
-              <RegistrySelect cat="vazio" value={form.termVazio} onChange={set('termVazio')} className={editClass} />
-            </div>
-            <div>
-              <Label>Destino do Contêiner</Label>
-              <select value={form.finalizacaoVazio} onChange={setFromEvent('finalizacaoVazio')} className={editClass}>
-                <option value="devolucao">Devolução de Vazio</option>
-                <option value="baixa">Baixa de Contêiner (sem devolução)</option>
-              </select>
-            </div>
-          </>
-        ) : (
-          <>
-            <div>
-              <Label>Booking</Label>
-              <input type="text" maxLength={150} value={form.booking} onChange={setFromEvent('booking')} className={editClass} />
-            </div>
-            <div>
-              <Label>Referência</Label>
-              <input type="text" maxLength={150} value={form.referencia} onChange={setFromEvent('referencia')} className={editClass} />
-            </div>
-            <div>
-              <Label>Navio</Label>
-              <input type="text" maxLength={150} value={form.navio} onChange={setFromEvent('navio')} className={editClass} />
-            </div>
-            <div>
-              <Label>Armador</Label>
-              <RegistrySelect cat="armador" value={form.armador} onChange={set('armador')} className={editClass} />
-            </div>
-          </>
-        )}
+    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="overflow-hidden">
+      <div className="mt-4 rounded-2xl border border-slate-700/70 bg-navy-900/50 p-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {isImport ? (
+            <>
+              <Field label="Tipo de documento">
+                <Segmented size="sm" options={DOC_TIPOS} value={form.documentoTipo} onChange={set('documentoTipo')} />
+              </Field>
+              <Field label="Número do documento"><input {...bind('documentoNumero')} /></Field>
+              <Field label="Armador"><RegistrySelect cat="armador" value={form.armador} onChange={set('armador')} /></Field>
+              <Field label="Destino do contêiner">
+                <Segmented size="sm" options={DESTINOS} value={form.finalizacaoVazio} onChange={set('finalizacaoVazio')} />
+              </Field>
+              <Field label="Terminal de carregamento"><RegistrySelect cat="cheio" value={form.termCarga} onChange={set('termCarga')} /></Field>
+              <Field label="Terminal de vazio"><RegistrySelect cat="vazio" value={form.termVazio} onChange={set('termVazio')} /></Field>
+            </>
+          ) : (
+            <>
+              <Field label="Booking"><input {...bind('booking')} /></Field>
+              <Field label="Referência"><input {...bind('referencia')} /></Field>
+              <Field label="Navio"><input {...bind('navio')} /></Field>
+              <Field label="Armador"><RegistrySelect cat="armador" value={form.armador} onChange={set('armador')} /></Field>
+            </>
+          )}
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <Button variant="secondary" size="sm" onClick={onDone}>Cancelar</Button>
+          <Button size="sm" loading={saving} onClick={save}>Salvar alterações</Button>
+        </div>
       </div>
-      <div className="flex justify-end gap-2 pt-3">
-        <button type="button" onClick={onDone} className="px-3 py-1.5 text-xs font-semibold text-slate-300 hover:bg-navy-700 rounded-lg border border-slate-600 transition">Cancelar</button>
-        <button type="button" onClick={save} className="px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-lg transition">
-          <i className="fas fa-check mr-1" />Salvar
-        </button>
-      </div>
-    </div>
+    </motion.div>
   )
 }
 
 function ImportChecklist({ proc, ct, disabled }) {
+  const steps = stepsChecklistImport(proc)
+  const feitos = steps.filter((s) => ct.checklist?.[s.type === 'checkbox' ? s.id : `${s.id}_check`] === 'true').length
   return (
-    <div className="space-y-2">
-      {stepsChecklistImport(proc).map((step) => {
-        const val = ct.checklist?.[step.id] || ''
-        if (step.type === 'checkbox') {
-          const isChecked = val === 'true'
-          return (
-            <label
-              key={step.id}
-              className={`flex items-center gap-3 text-sm text-slate-300 p-2.5 rounded-lg cursor-pointer transition border ${isChecked ? 'border-blue-800/40 bg-blue-900/10' : 'border-transparent hover:bg-navy-800 hover:border-slate-700'}`}
-            >
-              <input
-                type="checkbox"
-                checked={isChecked}
-                disabled={disabled}
-                onChange={(e) => atualizarChecklist(proc, ct.id, step.id, e.target.checked)}
-                className="w-4 h-4 accent-blue-500 bg-navy-800 border-slate-600 rounded"
-              />
-              <span className={isChecked ? 'text-slate-200' : ''}>{step.label}</span>
-            </label>
-          )
-        }
-        const isAgendado = ct.checklist?.[`${step.id}_check`] === 'true'
-        return (
-          <div
-            key={step.id}
-            className={`flex flex-wrap gap-2 items-center justify-between text-sm text-slate-300 p-3 rounded-lg border transition-colors ${isAgendado ? 'bg-emerald-900/10 border-emerald-800/40' : 'bg-navy-800 border-slate-700'}`}
-          >
-            <span className={`font-medium ${isAgendado ? 'text-slate-200' : ''}`}>{step.label}</span>
-            <div className="flex items-center gap-2">
-              <AutoSaveInput
-                type="datetime-local"
-                saveOnChange
-                value={val}
-                disabled={disabled}
-                onSave={(v) => atualizarChecklist(proc, ct.id, step.id, v)}
-                className="bg-navy-900 border border-slate-600 rounded-md p-1.5 text-xs text-ink focus:border-blue-500 outline-none w-44 transition"
-              />
-              <label className="flex items-center gap-1 cursor-pointer" title="Marcar como agendado">
-                <input
-                  type="checkbox"
-                  checked={isAgendado}
-                  disabled={disabled}
-                  onChange={(e) => atualizarChecklist(proc, ct.id, `${step.id}_check`, e.target.checked)}
-                  className="w-4 h-4 accent-emerald-500 bg-navy-800 border-slate-600 rounded"
-                />
+    <div>
+      <div className="mb-2 flex items-center justify-between">
+        <span className="label mb-0">Checklist</span>
+        <span className="text-xs font-medium tabular-nums text-slate-500">{feitos} de {steps.length} etapas</span>
+      </div>
+      <div className="divide-y divide-slate-700/50 overflow-hidden rounded-xl border border-slate-700/60 bg-navy-800">
+        {steps.map((step) => {
+          const val = ct.checklist?.[step.id] || ''
+          if (step.type === 'checkbox') {
+            const isChecked = val === 'true'
+            return (
+              <label
+                key={step.id}
+                className={`flex min-h-12 cursor-pointer items-center gap-3 px-3.5 py-2.5 text-sm transition-colors ${disabled ? 'cursor-default' : 'hover:bg-navy-700/40'} ${isChecked ? 'bg-blue-600/[0.04]' : ''}`}
+              >
+                <Checkbox checked={isChecked} disabled={disabled} label={step.label} onChange={(v) => atualizarChecklist(proc, ct.id, step.id, v)} />
+                <span className={`transition-colors ${isChecked ? 'text-slate-500 line-through decoration-slate-500/50' : 'text-ink'}`}>{step.label}</span>
               </label>
+            )
+          }
+          const isAgendado = ct.checklist?.[`${step.id}_check`] === 'true'
+          return (
+            <div key={step.id} className={`flex flex-wrap items-center gap-x-3 gap-y-2 px-3.5 py-2.5 text-sm ${isAgendado ? 'bg-emerald-600/[0.05]' : ''}`}>
+              <Tooltip label={isAgendado ? 'Agendado — clique para desmarcar' : 'Marcar como agendado'}>
+                <span>
+                  <Checkbox tone="success" checked={isAgendado} disabled={disabled} label={`${step.label}: agendado`} onChange={(v) => atualizarChecklist(proc, ct.id, `${step.id}_check`, v)} />
+                </span>
+              </Tooltip>
+              <span className="flex-1 font-medium text-ink">{step.label}</span>
+              <div className="w-full sm:w-56">
+                <DateTimeField size="sm" value={val} disabled={disabled} onChange={(v) => atualizarChecklist(proc, ct.id, step.id, v)} />
+              </div>
             </div>
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
     </div>
   )
 }
 
 function ExportDeadlines({ proc, ct, disabled }) {
   const save = (field) => (v) => atualizarCampoContainer(proc, ct.id, field, v)
-  const boxClass = 'bg-navy-800 p-3 rounded-lg border border-slate-700'
-  const boxLabel = 'block text-[10px] uppercase font-bold text-slate-400 mb-2'
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 text-sm">
-      <div className={boxClass}>
-        <label className={boxLabel}>Deadline Draft</label>
-        <AutoSaveInput type="datetime-local" saveOnChange value={ct.deadlineDraft} disabled={disabled} onSave={save('deadlineDraft')} className={smallClass} />
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <Field label="Deadline Draft"><DateTimeField size="sm" value={ct.deadlineDraft} disabled={disabled} onChange={save('deadlineDraft')} /></Field>
+      <Field label="Deadline Carga"><DateTimeField size="sm" value={ct.deadlineCarga} disabled={disabled} onChange={save('deadlineCarga')} /></Field>
+      <div className="space-y-2 rounded-xl border border-slate-700/60 bg-navy-800 p-3">
+        <span className="label">Retirada de vazio</span>
+        <RegistrySelect size="sm" cat="vazio" value={ct.termVazioExp} disabled={disabled} onChange={save('termVazioExp')} />
+        <DateTimeField size="sm" value={ct.agVazio} disabled={disabled} onChange={save('agVazio')} />
       </div>
-      <div className={boxClass}>
-        <label className={boxLabel}>Deadline Carga</label>
-        <AutoSaveInput type="datetime-local" saveOnChange value={ct.deadlineCarga} disabled={disabled} onSave={save('deadlineCarga')} className={smallClass} />
-      </div>
-      <div className={boxClass}>
-        <label className={boxLabel}>Retirada Vazio</label>
-        <div className="flex flex-col gap-2">
-          <RegistrySelect cat="vazio" value={ct.termVazioExp} disabled={disabled} onChange={save('termVazioExp')} className={smallClass} />
-          <AutoSaveInput type="datetime-local" saveOnChange value={ct.agVazio} disabled={disabled} onSave={save('agVazio')} className={smallClass} />
-        </div>
-      </div>
-      <div className={boxClass}>
-        <label className={boxLabel}>Depósito Cheio</label>
-        <div className="flex flex-col gap-2">
-          <RegistrySelect cat="cheio" value={ct.termCheioExp} disabled={disabled} onChange={save('termCheioExp')} className={smallClass} />
-          <AutoSaveInput type="datetime-local" saveOnChange value={ct.agCheio} disabled={disabled} onSave={save('agCheio')} className={smallClass} />
-        </div>
+      <div className="space-y-2 rounded-xl border border-slate-700/60 bg-navy-800 p-3">
+        <span className="label">Depósito cheio</span>
+        <RegistrySelect size="sm" cat="cheio" value={ct.termCheioExp} disabled={disabled} onChange={save('termCheioExp')} />
+        <DateTimeField size="sm" value={ct.agCheio} disabled={disabled} onChange={save('agCheio')} />
       </div>
     </div>
   )
@@ -227,6 +193,7 @@ function ExportDeadlines({ proc, ct, disabled }) {
 
 function ContainerBlock({ proc, ct, index, processes, disabled }) {
   const showToast = useToast()
+  const { confirm } = useDialog()
   const [numeroDigitado, setNumeroDigitado] = useState(ct.numero || '')
   const [numeroSalvo, setNumeroSalvo] = useState(ct.numero)
   if (ct.numero !== numeroSalvo) {
@@ -234,11 +201,17 @@ function ContainerBlock({ proc, ct, index, processes, disabled }) {
     setNumeroDigitado(ct.numero || '')
   }
   const save = (field) => (v) => atualizarCampoContainer(proc, ct.id, field, v)
+  const digitoInvalido = validarNumeroContainer(numeroDigitado) === false
 
   // Avisa (sem bloquear) se outro processo ativo já usa o número.
   const saveNumero = async (value) => {
     if (value && numeroContainerDuplicado(processes, value, { procId: proc.id, ctId: ct.id })) {
-      if (!window.confirm(`Já existe outro processo ativo usando o número de contêiner "${value}". Deseja salvar mesmo assim?`)) {
+      const ok = await confirm({
+        title: 'Contêiner já em uso',
+        message: `Outro processo ativo já usa o número "${value}". Deseja salvar mesmo assim?`,
+        confirmLabel: 'Salvar mesmo assim',
+      })
+      if (!ok) {
         setNumeroDigitado(ct.numero || '')
         return false
       }
@@ -247,67 +220,65 @@ function ContainerBlock({ proc, ct, index, processes, disabled }) {
   }
 
   const remover = async () => {
-    if (!window.confirm('Remover este contêiner do processo?')) return
+    const ok = await confirm({
+      title: 'Remover contêiner?',
+      message: `${ct.numero || `Contêiner ${index + 1}`} e todo o checklist dele serão removidos deste processo.`,
+      confirmLabel: 'Remover',
+      danger: true,
+    })
+    if (!ok) return
     await removerContainer(proc, ct.id)
     showToast('Contêiner removido.')
   }
 
   return (
-    <div className="bg-navy-900 p-5 rounded-xl shadow-inner border border-slate-700 mb-5 relative">
-      <div className="border-b border-slate-700 pb-4 mb-4">
-        <div className="flex justify-between items-start mb-3">
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Contêiner {index + 1}</span>
-          {!disabled && (
-            <button onClick={remover} title="Remover" className="w-7 h-7 rounded-md text-slate-500 hover:text-red-400 hover:bg-red-900/20 transition flex items-center justify-center">
-              <i className="fas fa-trash text-xs" />
-            </button>
-          )}
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.98 }}
+      className="mb-4 rounded-2xl border border-slate-700/60 bg-navy-900/50 p-4 sm:p-5"
+    >
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-7 items-center justify-center rounded-lg bg-navy-700 text-xs font-bold tabular-nums text-slate-400">{index + 1}</span>
+          <span className="font-mono text-sm font-semibold text-ink">{ct.numero || <span className="font-sans font-normal text-slate-500">Sem número</span>}</span>
+          {ct.tipo && <span className="rounded-md bg-navy-700/70 px-1.5 py-0.5 text-[11px] font-semibold text-slate-400">{ct.tipo}</span>}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <Label>Numeração</Label>
-            <AutoSaveInput
-              type="text"
-              placeholder="ABCD 123.456-7"
-              maxLength={15}
-              value={ct.numero}
-              transform={(v) => {
-                const m = mascaraNumeroContainer(v)
-                setNumeroDigitado(m)
-                return m
-              }}
-              disabled={disabled}
-              onSave={saveNumero}
-              className={fieldClass}
-            />
-            {validarNumeroContainer(numeroDigitado) === false && (
-              <p className="text-[10px] text-red-400 mt-1 leading-tight">Dígito verificador não confere.</p>
-            )}
-          </div>
-          <div>
-            <Label>Tipo / Equipamento</Label>
-            <RegistrySelect cat="tipo" value={ct.tipo} disabled={disabled} onChange={save('tipo')} className={fieldClass} />
-          </div>
-        </div>
+        {!disabled && <IconButton icon={Trash2} size="sm" label="Remover contêiner" className="hover:text-red-400! hover:bg-red-400/10!" onClick={remover} />}
+      </div>
+
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label="Numeração">
+          <AutoSaveInput
+            type="text"
+            placeholder="ABCD 123.456-7"
+            maxLength={15}
+            value={ct.numero}
+            transform={(v) => {
+              const m = mascaraNumeroContainer(v)
+              setNumeroDigitado(m)
+              return m
+            }}
+            disabled={disabled}
+            onSave={saveNumero}
+            className={`field font-mono ${digitoInvalido ? 'border-red-400/60' : ''}`}
+          />
+          {digitoInvalido && <p className="mt-1.5 text-xs text-red-400">Dígito verificador não confere — confira a numeração.</p>}
+        </Field>
+        <Field label="Tipo / equipamento">
+          <RegistrySelect cat="tipo" value={ct.tipo} disabled={disabled} onChange={save('tipo')} />
+        </Field>
         {proc.type === 'export' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
-            <div>
-              <Label>Tara</Label>
-              <AutoSaveInput type="text" placeholder="Tara" value={ct.tara} disabled={disabled} onSave={save('tara')} className={fieldClass} />
-            </div>
-            <div>
-              <Label>Lacre</Label>
-              <AutoSaveInput type="text" placeholder="Lacre" value={ct.lacre} disabled={disabled} onSave={save('lacre')} className={fieldClass} />
-            </div>
-          </div>
+          <>
+            <Field label="Tara"><AutoSaveInput type="text" placeholder="Tara" value={ct.tara} disabled={disabled} onSave={save('tara')} className="field" /></Field>
+            <Field label="Lacre"><AutoSaveInput type="text" placeholder="Lacre" value={ct.lacre} disabled={disabled} onSave={save('lacre')} className="field" /></Field>
+          </>
         )}
       </div>
-      {proc.type === 'import' ? (
-        <ImportChecklist proc={proc} ct={ct} disabled={disabled} />
-      ) : (
-        <ExportDeadlines proc={proc} ct={ct} disabled={disabled} />
-      )}
-    </div>
+
+      {proc.type === 'import' ? <ImportChecklist proc={proc} ct={ct} disabled={disabled} /> : <ExportDeadlines proc={proc} ct={ct} disabled={disabled} />}
+    </motion.div>
   )
 }
 
@@ -315,17 +286,13 @@ function ContainerBlock({ proc, ct, index, processes, disabled }) {
 // acompanha em tempo real alterações feitas em outra aba/dispositivo.
 export default function ProcessModal({ proc, processes, onClose }) {
   const showToast = useToast()
+  const { confirm } = useDialog()
   const [editingHeader, setEditingHeader] = useState(false)
   const isImport = proc.type === 'import'
   const archived = proc.status === 'archived'
   const containers = proc.containers || []
   const draftInfo = getDraftDeadlineInfo(proc)
-
-  useEffect(() => {
-    const onKey = (e) => e.key === 'Escape' && onClose()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  const title = isImport ? proc.importador || 'Processo de importação' : proc.exportador || 'Processo de exportação'
 
   const chips = isImport
     ? [
@@ -335,7 +302,7 @@ export default function ProcessModal({ proc, processes, onClose }) {
         { label: 'Armador', value: proc.armador },
         { label: 'Carga', value: proc.termCarga },
         { label: 'Vazio', value: proc.termVazio },
-        { label: 'Destino', value: proc.finalizacaoVazio === 'baixa' ? 'Baixa de Contêiner' : 'Devolução de Vazio' },
+        { label: 'Destino', value: proc.finalizacaoVazio === 'baixa' ? 'Baixa' : 'Devolução de vazio' },
       ]
     : [
         { label: 'Booking', value: proc.booking },
@@ -344,15 +311,27 @@ export default function ProcessModal({ proc, processes, onClose }) {
         { label: 'Armador', value: proc.armador },
       ]
 
-  const setStatus = async (status, pergunta, mensagem) => {
-    if (!window.confirm(pergunta)) return
+  const setStatus = async (status) => {
+    const arquivar = status === 'archived'
+    const ok = await confirm({
+      title: arquivar ? 'Arquivar processo?' : 'Desarquivar processo?',
+      message: arquivar ? 'Ele sai da lista de ativos e fica disponível em Arquivados.' : 'Ele volta para a lista de processos ativos.',
+      confirmLabel: arquivar ? 'Arquivar' : 'Desarquivar',
+    })
+    if (!ok) return
     await atualizarProcesso(proc.id, { status })
     onClose()
-    showToast(mensagem)
+    showToast(arquivar ? 'Processo movido para Arquivados.' : 'Processo restaurado para Ativos.')
   }
 
   const excluir = async () => {
-    if (!window.confirm('Tem certeza que deseja EXCLUIR este processo? Essa ação não pode ser desfeita.')) return
+    const ok = await confirm({
+      title: 'Excluir processo?',
+      message: `"${title}" será excluído permanentemente, com todos os contêineres. Essa ação não pode ser desfeita.`,
+      confirmLabel: 'Excluir',
+      danger: true,
+    })
+    if (!ok) return
     try {
       await excluirProcesso(proc.id)
       onClose()
@@ -366,119 +345,115 @@ export default function ProcessModal({ proc, processes, onClose }) {
   const saveProcField = (field) => (v) => atualizarProcesso(proc.id, { [field]: v })
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="modal-in bg-navy-800 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col border border-slate-700 overflow-hidden">
-        <div className="bg-navy-900 p-5 border-b border-slate-700 flex justify-between items-start">
+    <Modal onClose={onClose} title={title} size="xl" fullscreenMobile>
+      <header className="shrink-0 border-b border-slate-700/70 px-5 pb-4 pt-4 sm:px-7 sm:pt-6">
+        <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="flex gap-3 items-center mb-1">
-              <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-blue-900/50 text-blue-400 border border-blue-800 uppercase tracking-wider">{proc.type}</span>
-              <h2 className="text-2xl font-bold text-ink tracking-tight">
-                {isImport ? proc.importador || 'Processo de Importação' : proc.exportador || 'Processo de Exportação'}
-              </h2>
+            <div className="mb-1.5 flex items-center gap-2.5">
+              <span className="inline-flex items-center gap-1 rounded-full bg-blue-600/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-blue-500">
+                {isImport ? <ArrowDownToLine className="size-3.5" strokeWidth={2.5} /> : <ArrowUpFromLine className="size-3.5" strokeWidth={2.5} />}
+                {isImport ? 'Importação' : 'Exportação'}
+              </span>
+              {archived && <span className="rounded-full bg-slate-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Arquivado</span>}
+              <SaveIndicator />
             </div>
-            {editingHeader ? (
-              <HeaderEdit proc={proc} onDone={() => setEditingHeader(false)} />
-            ) : (
-              <div className="flex items-start gap-2 mt-1">
-                <p className="flex flex-wrap gap-1.5 items-center text-sm text-slate-400">
-                  <HeaderChips pares={chips} />
-                </p>
-                {!archived && (
-                  <button onClick={() => setEditingHeader(true)} title="Editar" className="text-slate-500 hover:text-blue-400 transition shrink-0 mt-0.5">
-                    <i className="fas fa-pen text-xs" />
-                  </button>
-                )}
-              </div>
-            )}
+            <h2 className="truncate text-xl font-bold tracking-tight text-ink sm:text-2xl">{title}</h2>
           </div>
-          <button onClick={onClose} title="Fechar" className="w-9 h-9 rounded-full text-slate-500 hover:text-ink hover:bg-navy-700 text-xl transition flex items-center justify-center shrink-0">
-            &times;
-          </button>
+          <IconButton icon={X} label="Fechar" shortcut="Esc" onClick={onClose} />
         </div>
 
+        <AnimatePresence initial={false} mode="wait">
+          {editingHeader ? (
+            <HeaderEdit key="edit" proc={proc} onDone={() => setEditingHeader(false)} />
+          ) : (
+            <motion.div key="chips" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-3 flex flex-wrap items-center gap-1.5">
+              {chips.map(({ label, value }) => (
+                <span key={label} className="inline-flex items-center gap-1 rounded-lg bg-navy-700/60 px-2 py-1 text-xs text-slate-300">
+                  <span className="text-slate-500">{label}</span>
+                  <span className="font-medium">{value || '—'}</span>
+                </span>
+              ))}
+              {!archived && (
+                <Button variant="ghost" size="sm" icon={Pencil} className="h-7! px-2! text-xs" onClick={() => setEditingHeader(true)}>
+                  Editar
+                </Button>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </header>
+
+      <div className="custom-scrollbar flex-1 overflow-y-auto px-5 py-6 sm:px-7">
         {draftInfo && (
-          <div className={`rounded-r-lg mx-5 mt-5 p-4 border-l-4 ${draftAlertConfig[draftInfo.nivel].box}`}>
-            <div className="flex">
-              <i className={`fas ${draftAlertConfig[draftInfo.nivel].icon} ${draftAlertConfig[draftInfo.nivel].iconColor} mt-0.5`} />
-              <p className={`ml-3 text-sm font-bold ${draftAlertConfig[draftInfo.nivel].text}`}>{draftInfo.texto}</p>
-            </div>
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`mb-6 flex items-center gap-3 rounded-xl border-l-4 p-3.5 ${draftAlertConfig[draftInfo.nivel].box}`}
+          >
+            <DraftIcon nivel={draftInfo.nivel} className={`size-5 ${draftAlertConfig[draftInfo.nivel].iconColor}`} />
+            <p className={`text-sm font-semibold ${draftAlertConfig[draftInfo.nivel].text}`}>{draftInfo.texto}</p>
+          </motion.div>
         )}
 
-        <div className="flex-1 overflow-y-auto p-6 bg-navy-800 custom-scrollbar">
-          <div className="bg-navy-900 p-4 rounded-xl border border-slate-700 mb-6">
-            <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3">Motorista / Veículo</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label>Motorista</Label>
-                <AutoSaveInput type="text" placeholder="Nome do motorista" maxLength={150} value={proc.motorista} disabled={archived} onSave={saveProcField('motorista')} className={fieldClass} />
-              </div>
-              <div>
-                <Label>Placas</Label>
-                <AutoSaveInput type="text" placeholder="Ex: ABC1D23 e XYZ9F87" maxLength={150} value={proc.placas} disabled={archived} onSave={saveProcField('placas')} className={fieldClass} />
-              </div>
+        <Section title="Motorista e veículo">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field label="Motorista">
+              <AutoSaveInput type="text" placeholder="Nome do motorista" maxLength={150} value={proc.motorista} disabled={archived} onSave={saveProcField('motorista')} className="field" />
+            </Field>
+            <Field label="Placas">
+              <AutoSaveInput type="text" placeholder="Ex: ABC1D23 e XYZ9F87" maxLength={150} value={proc.placas} disabled={archived} onSave={saveProcField('placas')} className="field" />
+            </Field>
+          </div>
+        </Section>
+
+        <Section title="Observações">
+          <AutoSaveInput
+            as="textarea"
+            placeholder="Recados rápidos para a equipe (ex: aguardando liberação da Receita)…"
+            maxLength={1000}
+            rows={3}
+            value={proc.observacoes}
+            disabled={archived}
+            onSave={saveProcField('observacoes')}
+            className="field resize-none"
+          />
+        </Section>
+
+        <Section
+          title={`Contêineres (${containers.length})`}
+          action={!archived && <Button size="sm" variant="secondary" icon={Plus} onClick={() => adicionarContainer(proc)}>Adicionar</Button>}
+        >
+          {containers.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-600/70 p-8 text-center text-sm text-slate-500">
+              Nenhum contêiner neste processo ainda.
             </div>
-          </div>
-
-          <div className="bg-navy-900 p-4 rounded-xl border border-slate-700 mb-6">
-            <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3">Observações</h3>
-            <AutoSaveInput
-              as="textarea"
-              placeholder="Recados rápidos para a equipe (ex: aguardando liberação da Receita)..."
-              maxLength={1000}
-              rows={3}
-              value={proc.observacoes}
-              disabled={archived}
-              onSave={saveProcField('observacoes')}
-              className="w-full bg-navy-800 border border-slate-600 rounded-lg p-2.5 text-sm text-ink focus:border-blue-500 outline-none transition resize-none"
-            />
-          </div>
-
-          {!archived && (
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold text-ink tracking-tight">Unidades ({containers.length})</h3>
-              <button onClick={() => adicionarContainer(proc)} className="bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white text-sm font-semibold px-4 py-2 rounded-lg shadow transition">
-                <i className="fas fa-plus mr-2" />Novo Contêiner
-              </button>
-            </div>
+          ) : (
+            <AnimatePresence initial={false}>
+              {containers.map((ct, index) => (
+                <ContainerBlock key={ct.id} proc={proc} ct={ct} index={index} processes={processes} disabled={archived} />
+              ))}
+            </AnimatePresence>
           )}
-
-          {containers.length === 0 && (
-            <div className="text-center p-8 text-slate-500 border border-dashed border-slate-700 rounded-xl">Nenhum contêiner adicionado a este processo.</div>
-          )}
-
-          {containers.map((ct, index) => (
-            <ContainerBlock key={ct.id} proc={proc} ct={ct} index={index} processes={processes} disabled={archived} />
-          ))}
-        </div>
-
-        <div className="p-5 border-t border-slate-700 bg-navy-900 flex flex-wrap justify-between items-center gap-3">
-          <button onClick={excluir} className="px-5 py-2.5 text-red-400 font-semibold hover:bg-red-900/20 rounded-lg transition border border-red-900/50 hover:border-red-700">
-            <i className="fas fa-trash mr-2" /> Excluir Processo
-          </button>
-          <div className="flex flex-wrap gap-3">
-            <button onClick={() => exportarProcessoPDF(proc)} className="px-5 py-2.5 text-slate-300 font-semibold hover:bg-navy-700 rounded-lg transition border border-slate-600">
-              <i className="fas fa-file-pdf mr-2" /> Exportar PDF
-            </button>
-            <button onClick={onClose} className="px-5 py-2.5 text-slate-300 font-semibold hover:bg-navy-700 rounded-lg transition border border-transparent hover:border-slate-600">Fechar</button>
-            {archived ? (
-              <button
-                onClick={() => setStatus('active', 'Deseja mover este processo de volta para a lista de Ativos?', 'Processo restaurado para Ativos.')}
-                className="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-lg shadow-lg shadow-blue-900/30 hover:bg-blue-500 transition"
-              >
-                <i className="fas fa-box-open mr-2" /> Desarquivar Processo
-              </button>
-            ) : (
-              <button
-                onClick={() => setStatus('archived', 'Tem certeza que deseja mover este processo para Arquivados?', 'Processo movido para Arquivados.')}
-                className="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-lg shadow-lg shadow-emerald-900/30 hover:bg-emerald-500 transition"
-              >
-                <i className="fas fa-check-double mr-2" /> Arquivar Processo
-              </button>
-            )}
-          </div>
-        </div>
+        </Section>
       </div>
-    </div>
+
+      <footer className="flex shrink-0 items-center gap-2 border-t border-slate-700/70 bg-navy-800 px-5 py-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] sm:px-7">
+        <Tooltip label="Excluir processo">
+          <Button variant="danger" icon={Trash2} onClick={excluir} aria-label="Excluir processo">
+            <span className="hidden sm:inline">Excluir</span>
+          </Button>
+        </Tooltip>
+        <div className="ml-auto flex gap-2">
+          <Button variant="secondary" icon={FileText} onClick={() => exportarProcessoPDF(proc)}>
+            <span className="hidden sm:inline">Exportar</span> PDF
+          </Button>
+          {archived ? (
+            <Button icon={ArchiveRestore} onClick={() => setStatus('active')}>Desarquivar</Button>
+          ) : (
+            <Button variant="success" icon={Archive} onClick={() => setStatus('archived')}>Arquivar</Button>
+          )}
+        </div>
+      </footer>
+    </Modal>
   )
 }

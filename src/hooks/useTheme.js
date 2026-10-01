@@ -9,8 +9,12 @@ export function useTheme() {
 
   const toggleTheme = () => {
     const next = !isDark
-    if (next) document.documentElement.setAttribute('data-theme', 'dark')
-    else document.documentElement.removeAttribute('data-theme')
+    const root = document.documentElement
+    // Transição de cor só durante a troca, pra não deixar o resto do app "lento".
+    root.classList.add('theme-transition')
+    if (next) root.setAttribute('data-theme', 'dark')
+    else root.removeAttribute('data-theme')
+    setTimeout(() => root.classList.remove('theme-transition'), 350)
     try {
       localStorage.setItem('logitrack-theme', next ? 'dark' : 'light')
     } catch { /* navegador sem localStorage */ }

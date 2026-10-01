@@ -33,6 +33,8 @@ O LogiTrack Pro organiza cada processo de importação ou exportação em um car
 - Alerta visual de Deadline Draft (3, 2, 1 dia ou atrasado) para exportação.
 - Reordenação dos cards por arrastar (preferência pessoal, salva no navegador de cada usuário).
 - Modo escuro opcional (preferência salva por navegador).
+- Busca rápida com Ctrl+K e atalhos de teclado (N novo processo, / filtrar, 1/2/3 abas).
+- Navegação inferior no celular e telas em tela cheia, como um app.
 
 **Exportação de dados**
 - Exportação de um processo individual em PDF (via impressão do navegador).
@@ -51,7 +53,10 @@ O LogiTrack Pro organiza cada processo de importação ou exportação em um car
 - **Firebase Firestore** — banco de dados em tempo real.
 - **dnd-kit** — arrastar e reordenar os cards.
 - **vite-plugin-pwa** — gera o service worker e o manifest do PWA.
-- **Font Awesome 6** — ícones.
+- **Radix UI** + **cmdk** — janelas, seleções com busca, dicas e busca rápida (Ctrl+K), acessíveis por teclado.
+- **Motion** — animações.
+- **Lucide** — ícones.
+- **react-day-picker** — calendário de data e hora.
 - **Vercel** — hospedagem e deploy contínuo a partir deste repositório.
 
 ## Estrutura do projeto

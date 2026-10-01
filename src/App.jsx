@@ -1,3 +1,4 @@
+import { LoaderCircle } from 'lucide-react'
 import { useAuth } from './contexts/AuthContext'
 import LoginScreen from './components/LoginScreen'
 import AppShell from './components/AppShell'
@@ -8,8 +9,8 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center text-slate-500">
-        <i className="fas fa-spinner fa-spin text-xl" />
+      <div className="h-dvh flex items-center justify-center text-slate-500">
+        <LoaderCircle className="size-6 animate-spin" />
       </div>
     )
   }
