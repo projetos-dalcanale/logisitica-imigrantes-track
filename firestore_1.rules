@@ -1,0 +1,62 @@
+rules_version = '2';
+
+// Regras de segurança para o projeto Firebase "track-logistica".
+//
+// COMO APLICAR:
+// 1. Console do Firebase -> Firestore Database -> Regras -> cole este conteúdo -> Publicar
+//    (ou, com a Firebase CLI instalada: `firebase deploy --only firestore:rules`)
+//
+// POR QUE ISSO É CRÍTICO:
+// O app filtra os processos no cliente com `where("userId", "==", currentUser.uid)`.
+// Esse filtro é só uma conveniência de exibição – ele NÃO impede que qualquer usuário
+// autenticado leia, edite ou apague os documentos de QUALQUER outro usuário chamando a
+// API do Firestore diretamente (ex.: pelo console do navegador). Sem regras no servidor,
+// os dados de todos os clientes/processos logísticos ficam expostos.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /processes/{processId} {
+      // Só pode ler, atualizar ou apagar um processo se ele pertencer ao usuário autenticado.
+      allow read, update, delete: if request.auth != null
+                          && request.auth.uid == resource.data.userId;
+
+      // Só pode criar um processo novo já atribuído a si mesmo (impede criar
+      // documentos em nome de outro usuário).
+      allow create: if request.auth != null
+                          && request.auth.uid == request.resource.data.userId
+                          && request.resource.data.type in ['import', 'export']
+                          && request.resource.data.status == 'active';
+    }
+
+    // Lista compartilhada de terminais pré-cadastrados (vazio/cheio), usada nos
+    // selects de "Terminal de Carregamento", "Terminal de Vazio", "Depósito
+    // Cheio" e "Retirada Vazio". Qualquer usuário autenticado (ou seja, com
+    // conta criada por você no Firebase) pode ler a lista e adicionar novos
+    // terminais.
+    match /config/terminals {
+      allow read, write: if request.auth != null;
+    }
+
+    // Lista compartilhada de armadores pré-cadastrados, usada no select do
+    // campo "Armador". Qualquer usuário autenticado (ou seja, com conta
+    // criada por você no Firebase) pode ler a lista e adicionar novos
+    // armadores.
+    match /config/armadores {
+      allow read, write: if request.auth != null;
+    }
+
+    // Lista compartilhada de tipos de contêiner pré-cadastrados (ex: 20DC,
+    // 40HC), usada no select do campo "Tipo / Equipamento". Qualquer usuário
+    // autenticado (ou seja, com conta criada por você no Firebase) pode ler
+    // a lista e adicionar novos tipos.
+    match /config/tipos {
+      allow read, write: if request.auth != null;
+    }
+
+    // Nega tudo o que não foi explicitamente liberado acima.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
