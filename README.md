@@ -24,6 +24,11 @@ O LogiTrack Pro organiza cada processo de importação ou exportação em um car
 - Validação do dígito verificador da numeração do contêiner (norma ISO 6346), com aviso em tempo real.
 - Observações livres por processo, arquivamento/restauração e exclusão (com confirmação).
 
+**Tabela de fretes**
+- Guia "Fretes" com uma ficha por cliente: Frete Peso, Pedágio, Ad-Valorem, Escolta, Adc. Margem, Ajudante, Adc. IMO, Adc. LS, Outros, Gris e responsável pelo seguro, mais observações e peculiaridades.
+- Campos que o cliente não tem podem ser removidos, e campos personalizados (0,00 ou 0,00000) podem ser adicionados.
+- Consulta com busca por cliente (também no Ctrl+K); compartilhada com toda a equipe.
+
 **Cadastros compartilhados**
 - Terminal de Carregamento, Terminal de Vazio, Armador e Tipo de Contêiner: listas únicas usadas por toda a equipe, com adicionar, editar (renomear) e excluir.
 

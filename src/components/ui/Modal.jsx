@@ -4,6 +4,7 @@ import { motion } from 'motion/react'
 const SIZES = {
   sm: 'sm:max-w-md',
   md: 'sm:max-w-lg',
+  lg: 'sm:max-w-3xl',
   xl: 'sm:max-w-5xl',
 }
 
