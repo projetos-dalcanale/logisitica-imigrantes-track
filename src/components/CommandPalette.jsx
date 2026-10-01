@@ -1,5 +1,5 @@
 import { Command } from 'cmdk'
-import { Archive, ArrowDownToLine, ArrowUpFromLine, CornerDownLeft, ListChecks, LogOut, Moon, Plus, Search } from 'lucide-react'
+import { Archive, ArrowDownToLine, ArrowUpFromLine, Building2, CornerDownLeft, ListChecks, LogOut, Moon, Plus, ReceiptText, Search } from 'lucide-react'
 import Modal from './ui/Modal'
 
 const docDe = (p) =>
@@ -18,9 +18,9 @@ function Item({ icon: Icon, children, onSelect, value, hint }) {
 }
 
 // BUSCA RÁPIDA (Ctrl/⌘+K): acha qualquer processo — inclusive arquivados —
-// por nome, armador, documento/booking, motorista, placa ou contêiner, e
-// dá acesso às ações principais pelo teclado.
-export default function CommandPalette({ processes, onClose, onOpenProcess, actions }) {
+// por nome, armador, documento/booking, motorista, placa ou contêiner, as
+// fichas de frete por cliente, e dá acesso às ações principais pelo teclado.
+export default function CommandPalette({ processes, fretes = [], onClose, onOpenProcess, onOpenFrete, actions }) {
   const ordenados = [...processes].sort((a, b) => {
     if (a.status !== b.status) return a.status === 'active' ? -1 : 1
     return new Date(b.createdAt) - new Date(a.createdAt)
@@ -33,7 +33,7 @@ export default function CommandPalette({ processes, onClose, onOpenProcess, acti
           <Search className="size-5 text-slate-500" />
           <Command.Input
             data-autofocus
-            placeholder="Buscar processo, contêiner, booking ou ação…"
+            placeholder="Buscar processo, contêiner, cliente ou ação…"
             className="h-14 w-full bg-transparent text-[15px] text-ink outline-none placeholder:text-slate-500"
           />
           <span className="kbd">Esc</span>
@@ -71,11 +71,34 @@ export default function CommandPalette({ processes, onClose, onOpenProcess, acti
             })}
           </Command.Group>
 
+          {fretes.length > 0 && (
+            <Command.Group heading="Fretes">
+              {fretes.map((f) => (
+                <Command.Item
+                  key={f.id}
+                  value={`frete ${f.cliente} ${f.observacoes || ''} ${f.id}`}
+                  onSelect={() => onOpenFrete(f.id)}
+                  className="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5"
+                >
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-slate-500/10 text-slate-400">
+                    <Building2 className="size-4" strokeWidth={2.25} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium text-ink">{f.cliente}</div>
+                    <div className="truncate text-xs text-slate-500">Tabela de frete · {(f.campos || []).length} campos</div>
+                  </div>
+                  <CornerDownLeft className="size-4 text-slate-500 opacity-0 group-data-[selected=true]:opacity-100" />
+                </Command.Item>
+              ))}
+            </Command.Group>
+          )}
+
           <Command.Group heading="Ações">
             <Item icon={Plus} value="novo processo criar" onSelect={actions.novo} hint="N">Novo processo</Item>
             <Item icon={ArrowDownToLine} value="ir importações" onSelect={() => actions.aba('import')} hint="1">Ir para Importações</Item>
             <Item icon={ArrowUpFromLine} value="ir exportações" onSelect={() => actions.aba('export')} hint="2">Ir para Exportações</Item>
             <Item icon={Archive} value="ir arquivados" onSelect={() => actions.aba('archive')} hint="3">Ir para Arquivados</Item>
+            <Item icon={ReceiptText} value="ir fretes tabela de frete clientes" onSelect={() => actions.aba('fretes')} hint="4">Ir para Fretes</Item>
             <Item icon={ListChecks} value="gerenciar cadastros terminais armadores tipos" onSelect={actions.cadastros}>Gerenciar cadastros</Item>
             <Item icon={Moon} value="alternar tema modo escuro claro" onSelect={actions.tema}>Alternar modo claro/escuro</Item>
             <Item icon={LogOut} value="sair logout" onSelect={actions.sair}>Sair</Item>

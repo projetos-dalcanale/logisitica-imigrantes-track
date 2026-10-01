@@ -1,5 +1,5 @@
 import { motion } from 'motion/react'
-import { Plus, Search } from 'lucide-react'
+import { Plus } from 'lucide-react'
 
 function NavButton({ icon: Icon, label, active, badge, onClick }) {
   return (
@@ -24,10 +24,11 @@ function NavButton({ icon: Icon, label, active, badge, onClick }) {
   )
 }
 
-// Navegação inferior no celular, como num app: abas, botão central "Novo" e busca.
-export default function BottomNav({ tabs, counts, active, onChange, onNew, onSearch }) {
+// Navegação inferior no celular, como num app: 4 abas e botão central "+"
+// (novo processo, ou novo frete quando a aba Fretes está aberta).
+export default function BottomNav({ tabs, counts, active, onChange, onNew }) {
   const tab = (t) => (
-    <NavButton key={t.value} icon={t.icon} label={t.short} active={t.value === active} badge={counts[t.value]} onClick={() => onChange(t.value)} />
+    <NavButton key={t.value} icon={t.icon} label={t.short} active={t.value === active} badge={t.value === 'fretes' ? 0 : counts[t.value]} onClick={() => onChange(t.value)} />
   )
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-700/70 bg-navy-800/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg lg:hidden">
@@ -39,14 +40,14 @@ export default function BottomNav({ tabs, counts, active, onChange, onNew, onSea
             type="button"
             whileTap={{ scale: 0.92 }}
             onClick={onNew}
-            aria-label="Novo processo"
+            aria-label={active === 'fretes' ? 'Novo frete' : 'Novo processo'}
             className="-mt-6 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-900/30 ring-4 ring-navy-900"
           >
             <Plus className="size-6" strokeWidth={2.5} />
           </motion.button>
         </div>
         {tab(tabs[2])}
-        <NavButton icon={Search} label="Buscar" onClick={onSearch} />
+        {tab(tabs[3])}
       </div>
     </nav>
   )

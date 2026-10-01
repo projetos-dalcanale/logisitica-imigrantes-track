@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence } from 'motion/react'
-import { Archive, ArrowDownToLine, ArrowUpFromLine, LogOut, Moon, Search, Settings, Sun, X } from 'lucide-react'
+import { Archive, ArrowDownToLine, ArrowUpFromLine, LogOut, Moon, ReceiptText, Search, Settings, Sun, X } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../hooks/useTheme'
 import { useProcesses } from '../hooks/useProcesses'
+import { useFretes } from '../hooks/useFretes'
 import ProcessList from './ProcessList'
 import ProcessModal from './ProcessModal'
 import NewProcessForm from './NewProcessForm'
 import RegistriesModal from './RegistriesModal'
+import FreteList from './FreteList'
+import FreteModal from './FreteModal'
 import CommandPalette from './CommandPalette'
 import BottomNav from './BottomNav'
 import Logo from './Logo'
@@ -19,6 +22,7 @@ export const TABS = [
   { value: 'import', label: 'Importações', short: 'Importação', icon: ArrowDownToLine },
   { value: 'export', label: 'Exportações', short: 'Exportação', icon: ArrowUpFromLine },
   { value: 'archive', label: 'Arquivados', short: 'Arquivados', icon: Archive },
+  { value: 'fretes', label: 'Fretes', short: 'Fretes', icon: ReceiptText },
 ]
 
 const isTyping = (el) => el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))
@@ -31,12 +35,18 @@ export default function AppShell() {
   const { user, logout } = useAuth()
   const { isDark, toggleTheme } = useTheme()
   const { processes, loading } = useProcesses(user.uid)
+  const { fretes, loading: loadingFretes, erro: erroFretes } = useFretes()
+  const [freteOpen, setFreteOpen] = useState(null) // null | 'new' | id do frete
   const [activeTab, setActiveTab] = useState('import')
   const [openId, setOpenId] = useState(null)
   const [registriesOpen, setRegistriesOpen] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [newOpen, setNewOpen] = useState(false) // só no celular
   const searchRef = useRef(null)
+  const activeTabRef = useRef(activeTab)
+  useEffect(() => {
+    activeTabRef.current = activeTab
+  }, [activeTab])
 
   const closeProcess = useCallback(() => setOpenId(null), [])
   // Sempre a versão mais recente do Firestore; some sozinho se for excluído.
@@ -51,10 +61,11 @@ export default function AppShell() {
     import: processes.filter((p) => p.status === 'active' && p.type === 'import').length,
     export: processes.filter((p) => p.status === 'active' && p.type === 'export').length,
     archive: processes.filter((p) => p.status === 'archived').length,
+    fretes: fretes.length,
   }
 
   // ATALHOS DE TECLADO: Ctrl/⌘+K busca rápida, "/" busca na lista,
-  // N novo processo, 1/2/3 trocam de aba.
+  // N novo processo (ou novo frete, na aba Fretes), 1 a 4 trocam de aba.
   useEffect(() => {
     const onKey = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -69,8 +80,9 @@ export default function AppShell() {
         searchRef.current?.focus()
       } else if (e.key.toLowerCase() === 'n') {
         e.preventDefault()
-        novoProcesso()
-      } else if (['1', '2', '3'].includes(e.key)) {
+        if (activeTabRef.current === 'fretes') setFreteOpen('new')
+        else novoProcesso()
+      } else if (['1', '2', '3', '4'].includes(e.key)) {
         setActiveTab(TABS[Number(e.key) - 1].value)
       }
     }
@@ -133,7 +145,7 @@ export default function AppShell() {
               className="hidden h-9 w-60 items-center gap-2 rounded-[10px] border border-slate-700/80 bg-navy-900/60 px-3 text-sm text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-400 md:flex"
             >
               <Search className="size-4" />
-              <span className="flex-1 text-left">Buscar processo…</span>
+              <span className="flex-1 text-left">Buscar…</span>
               <span className="kbd">Ctrl K</span>
             </button>
             <IconButton icon={Search} label="Buscar" className="md:hidden" onClick={() => setPaletteOpen(true)} />
@@ -151,19 +163,42 @@ export default function AppShell() {
 
         <div className="custom-scrollbar flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-6xl px-4 pb-28 pt-5 sm:px-6 lg:px-8 lg:pb-10 lg:pt-7">
-            <ProcessList
-              processes={processes}
-              loading={loading}
-              tab={activeTab}
-              onOpen={setOpenId}
-              searchRef={searchRef}
-              onNew={novoProcesso}
-            />
+            {activeTab === 'fretes' ? (
+              <FreteList
+                fretes={fretes}
+                loading={loadingFretes}
+                erro={erroFretes}
+                onOpen={setFreteOpen}
+                onNew={() => setFreteOpen('new')}
+                searchRef={searchRef}
+              />
+            ) : (
+              <ProcessList
+                processes={processes}
+                loading={loading}
+                tab={activeTab}
+                onOpen={setOpenId}
+                searchRef={searchRef}
+                onNew={novoProcesso}
+              />
+            )}
           </div>
         </div>
       </main>
 
-      <BottomNav tabs={TABS} counts={counts} active={activeTab} onChange={setActiveTab} onNew={() => setNewOpen(true)} onSearch={() => setPaletteOpen(true)} />
+      <BottomNav tabs={TABS} counts={counts} active={activeTab} onChange={setActiveTab} onNew={() => (activeTab === 'fretes' ? setFreteOpen('new') : setNewOpen(true))} />
+
+      <AnimatePresence>
+        {(freteOpen === 'new' || fretes.some((f) => f.id === freteOpen)) && (
+          <FreteModal
+            key="frete"
+            frete={freteOpen === 'new' ? null : fretes.find((f) => f.id === freteOpen)}
+            fretes={fretes}
+            onClose={() => setFreteOpen(null)}
+            onSaved={setFreteOpen}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {openProc && <ProcessModal key={openProc.id} proc={openProc} processes={processes} onClose={closeProcess} />}
@@ -174,10 +209,15 @@ export default function AppShell() {
           <CommandPalette
             key="palette"
             processes={processes}
+            fretes={fretes}
             onClose={() => setPaletteOpen(false)}
             onOpenProcess={(id) => {
               setPaletteOpen(false)
               setOpenId(id)
+            }}
+            onOpenFrete={(id) => {
+              setPaletteOpen(false)
+              setFreteOpen(id)
             }}
             actions={{
               novo: () => {
