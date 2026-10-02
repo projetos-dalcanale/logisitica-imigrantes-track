@@ -1,5 +1,6 @@
 import { Command } from 'cmdk'
-import { Archive, ArrowDownToLine, ArrowUpFromLine, Building2, CornerDownLeft, ListChecks, LogOut, Moon, Plus, ReceiptText, Search } from 'lucide-react'
+import { Archive, Building2, CornerDownLeft, ListChecks, LogOut, Moon, Plus, ReceiptText, Search } from 'lucide-react'
+import { ExportIcon, ImportIcon } from './ui/icons'
 import Modal from './ui/Modal'
 
 const docDe = (p) =>
@@ -48,7 +49,7 @@ export default function CommandPalette({ processes, fretes = [], onClose, onOpen
               const busca = [titulo, p.armador, doc, p.referencia, p.navio, p.motorista, p.placas, ...(p.containers || []).map((c) => c.numero)]
                 .filter(Boolean)
                 .join(' ')
-              const Icon = p.status === 'archived' ? Archive : p.type === 'import' ? ArrowDownToLine : ArrowUpFromLine
+              const Icon = p.status === 'archived' ? Archive : p.type === 'import' ? ImportIcon : ExportIcon
               return (
                 <Command.Item
                   key={p.id}
@@ -95,8 +96,8 @@ export default function CommandPalette({ processes, fretes = [], onClose, onOpen
 
           <Command.Group heading="Ações">
             <Item icon={Plus} value="novo processo criar" onSelect={actions.novo} hint="N">Novo processo</Item>
-            <Item icon={ArrowDownToLine} value="ir importações" onSelect={() => actions.aba('import')} hint="1">Ir para Importações</Item>
-            <Item icon={ArrowUpFromLine} value="ir exportações" onSelect={() => actions.aba('export')} hint="2">Ir para Exportações</Item>
+            <Item icon={ImportIcon} value="ir importações" onSelect={() => actions.aba('import')} hint="1">Ir para Importações</Item>
+            <Item icon={ExportIcon} value="ir exportações" onSelect={() => actions.aba('export')} hint="2">Ir para Exportações</Item>
             <Item icon={Archive} value="ir arquivados" onSelect={() => actions.aba('archive')} hint="3">Ir para Arquivados</Item>
             <Item icon={ReceiptText} value="ir fretes tabela de frete clientes" onSelect={() => actions.aba('fretes')} hint="4">Ir para Fretes</Item>
             <Item icon={ListChecks} value="gerenciar cadastros terminais armadores tipos" onSelect={actions.cadastros}>Gerenciar cadastros</Item>

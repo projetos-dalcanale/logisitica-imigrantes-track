@@ -1,4 +1,5 @@
-import { Archive, ArrowDownToLine, ArrowUpFromLine, CalendarClock, CircleCheck, Clock, Layers, TriangleAlert } from 'lucide-react'
+import { Archive, CalendarClock, CircleCheck, Clock, Layers, TriangleAlert } from 'lucide-react'
+import { ExportIcon, ImportIcon } from './ui/icons'
 import { getDraftDeadlineInfo, getProcessProgress } from '../lib/processos'
 
 const TONS = {
@@ -40,8 +41,8 @@ export default function ResumoBar({ processes, tab, now }) {
     const arq = processes.filter((p) => p.status === 'archived')
     stats = [
       { icon: Archive, label: 'Arquivados', value: arq.length, tone: 'neutral' },
-      { icon: ArrowDownToLine, label: 'Importações', value: arq.filter((p) => p.type === 'import').length, tone: 'blue' },
-      { icon: ArrowUpFromLine, label: 'Exportações', value: arq.filter((p) => p.type === 'export').length, tone: 'blue' },
+      { icon: ImportIcon, label: 'Importações', value: arq.filter((p) => p.type === 'import').length, tone: 'blue' },
+      { icon: ExportIcon, label: 'Exportações', value: arq.filter((p) => p.type === 'export').length, tone: 'blue' },
     ]
   } else if (tab === 'import') {
     const ativos = processes.filter((p) => p.status === 'active' && p.type === 'import')

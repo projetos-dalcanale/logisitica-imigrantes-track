@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Archive, ArchiveRestore, ArrowDownToLine, ArrowUpFromLine, CirclePlus, FileText, Trash2 } from 'lucide-react'
+import { Archive, ArchiveRestore, CirclePlus, FileText, Trash2 } from 'lucide-react'
+import { ExportIcon, ImportIcon } from './ui/icons'
 import { useToast } from '../contexts/ToastContext'
 import { useDialog } from '../contexts/DialogContext'
 import {
@@ -289,7 +290,7 @@ export default function ProcessModal({ proc, processes, onClose }) {
       <div className="custom-scrollbar flex-1 space-y-6 overflow-y-auto px-4 pb-8 sm:px-6">
         <div className="px-1">
           <div className="mb-1 flex items-center gap-1.5 text-[13px] font-medium text-slate-400">
-            {isImport ? <ArrowDownToLine className="size-3.5" strokeWidth={2.4} /> : <ArrowUpFromLine className="size-3.5" strokeWidth={2.4} />}
+            {isImport ? <ImportIcon className="size-3.5" strokeWidth={2.4} /> : <ExportIcon className="size-3.5" strokeWidth={2.4} />}
             {isImport ? 'Importação' : 'Exportação'}
             {archived && <span className="ml-1 rounded-full bg-slate-500/15 px-2 py-px text-[11px]">Arquivado</span>}
           </div>
