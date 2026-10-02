@@ -4,7 +4,9 @@ import { describe, expect, it } from 'vitest'
 
 const raiz = new URL('../../', import.meta.url)
 const vercel = JSON.parse(readFileSync(new URL('vercel.json', raiz), 'utf8'))
-const html = readFileSync(new URL('index.html', raiz), 'utf8')
+// Quebras de linha como no build da Vercel (Linux): no Windows o Git pode
+// gravar CRLF, o que mudaria o hash sem o site de produção mudar.
+const html = readFileSync(new URL('index.html', raiz), 'utf8').replace(/\r\n/g, '\n')
 const cabecalhos = Object.fromEntries(vercel.headers[0].headers.map((h) => [h.key, h.value]))
 const csp = cabecalhos['Content-Security-Policy']
 
