@@ -126,7 +126,7 @@ function DetalhesGroup({ proc, archived }) {
   )
 }
 
-function ContainerGroup({ proc, ct, index, processes, disabled }) {
+function ContainerGroup({ proc, ct, index, processes, disabled, multi }) {
   const showToast = useToast()
   const { confirm } = useDialog()
   const [numeroDigitado, setNumeroDigitado] = useState(ct.numero || '')
@@ -196,6 +196,17 @@ function ContainerGroup({ proc, ct, index, processes, disabled }) {
           </div>
         </Row>
         <Row label="Tipo"><RegistrySelect variant="plain" cat="tipo" value={ct.tipo} disabled={disabled} onChange={save('tipo')} /></Row>
+        {multi && (
+          <>
+            {/* Sem motorista próprio, o contêiner usa o do processo (aparece como sugestão). */}
+            <Row label="Motorista">
+              <AutoSaveInput type="text" placeholder={proc.motorista || 'Nome'} maxLength={150} value={ct.motorista} disabled={disabled} onSave={save('motorista')} className={plainRight} />
+            </Row>
+            <Row label="Placas">
+              <AutoSaveInput type="text" placeholder={proc.placas || 'ABC1D23'} maxLength={150} value={ct.placas} disabled={disabled} onSave={save('placas')} className={plainRight} />
+            </Row>
+          </>
+        )}
 
         {isImport ? (
           steps.map((step) => {
@@ -317,10 +328,13 @@ export default function ProcessModal({ proc, processes, onClose }) {
 
         <DetalhesGroup key={archived ? 'a' : 'b'} proc={proc} archived={archived} />
 
-        <Group title="Transporte">
-          <Row label="Motorista"><AutoSaveInput type="text" placeholder="Nome" maxLength={150} value={proc.motorista} disabled={archived} onSave={saveProcField('motorista')} className={plainRight} /></Row>
-          <Row label="Placas"><AutoSaveInput type="text" placeholder="ABC1D23" maxLength={150} value={proc.placas} disabled={archived} onSave={saveProcField('placas')} className={plainRight} /></Row>
-        </Group>
+        {/* Com mais de um contêiner, motorista e placas ficam em cada contêiner. */}
+        {containers.length <= 1 && (
+          <Group title="Transporte">
+            <Row label="Motorista"><AutoSaveInput type="text" placeholder="Nome" maxLength={150} value={proc.motorista} disabled={archived} onSave={saveProcField('motorista')} className={plainRight} /></Row>
+            <Row label="Placas"><AutoSaveInput type="text" placeholder="ABC1D23" maxLength={150} value={proc.placas} disabled={archived} onSave={saveProcField('placas')} className={plainRight} /></Row>
+          </Group>
+        )}
 
         <Group title="Observações">
           <div className="px-4 py-3">
@@ -339,7 +353,7 @@ export default function ProcessModal({ proc, processes, onClose }) {
 
         <AnimatePresence initial={false}>
           {containers.map((ct, index) => (
-            <ContainerGroup key={ct.id} proc={proc} ct={ct} index={index} processes={processes} disabled={archived} />
+            <ContainerGroup key={ct.id} proc={proc} ct={ct} index={index} processes={processes} disabled={archived} multi={containers.length > 1} />
           ))}
         </AnimatePresence>
 

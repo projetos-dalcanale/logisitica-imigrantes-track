@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { CircleMinus, CirclePlus } from 'lucide-react'
+import { CircleMinus, CirclePlus, Truck, User } from 'lucide-react'
 import { ExportIcon, ImportIcon } from './ui/icons'
 import { useToast } from '../contexts/ToastContext'
 import { useDialog } from '../contexts/DialogContext'
@@ -19,7 +19,7 @@ const EMPTY = {
 }
 
 let unidadeSeq = 0
-const novaUnidade = () => ({ key: ++unidadeSeq, numero: '', tipo: '' })
+const novaUnidade = () => ({ key: ++unidadeSeq, numero: '', tipo: '', motorista: '', placas: '' })
 
 // NOVO PROCESSO: folha no estilo iOS (Cancelar · título · Criar) com o
 // formulário em listas agrupadas. Contêineres são opcionais.
@@ -32,6 +32,7 @@ export default function NewProcessSheet({ uid, processes, onClose, onCreated }) 
   const [saving, setSaving] = useState(false)
   const [armadorFaltando, setArmadorFaltando] = useState(false)
   const isImport = type === 'import'
+  const multi = unidades.length > 1 // com 2+ contêineres, motorista e placas vão em cada um
 
   const set = (field) => (value) => setForm((f) => ({ ...f, [field]: value }))
   const text = (field, placeholder, extra = {}) => (
@@ -74,7 +75,10 @@ export default function NewProcessSheet({ uid, processes, onClose, onCreated }) 
           }
         : { exportador: form.exportador, referencia: form.referencia, booking: form.booking, navio: form.navio }),
       // Salva mesmo vazio: o número/tipo podem ser preenchidos depois no processo.
-      containers: unidades.map((u, i) => novoContainer(type, `c_${Date.now()}_${i}`, u.numero.trim(), u.tipo.trim())),
+      containers: unidades.map((u, i) => ({
+        ...novoContainer(type, `c_${Date.now()}_${i}`, u.numero.trim(), u.tipo.trim()),
+        ...(multi && { motorista: u.motorista.trim(), placas: u.placas.trim() }),
+      })),
     }
 
     // VERIFICAÇÃO DE DUPLICIDADE: avisa (sem bloquear) quando contêiner,
@@ -159,8 +163,12 @@ export default function NewProcessSheet({ uid, processes, onClose, onCreated }) 
               </Group>
 
               <Group title="Transporte">
-                <Row label="Motorista" htmlFor="np-motorista">{text('motorista', 'Nome')}</Row>
-                <Row label="Placas" htmlFor="np-placas">{text('placas', 'ABC1D23')}</Row>
+                {!multi && (
+                  <>
+                    <Row label="Motorista" htmlFor="np-motorista">{text('motorista', 'Nome')}</Row>
+                    <Row label="Placas" htmlFor="np-placas">{text('placas', 'ABC1D23')}</Row>
+                  </>
+                )}
                 {isImport && (
                   <>
                     <Row label="Carregamento"><RegistrySelect variant="plain" cat="cheio" value={form.termCarga} onChange={set('termCarga')} placeholder="Terminal" /></Row>
@@ -204,6 +212,29 @@ export default function NewProcessSheet({ uid, processes, onClose, onCreated }) 
                         <RegistrySelect variant="plain" cat="tipo" value={u.tipo} onChange={(v) => setUnidade(u.key, 'tipo', v)} placeholder="Tipo" />
                       </div>
                     </div>
+                    {multi && (
+                      // Com mais de um contêiner, cada um tem o seu motorista.
+                      <div className="flex items-center gap-3 pb-2.5 pl-12 pr-4 text-[14px]">
+                        <User className="size-4 shrink-0 text-slate-500" strokeWidth={2} />
+                        <input
+                          value={u.motorista}
+                          onChange={(e) => setUnidade(u.key, 'motorista', e.target.value)}
+                          maxLength={150}
+                          placeholder="Motorista"
+                          aria-label={`Motorista do contêiner ${i + 1}`}
+                          className="field-plain min-w-0 flex-1 text-[14px]"
+                        />
+                        <Truck className="size-4 shrink-0 text-slate-500" strokeWidth={2} />
+                        <input
+                          value={u.placas}
+                          onChange={(e) => setUnidade(u.key, 'placas', e.target.value)}
+                          maxLength={150}
+                          placeholder="Placas"
+                          aria-label={`Placas do contêiner ${i + 1}`}
+                          className="field-plain w-28 shrink-0 text-[14px]"
+                        />
+                      </div>
+                    )}
                   </motion.div>
                 )
               })}

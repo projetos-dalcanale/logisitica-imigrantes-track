@@ -8,6 +8,8 @@ import {
   mascaraNumeroContainer,
   novoChecklistImport,
   stepsChecklistImport,
+  transportePorContainer,
+  distintos,
   validarNumeroContainer,
 } from './processos'
 
@@ -165,5 +167,41 @@ describe('datas', () => {
     expect(formatarDataHora('')).toBe('—')
     expect(formatarDataHora('abc')).toBe('—')
     expect(formatarDataHoraCurta('')).toBeNull()
+  })
+})
+
+describe('motorista e placas por contêiner', () => {
+  it('com um contêiner, usa o motorista do processo', () => {
+    const proc = { motorista: 'João', placas: 'ABC1D23', containers: [{ id: 'c1', numero: 'CSQU 305.438-3' }] }
+    expect(transportePorContainer(proc)).toEqual([{ ctId: 'c1', numero: 'CSQU 305.438-3', motorista: 'João', placas: 'ABC1D23' }])
+  })
+
+  it('com vários contêineres, cada um tem o seu e os vazios herdam o do processo', () => {
+    const proc = {
+      motorista: 'João',
+      placas: 'ABC1D23',
+      containers: [
+        { id: 'c1', numero: 'A', motorista: 'Carlos', placas: 'QWE4R56' },
+        { id: 'c2', numero: 'B', motorista: '', placas: '' },
+      ],
+    }
+    expect(transportePorContainer(proc).map((t) => [t.motorista, t.placas])).toEqual([
+      ['Carlos', 'QWE4R56'],
+      ['João', 'ABC1D23'],
+    ])
+  })
+
+  it('processo sem contêiner ainda mostra o motorista do processo', () => {
+    expect(transportePorContainer({ motorista: 'João', containers: [] })[0].motorista).toBe('João')
+  })
+
+  it('lista valores distintos, sem vazios', () => {
+    expect(distintos(['João', ' João ', '', null, 'Carlos'])).toEqual(['João', 'Carlos'])
+  })
+
+  it('a busca encontra o motorista de um contêiner', () => {
+    const lista = [{ id: 'x', type: 'import', status: 'active', createdAt: '2026-10-01', containers: [{ numero: 'A', motorista: 'Carlos Lima', placas: 'QWE4R56' }] }]
+    expect(filtrarProcessos(lista, 'import', 'carlos').map((p) => p.id)).toEqual(['x'])
+    expect(filtrarProcessos(lista, 'import', 'qwe4').map((p) => p.id)).toEqual(['x'])
   })
 })

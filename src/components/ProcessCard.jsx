@@ -5,6 +5,8 @@ import {
   formatarDataHoraCurta,
   getDraftDeadlineInfo,
   getProcessProgress,
+  distintos,
+  transportePorContainer,
 } from '../lib/processos'
 import Tooltip from './ui/Tooltip'
 
@@ -36,6 +38,15 @@ export default function ProcessCard({ proc, now, onOpen, dragHandle, style, inne
   const agCargaTexto = formatarDataHoraCurta(agCarga)
   const progress = getProcessProgress(proc)
   const done = progress === 100
+  // Motoristas e placas de todos os contêineres (cada um pode ter o seu).
+  const transporte = transportePorContainer(proc)
+  const motoristas = distintos(transporte.map((t) => t.motorista))
+  const placas = distintos(transporte.map((t) => t.placas))
+  const resumo = (lista, vazio, plural) => (lista.length === 0 ? vazio : lista.length <= 2 ? lista.join(' · ') : `${lista.length} ${plural}`)
+  const detalheTransporte =
+    transporte.length > 1
+      ? transporte.map((t, i) => `${t.numero || `Contêiner ${i + 1}`}: ${t.motorista || 'sem motorista'}${t.placas ? ` (${t.placas})` : ''}`).join('\n')
+      : null
 
   let status
   if (draftInfo) {
@@ -93,8 +104,12 @@ export default function ProcessCard({ proc, now, onOpen, dragHandle, style, inne
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]">
-        <Meta icon={User} muted={!proc.motorista}>{proc.motorista || 'Sem motorista'}</Meta>
-        <Meta icon={Truck} muted={!proc.placas}>{proc.placas || 'Sem placas'}</Meta>
+        <Tooltip label={detalheTransporte && <span className="whitespace-pre-line">{detalheTransporte}</span>}>
+          <span className="inline-flex min-w-0 items-center gap-x-4">
+            <Meta icon={User} muted={!motoristas.length}>{resumo(motoristas, 'Sem motorista', 'motoristas')}</Meta>
+            <Meta icon={Truck} muted={!placas.length}>{resumo(placas, 'Sem placas', 'placas')}</Meta>
+          </span>
+        </Tooltip>
         {agCargaTexto && <Meta icon={CalendarCheck}>Carreg. {agCargaTexto}</Meta>}
         {numeros.length > 0 ? (
           <span className="ml-auto font-mono text-[12px] text-slate-400">
