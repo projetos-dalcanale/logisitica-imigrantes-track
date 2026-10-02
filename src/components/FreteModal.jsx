@@ -5,7 +5,7 @@ import { CircleMinus, CirclePlus } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useDialog } from '../contexts/DialogContext'
 import { useToast } from '../contexts/ToastContext'
-import { CAMPOS_PADRAO, RESP_SEGURO, TIPOS_CAMPO, atualizarFrete, criarFrete, excluirFrete, formatarValor, novaFicha } from '../lib/fretes'
+import { CAMPOS_PADRAO, TIPOS_CAMPO, atualizarFrete, criarFrete, excluirFrete, formatarValor, novaFicha } from '../lib/fretes'
 import { formatarDataHora } from '../lib/processos'
 import Modal, { SheetHeader } from './ui/Modal'
 import Button from './ui/Button'
@@ -100,7 +100,6 @@ function FreteForm({ inicial, fretes, onCancel, onSaved }) {
     const data = {
       cliente,
       campos: form.campos.map((c) => ({ ...c, label: c.label.trim() || 'Campo sem nome' })),
-      respSeguro: form.respSeguro,
       observacoes: form.observacoes.trim(),
     }
     setSaving(true)
@@ -177,12 +176,6 @@ function FreteForm({ inicial, fretes, onCancel, onSaved }) {
           <AdicionarCampo campos={form.campos} onAdd={(c) => setForm((f) => ({ ...f, campos: [...f.campos, c] }))} />
         </Group>
 
-        <Group>
-          <Row label="Seguro">
-            <Segmented size="sm" className="w-64" options={RESP_SEGURO} value={form.respSeguro} onChange={(respSeguro) => setForm((f) => ({ ...f, respSeguro }))} />
-          </Row>
-        </Group>
-
         <Group title="Observações e peculiaridades">
           <div className="px-4 py-3">
             <textarea
@@ -202,7 +195,6 @@ function FreteForm({ inicial, fretes, onCancel, onSaved }) {
 
 function FreteView({ frete, onClose, onEdit, onDelete }) {
   const campos = frete.campos || []
-  const resp = RESP_SEGURO.find((r) => r.value === frete.respSeguro)?.label || '—'
   return (
     <>
       <SheetHeader
@@ -233,9 +225,6 @@ function FreteView({ frete, onClose, onEdit, onDelete }) {
           )}
         </Group>
 
-        <Group>
-          <Row label="Responsável pelo seguro"><span className="text-slate-400">{resp}</span></Row>
-        </Group>
 
         {frete.observacoes && (
           <Group title="Observações e peculiaridades">

@@ -5,7 +5,8 @@ import { formatarNumero } from './numeros'
 
 // TABELA DE FRETES POR CLIENTE (coleção "fretes", compartilhada com a equipe).
 // Cada documento: { cliente, campos: [{ id, label, tipo, valor, custom? }],
-// respSeguro, observacoes, createdAt, updatedAt, updatedBy }.
+// observacoes, createdAt, updatedAt, updatedBy }. Fichas antigas podem ter
+// "respSeguro", que não é mais usado (o seguro é sempre da transportadora).
 
 // tipo "moeda" = 2 casas (0,00); tipo "taxa" = 5 casas (0,00000).
 export const TIPOS_CAMPO = {
@@ -27,15 +28,9 @@ export const CAMPOS_PADRAO = [
   { id: 'gris', label: 'Gris', tipo: 'moeda' },
 ]
 
-export const RESP_SEGURO = [
-  { value: 'transportadora', label: 'Transportadora' },
-  { value: 'cliente', label: 'Cliente' },
-]
-
 export const novaFicha = () => ({
   cliente: '',
   campos: CAMPOS_PADRAO.map((c) => ({ ...c, valor: 0 })),
-  respSeguro: 'transportadora',
   observacoes: '',
 })
 
