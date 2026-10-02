@@ -1,0 +1,169 @@
+import { describe, expect, it } from 'vitest'
+import {
+  filtrarProcessos,
+  formatarDataHora,
+  formatarDataHoraCurta,
+  getDraftDeadlineInfo,
+  getProcessProgress,
+  mascaraNumeroContainer,
+  novoChecklistImport,
+  stepsChecklistImport,
+  validarNumeroContainer,
+} from './processos'
+
+const DIA = 86400000
+const AGORA = new Date('2026-10-02T12:00:00').getTime()
+const dataLocal = (ms) => {
+  const d = new Date(ms)
+  const p = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+describe('dígito verificador ISO 6346', () => {
+  it('aceita um número válido, com ou sem máscara', () => {
+    // Exemplo clássico da norma: CSQU 305438-3
+    expect(validarNumeroContainer('CSQU3054383')).toBe(true)
+    expect(validarNumeroContainer('CSQU 305.438-3')).toBe(true)
+    expect(validarNumeroContainer('csqu3054383')).toBe(true)
+  })
+
+  it('recusa um dígito verificador errado', () => {
+    expect(validarNumeroContainer('CSQU3054384')).toBe(false)
+  })
+
+  it('não avalia enquanto o número está incompleto', () => {
+    expect(validarNumeroContainer('')).toBeNull()
+    expect(validarNumeroContainer('CSQU305')).toBeNull()
+    expect(validarNumeroContainer('CSQ 3054383')).toBeNull()
+  })
+
+  it('trata resto 10 como dígito 0', () => {
+    // Procura um número cujo cálculo dê resto 10 e confere que "0" é aceito.
+    let achou = null
+    for (let n = 0; n < 2000 && !achou; n++) {
+      const base = `ABCU${String(n).padStart(6, '0')}`
+      const comZero = validarNumeroContainer(base + '0')
+      const algumOutro = [1, 2, 3, 4, 5, 6, 7, 8, 9].some((d) => validarNumeroContainer(base + d))
+      if (comZero && !algumOutro) achou = base
+    }
+    expect(achou).not.toBeNull()
+  })
+})
+
+describe('máscara do número do contêiner', () => {
+  it('formata como ABCD 123.456-7', () => {
+    expect(mascaraNumeroContainer('csqu3054383')).toBe('CSQU 305.438-3')
+  })
+  it('formata parcialmente enquanto digita', () => {
+    expect(mascaraNumeroContainer('CSQU')).toBe('CSQU')
+    expect(mascaraNumeroContainer('CSQU30')).toBe('CSQU 30')
+    expect(mascaraNumeroContainer('CSQU3054')).toBe('CSQU 305.4')
+  })
+  it('aceita colagem fora de ordem e corta o excesso', () => {
+    expect(mascaraNumeroContainer('305 CSQU 438-3 99')).toBe('CSQU 305.438-3')
+  })
+})
+
+describe('checklist de importação', () => {
+  it('cria checklist zerado com os campos de confirmação dos agendamentos', () => {
+    const c = novoChecklistImport()
+    expect(c).toMatchObject({ ag_carga: '', ag_carga_check: '', gerar_cte: '', ag_vazio: '', ag_vazio_check: '' })
+  })
+  it('esconde o Agendamento de Vazio quando é baixa de contêiner', () => {
+    expect(stepsChecklistImport({ finalizacaoVazio: 'baixa' }).map((s) => s.id)).not.toContain('ag_vazio')
+    expect(stepsChecklistImport({}).map((s) => s.id)).toContain('ag_vazio')
+  })
+})
+
+describe('progresso do processo', () => {
+  it('é 0 sem contêineres', () => {
+    expect(getProcessProgress({ type: 'import', containers: [] })).toBe(0)
+  })
+
+  it('importação: conta etapas marcadas e agendamentos confirmados', () => {
+    const proc = {
+      type: 'import',
+      containers: [{ checklist: { ...novoChecklistImport(), gerar_cte: 'true', ag_carga_check: 'true', ag_carga: '2026-10-02T10:00' } }],
+    }
+    expect(getProcessProgress(proc)).toBe(33) // 2 de 6
+  })
+
+  it('importação com baixa: não conta o Agendamento de Vazio', () => {
+    const checklist = { ag_carga_check: 'true', gerar_cte: 'true', gerar_ciot: 'true', gerar_mdfe: 'true', encerrar_mdfe: 'true' }
+    expect(getProcessProgress({ type: 'import', finalizacaoVazio: 'baixa', containers: [{ checklist }] })).toBe(100)
+    expect(getProcessProgress({ type: 'import', containers: [{ checklist }] })).toBe(83)
+  })
+
+  it('exportação: conta prazos e agendamentos preenchidos', () => {
+    const proc = { type: 'export', containers: [{ deadlineDraft: 'x', deadlineCarga: 'x', agVazio: '', agCheio: '' }] }
+    expect(getProcessProgress(proc)).toBe(50)
+  })
+})
+
+describe('aviso de Deadline Draft', () => {
+  const exp = (containers, extra = {}) => ({ type: 'export', status: 'active', containers, ...extra })
+
+  it('avisa com 1, 2 e 3 dias de antecedência', () => {
+    expect(getDraftDeadlineInfo(exp([{ deadlineDraft: dataLocal(AGORA + 0.5 * DIA) }]), AGORA)).toEqual({ nivel: 'urgente', texto: 'Draft vence em 1 dia' })
+    expect(getDraftDeadlineInfo(exp([{ deadlineDraft: dataLocal(AGORA + 1.5 * DIA) }]), AGORA).nivel).toBe('atencao')
+    expect(getDraftDeadlineInfo(exp([{ deadlineDraft: dataLocal(AGORA + 2.5 * DIA) }]), AGORA).nivel).toBe('aviso')
+  })
+
+  it('não avisa com mais de 3 dias', () => {
+    expect(getDraftDeadlineInfo(exp([{ deadlineDraft: dataLocal(AGORA + 5 * DIA) }]), AGORA)).toBeNull()
+  })
+
+  it('marca atrasado e conta os dias', () => {
+    expect(getDraftDeadlineInfo(exp([{ deadlineDraft: dataLocal(AGORA - 2.5 * DIA) }]), AGORA)).toEqual({ nivel: 'atrasado', texto: 'Draft atrasado há 2 dias' })
+    expect(getDraftDeadlineInfo(exp([{ deadlineDraft: dataLocal(AGORA - 3600000) }]), AGORA).texto).toBe('Draft venceu hoje')
+  })
+
+  it('usa o prazo mais próximo entre os contêineres', () => {
+    const info = getDraftDeadlineInfo(exp([{ deadlineDraft: dataLocal(AGORA + 2.5 * DIA) }, { deadlineDraft: dataLocal(AGORA + 0.5 * DIA) }]), AGORA)
+    expect(info.nivel).toBe('urgente')
+  })
+
+  it('ignora contêiner com Draft cumprido (número, tara e lacre)', () => {
+    const cumprido = { deadlineDraft: dataLocal(AGORA - DIA), numero: 'CSQU 305.438-3', tara: '3800', lacre: 'L1' }
+    expect(getDraftDeadlineInfo(exp([cumprido]), AGORA)).toBeNull()
+  })
+
+  it('não avisa em importação nem em arquivados', () => {
+    const c = [{ deadlineDraft: dataLocal(AGORA + 0.5 * DIA) }]
+    expect(getDraftDeadlineInfo({ type: 'import', status: 'active', containers: c }, AGORA)).toBeNull()
+    expect(getDraftDeadlineInfo(exp(c, { status: 'archived' }), AGORA)).toBeNull()
+  })
+})
+
+describe('filtro e busca de processos', () => {
+  const lista = [
+    { id: 'a', type: 'import', status: 'active', createdAt: '2026-09-01', importador: 'PRIME MED', armador: 'CMA CGM', containers: [{ numero: 'CMAU 713.196-4' }] },
+    { id: 'b', type: 'import', status: 'active', createdAt: '2026-09-20', importador: 'NOVA QUÍMICA', armador: 'MSC', containers: [] },
+    { id: 'c', type: 'export', status: 'active', createdAt: '2026-09-10', exportador: 'BR BEAUTY', booking: '13565591', containers: [] },
+    { id: 'd', type: 'import', status: 'archived', createdAt: '2026-08-01', importador: 'ANTIGO', containers: [] },
+  ]
+
+  it('separa por aba e ordena do mais novo para o mais antigo', () => {
+    expect(filtrarProcessos(lista, 'import', '').map((p) => p.id)).toEqual(['b', 'a'])
+    expect(filtrarProcessos(lista, 'export', '').map((p) => p.id)).toEqual(['c'])
+    expect(filtrarProcessos(lista, 'archive', '').map((p) => p.id)).toEqual(['d'])
+  })
+
+  it('busca por armador, contêiner e booking, sem diferenciar maiúsculas', () => {
+    expect(filtrarProcessos(lista, 'import', 'msc').map((p) => p.id)).toEqual(['b'])
+    expect(filtrarProcessos(lista, 'import', 'cmau 713').map((p) => p.id)).toEqual(['a'])
+    expect(filtrarProcessos(lista, 'export', '13565').map((p) => p.id)).toEqual(['c'])
+  })
+})
+
+describe('datas', () => {
+  it('formata data e hora no padrão brasileiro', () => {
+    expect(formatarDataHora('2026-09-20T14:30')).toBe('20/09/2026 14:30')
+    expect(formatarDataHoraCurta('2026-09-20T14:30')).toBe('20/09 14:30')
+  })
+  it('lida com valores vazios ou inválidos', () => {
+    expect(formatarDataHora('')).toBe('—')
+    expect(formatarDataHora('abc')).toBe('—')
+    expect(formatarDataHoraCurta('')).toBeNull()
+  })
+})

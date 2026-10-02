@@ -1,21 +1,30 @@
 import { useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import * as Popover from '@radix-ui/react-popover'
-import { Building2, History, Pencil, Plus, ShieldCheck, Trash2, X } from 'lucide-react'
+import { CircleMinus, CirclePlus } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useDialog } from '../contexts/DialogContext'
 import { useToast } from '../contexts/ToastContext'
 import { CAMPOS_PADRAO, RESP_SEGURO, TIPOS_CAMPO, atualizarFrete, criarFrete, excluirFrete, formatarValor, novaFicha } from '../lib/fretes'
 import { formatarDataHora } from '../lib/processos'
-import Modal from './ui/Modal'
+import Modal, { SheetHeader } from './ui/Modal'
 import Button from './ui/Button'
 import NumberInput from './ui/NumberInput'
 import Segmented from './ui/Segmented'
-import { IconButton } from './ui/Tooltip'
+import { Group, Row } from './ui/List'
 
 const TIPO_OPCOES = Object.entries(TIPOS_CAMPO).map(([value, t]) => ({ value, label: t.label }))
 
-// Menu "Adicionar campo": campos padrão que foram removidos + campo personalizado.
+function Iniciais({ nome, size = 'lg' }) {
+  const dim = size === 'lg' ? 'size-16 text-xl' : 'size-9 text-[13px]'
+  return (
+    <span className={`${dim} flex shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-slate-400 to-slate-500 font-semibold text-white`}>
+      {(nome || '?').trim().slice(0, 2).toUpperCase()}
+    </span>
+  )
+}
+
+// Linha "Adicionar campo" (menu com os campos padrão removidos + campo personalizado).
 function AdicionarCampo({ campos, onAdd }) {
   const [open, setOpen] = useState(false)
   const faltando = CAMPOS_PADRAO.filter((p) => !campos.some((c) => c.id === p.id))
@@ -28,7 +37,10 @@ function AdicionarCampo({ campos, onAdd }) {
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
-        <Button variant="secondary" size="sm" icon={Plus}>Adicionar campo</Button>
+        <button type="button" className="flex min-h-11 w-full items-center gap-3 px-4 text-left text-[15px] text-blue-500 transition-colors hover:bg-navy-700/40">
+          <CirclePlus className="size-5 fill-emerald-500 text-white dark:text-navy-800" strokeWidth={2} />
+          Adicionar campo
+        </button>
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
@@ -40,23 +52,23 @@ function AdicionarCampo({ campos, onAdd }) {
             focarId.current = null
           }}
           align="start"
-          sideOffset={6}
+          sideOffset={4}
           collisionPadding={12}
-          className="z-[70] w-60 overflow-hidden rounded-xl border border-slate-700/80 bg-navy-800 p-1 shadow-lift data-[state=open]:animate-[pop-in_.14s_ease-out]"
+          className="z-[70] w-60 overflow-hidden rounded-xl bg-navy-800/95 p-1.5 shadow-lift ring-[0.5px] ring-black/10 backdrop-blur-xl data-[state=open]:animate-[pop-in_.14s_ease-out] dark:ring-white/10"
         >
-          {faltando.length > 0 && <div className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Campos padrão</div>}
+          {faltando.length > 0 && <div className="px-2.5 pb-1 pt-1.5 text-[11px] font-semibold text-slate-500">Campos padrão</div>}
           {faltando.map((c) => (
-            <button key={c.id} type="button" onClick={() => add({ ...c, valor: 0 })} className="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm text-ink hover:bg-navy-700/70">
+            <button key={c.id} type="button" onClick={() => add({ ...c, valor: 0 })} className="flex w-full items-center rounded-md px-2.5 py-1.5 text-left text-[13px] text-ink hover:bg-blue-500 hover:text-white">
               {c.label}
             </button>
           ))}
-          {faltando.length > 0 && <div className="my-1 h-px bg-slate-700/70" />}
+          {faltando.length > 0 && <div className="my-1 h-px bg-slate-700" />}
           <button
             type="button"
             onClick={() => add({ id: `custom_${Date.now()}`, label: '', tipo: 'moeda', valor: 0, custom: true })}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-blue-500 hover:bg-navy-700/70"
+            className="flex w-full items-center rounded-md px-2.5 py-1.5 text-left text-[13px] font-medium text-blue-500 hover:bg-blue-500 hover:text-white"
           >
-            <Plus className="size-4" strokeWidth={2.5} /> Campo personalizado
+            Campo personalizado…
           </button>
         </Popover.Content>
       </Popover.Portal>
@@ -100,147 +112,143 @@ function FreteForm({ inicial, fretes, onCancel, onSaved }) {
       onSaved(id)
     } catch (err) {
       console.error('Erro ao salvar frete:', err)
-      showToast(err.code === 'permission-denied' ? 'Sem permissão: atualize as regras do Firestore (coleção fretes).' : 'Erro ao salvar o frete.', 'error')
-    } finally {
+      showToast(err.code === 'permission-denied' ? 'Sem permissão: atualize as regras do Firestore (coleção fretes).' : 'Não foi possível salvar o frete.', 'error')
       setSaving(false)
     }
   }
 
   return (
     <form onSubmit={salvar} className="flex min-h-0 flex-1 flex-col">
-      <div className="custom-scrollbar flex-1 space-y-6 overflow-y-auto px-5 py-5 sm:px-7">
-        <div>
-          <label className="label">Cliente</label>
-          <input
-            data-autofocus={!inicial?.id || undefined}
-            value={form.cliente}
-            maxLength={150}
-            onChange={(e) => (setForm((f) => ({ ...f, cliente: e.target.value })), setErroNome(false))}
-            placeholder="Nome do cliente"
-            className={`field text-base font-semibold ${erroNome ? 'border-red-400/60' : ''}`}
-          />
-          {erroNome && <p className="mt-1.5 text-xs text-red-400">Informe o nome do cliente.</p>}
-        </div>
+      <SheetHeader
+        title={inicial?.id ? 'Editar frete' : 'Novo cliente'}
+        left={<Button variant="plain" className="px-1" onClick={onCancel}>Cancelar</Button>}
+        right={<Button type="submit" variant="plain" className="px-1 font-semibold" loading={saving}>Salvar</Button>}
+      />
+      <div className="custom-scrollbar flex-1 space-y-6 overflow-y-auto px-4 pb-10 pt-2 sm:px-6">
+        <Group footer={erroNome ? <span className="text-red-500">Informe o nome do cliente.</span> : undefined}>
+          <Row label={<span className={erroNome ? 'text-red-500' : ''}>Cliente</span>} htmlFor="frete-cliente">
+            <input
+              id="frete-cliente"
+              data-autofocus={!inicial?.id || undefined}
+              value={form.cliente}
+              maxLength={150}
+              onChange={(e) => (setForm((f) => ({ ...f, cliente: e.target.value })), setErroNome(false))}
+              placeholder="Nome do cliente"
+              className="field-plain text-right font-medium"
+            />
+          </Row>
+        </Group>
 
-        <div>
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <h3 className="text-[13px] font-semibold text-ink">Valores do frete</h3>
-            <AdicionarCampo campos={form.campos} onAdd={(c) => setForm((f) => ({ ...f, campos: [...f.campos, c] }))} />
+        <Group title="Valores do frete" footer="Toque em ⊖ para remover um campo que este cliente não tem.">
+          <AnimatePresence initial={false}>
+            {form.campos.map((c) => (
+              <motion.div key={c.id} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                <div className="flex min-h-11 items-center gap-3 px-4 py-1.5">
+                  <button type="button" aria-label={`Remover ${c.label || 'campo'}`} onClick={() => removerCampo(c.id)} className="shrink-0 transition-transform active:scale-90">
+                    <CircleMinus className="size-5 fill-red-500 text-white dark:text-navy-800" strokeWidth={2} />
+                  </button>
+                  {c.custom ? (
+                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                      <input
+                        id={`campo-${c.id}`}
+                        value={c.label}
+                        maxLength={60}
+                        onChange={(e) => setCampo(c.id, { label: e.target.value })}
+                        placeholder="Nome do campo"
+                        className="field-plain min-w-28 flex-1"
+                      />
+                      <Segmented size="sm" className="w-40" options={TIPO_OPCOES} value={c.tipo} onChange={(tipo) => setCampo(c.id, { tipo })} />
+                    </div>
+                  ) : (
+                    <span className="min-w-0 flex-1 truncate text-[15px] text-ink">{c.label}</span>
+                  )}
+                  <NumberInput
+                    plain
+                    aria-label={c.label || 'Valor'}
+                    value={c.valor}
+                    decimals={TIPOS_CAMPO[c.tipo]?.casas ?? 2}
+                    onChange={(valor) => setCampo(c.id, { valor })}
+                    className="w-32 shrink-0 text-slate-400 focus:text-ink"
+                  />
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          <AdicionarCampo campos={form.campos} onAdd={(c) => setForm((f) => ({ ...f, campos: [...f.campos, c] }))} />
+        </Group>
+
+        <Group>
+          <Row label="Seguro">
+            <Segmented size="sm" className="w-64" options={RESP_SEGURO} value={form.respSeguro} onChange={(respSeguro) => setForm((f) => ({ ...f, respSeguro }))} />
+          </Row>
+        </Group>
+
+        <Group title="Observações e peculiaridades">
+          <div className="px-4 py-3">
+            <textarea
+              rows={4}
+              maxLength={2000}
+              value={form.observacoes}
+              onChange={(e) => setForm((f) => ({ ...f, observacoes: e.target.value }))}
+              placeholder="Ex: cobra pedágio só na ida; escolta obrigatória para carga IMO; pagamento em 30 dias…"
+              className="field-plain resize-none"
+            />
           </div>
-          {form.campos.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-slate-600/70 p-6 text-center text-sm text-slate-500">Nenhum campo. Use "Adicionar campo".</p>
-          ) : (
-            <div className="grid grid-cols-1 gap-x-6 gap-y-2.5 sm:grid-cols-2">
-              <AnimatePresence initial={false}>
-                {form.campos.map((c) => (
-                  <motion.div
-                    key={c.id}
-                    layout
-                    initial={{ opacity: 0, scale: 0.97 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.97, transition: { duration: 0.12 } }}
-                    className="flex items-center gap-2"
-                  >
-                    {c.custom ? (
-                      <div className="flex min-w-0 flex-1 flex-col gap-1">
-                        <input
-                          id={`campo-${c.id}`}
-                          value={c.label}
-                          maxLength={60}
-                          onChange={(e) => setCampo(c.id, { label: e.target.value })}
-                          placeholder="Nome do campo"
-                          className="field field-sm"
-                        />
-                        <Segmented size="sm" className="p-0.5!" options={TIPO_OPCOES} value={c.tipo} onChange={(tipo) => setCampo(c.id, { tipo })} />
-                      </div>
-                    ) : (
-                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-300">{c.label}</span>
-                    )}
-                    <NumberInput
-                      aria-label={c.label || 'Valor'}
-                      value={c.valor}
-                      decimals={TIPOS_CAMPO[c.tipo]?.casas ?? 2}
-                      onChange={(valor) => setCampo(c.id, { valor })}
-                      className="w-36 shrink-0"
-                    />
-                    <IconButton icon={X} size="sm" label={`Remover ${c.label || 'campo'}`} className="hover:text-red-400! hover:bg-red-400/10!" onClick={() => removerCampo(c.id)} />
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-          )}
-        </div>
-
-        <div>
-          <label className="label">Responsável pelo seguro</label>
-          <Segmented size="sm" className="max-w-sm" options={RESP_SEGURO} value={form.respSeguro} onChange={(respSeguro) => setForm((f) => ({ ...f, respSeguro }))} />
-        </div>
-
-        <div>
-          <label className="label">Observações e peculiaridades</label>
-          <textarea
-            rows={4}
-            maxLength={2000}
-            value={form.observacoes}
-            onChange={(e) => setForm((f) => ({ ...f, observacoes: e.target.value }))}
-            placeholder="Ex: cobra pedágio só na ida; escolta obrigatória para carga IMO; pagamento em 30 dias…"
-            className="field resize-none"
-          />
-        </div>
+        </Group>
       </div>
-      <footer className="flex shrink-0 justify-end gap-2 border-t border-slate-700/70 px-5 py-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] sm:px-7">
-        <Button variant="secondary" onClick={onCancel}>Cancelar</Button>
-        <Button type="submit" loading={saving}>Salvar frete</Button>
-      </footer>
     </form>
   )
 }
 
-function FreteView({ frete, onEdit, onDelete }) {
+function FreteView({ frete, onClose, onEdit, onDelete }) {
   const campos = frete.campos || []
   const resp = RESP_SEGURO.find((r) => r.value === frete.respSeguro)?.label || '—'
   return (
     <>
-      <div className="custom-scrollbar flex-1 space-y-6 overflow-y-auto px-5 py-5 sm:px-7">
-        {campos.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-slate-600/70 p-6 text-center text-sm text-slate-500">Nenhum valor cadastrado.</p>
-        ) : (
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-            {campos.map((c) => (
-              <div key={c.id} className={`rounded-xl border border-slate-700/60 px-3.5 py-3 ${c.valor ? 'bg-navy-800' : 'bg-navy-900/40'}`}>
-                <div className="truncate text-xs font-medium text-slate-500">{c.label}</div>
-                <div className={`mt-1 text-lg font-semibold tabular-nums tracking-tight ${c.valor ? 'text-ink' : 'text-slate-500'}`}>{formatarValor(c.valor, c.tipo)}</div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="flex items-center gap-2 text-sm">
-          <ShieldCheck className="size-4 text-slate-500" />
-          <span className="text-slate-500">Resp. seguro:</span>
-          <span className="font-semibold text-ink">{resp}</span>
+      <SheetHeader
+        title=""
+        left={<Button variant="plain" className="px-1" onClick={onClose}>Fechar</Button>}
+        right={<Button variant="plain" className="px-1 font-semibold" onClick={onEdit}>Editar</Button>}
+      />
+      <div className="custom-scrollbar flex-1 space-y-6 overflow-y-auto px-4 pb-10 sm:px-6">
+        <div className="flex flex-col items-center pt-1 text-center">
+          <Iniciais nome={frete.cliente} />
+          <h2 className="mt-3 font-display text-[24px] font-bold tracking-[-0.025em] text-ink">{frete.cliente}</h2>
+          {frete.updatedAt && (
+            <p className="mt-0.5 text-[13px] text-slate-500">
+              Atualizado em {formatarDataHora(frete.updatedAt)}{frete.updatedBy ? ` por ${frete.updatedBy.split('@')[0]}` : ''}
+            </p>
+          )}
         </div>
 
+        <Group title="Valores do frete">
+          {campos.length === 0 ? (
+            <div className="px-4 py-3 text-[15px] text-slate-500">Nenhum valor cadastrado.</div>
+          ) : (
+            campos.map((c) => (
+              <Row key={c.id} label={c.label}>
+                <span className={`tabular-nums ${c.valor ? 'font-medium text-ink' : 'text-slate-500'}`}>{formatarValor(c.valor, c.tipo)}</span>
+              </Row>
+            ))
+          )}
+        </Group>
+
+        <Group>
+          <Row label="Responsável pelo seguro"><span className="text-slate-400">{resp}</span></Row>
+        </Group>
+
         {frete.observacoes && (
-          <div>
-            <h3 className="label">Observações e peculiaridades</h3>
-            <p className="whitespace-pre-wrap rounded-xl border border-slate-700/60 bg-navy-900/40 p-3.5 text-sm leading-relaxed text-slate-300">{frete.observacoes}</p>
-          </div>
+          <Group title="Observações e peculiaridades">
+            <p className="whitespace-pre-wrap px-4 py-3 text-[15px] leading-relaxed text-ink">{frete.observacoes}</p>
+          </Group>
         )}
 
-        {frete.updatedAt && (
-          <p className="flex items-center gap-1.5 text-xs text-slate-500">
-            <History className="size-3.5" />
-            Atualizado em {formatarDataHora(frete.updatedAt)}{frete.updatedBy ? ` por ${frete.updatedBy}` : ''}
-          </p>
-        )}
+        <Group>
+          <button type="button" onClick={onDelete} className="flex min-h-11 w-full items-center justify-center px-4 text-[15px] text-red-500 transition-colors hover:bg-red-500/5">
+            Excluir cliente
+          </button>
+        </Group>
       </div>
-      <footer className="flex shrink-0 items-center gap-2 border-t border-slate-700/70 px-5 py-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] sm:px-7">
-        <Button variant="danger" icon={Trash2} onClick={onDelete}>
-          <span className="hidden sm:inline">Excluir</span>
-        </Button>
-        <Button className="ml-auto" icon={Pencil} onClick={onEdit}>Editar valores</Button>
-      </footer>
     </>
   )
 }
@@ -265,19 +273,7 @@ export default function FreteModal({ frete, fretes, onClose, onSaved }) {
   }
 
   return (
-    <Modal onClose={onClose} title={frete ? `Frete — ${frete.cliente}` : 'Novo frete'} size="lg" fullscreenMobile>
-      <header className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-700/70 px-5 py-4 sm:px-7">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-600/10 text-blue-500">
-            <Building2 className="size-5" />
-          </div>
-          <div className="min-w-0">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{editando ? (frete ? 'Editando frete' : 'Novo frete') : 'Tabela de frete'}</div>
-            <h2 className="truncate text-xl font-bold tracking-tight text-ink">{frete?.cliente || 'Novo cliente'}</h2>
-          </div>
-        </div>
-        <IconButton icon={X} label="Fechar" shortcut="Esc" onClick={onClose} />
-      </header>
+    <Modal onClose={onClose} title={frete ? `Frete — ${frete.cliente}` : 'Novo cliente'} size="md" sheet grouped>
       {editando ? (
         <FreteForm
           inicial={frete}
@@ -289,7 +285,7 @@ export default function FreteModal({ frete, fretes, onClose, onSaved }) {
           }}
         />
       ) : (
-        <FreteView frete={frete} onEdit={() => setEditando(true)} onDelete={excluir} />
+        <FreteView frete={frete} onClose={onClose} onEdit={() => setEditando(true)} onDelete={excluir} />
       )}
     </Modal>
   )

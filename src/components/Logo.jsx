@@ -1,12 +1,15 @@
 import { Truck } from 'lucide-react'
 
-// Marca do app: ícone de caminhão num quadrado na cor da marca.
+// Ícone do app no formato de ícone de app da Apple (cantos contínuos,
+// leve gradiente e brilho no topo), na cor da marca.
 export default function Logo({ size = 'md' }) {
-  const box = size === 'lg' ? 'size-12 rounded-2xl' : 'size-8 rounded-[10px]'
-  const icon = size === 'lg' ? 'size-6' : 'size-[18px]'
+  const box = size === 'lg' ? 'size-16 rounded-[18px]' : 'size-8 rounded-[9px]'
+  const icon = size === 'lg' ? 'size-8' : 'size-[17px]'
   return (
-    <div className={`${box} flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md shadow-blue-900/25`}>
-      <Truck className={icon} strokeWidth={2.25} />
+    <div
+      className={`${box} relative flex shrink-0 items-center justify-center overflow-hidden bg-gradient-to-b from-[#e2232b] to-[#a80008] text-white shadow-[0_1px_2px_rgb(0_0_0/0.2),inset_0_0.5px_0_rgb(255_255_255/0.35)]`}
+    >
+      <Truck className={icon} strokeWidth={2.2} />
     </div>
   )
 }

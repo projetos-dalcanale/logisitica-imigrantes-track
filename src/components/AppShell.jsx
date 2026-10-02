@@ -1,22 +1,24 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { AnimatePresence } from 'motion/react'
-import { Archive, ArrowDownToLine, ArrowUpFromLine, LogOut, Moon, ReceiptText, Search, Settings, Sun, X } from 'lucide-react'
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
+import { Archive, ArrowDownToLine, ArrowUpFromLine, Plus, ReceiptText, Search } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../hooks/useTheme'
 import { useProcesses } from '../hooks/useProcesses'
 import { useFretes } from '../hooks/useFretes'
 import ProcessList from './ProcessList'
-import ProcessModal from './ProcessModal'
-import NewProcessForm from './NewProcessForm'
-import RegistriesModal from './RegistriesModal'
 import FreteList from './FreteList'
-import FreteModal from './FreteModal'
-import CommandPalette from './CommandPalette'
+import Sidebar from './Sidebar'
 import BottomNav from './BottomNav'
-import Logo from './Logo'
-import Modal from './ui/Modal'
-import Segmented from './ui/Segmented'
+import AccountMenu, { Avatar } from './AccountMenu'
+import Button from './ui/Button'
 import { IconButton } from './ui/Tooltip'
+
+// Janelas carregadas só quando abertas (deixa a abertura do app mais rápida).
+const ProcessModal = lazy(() => import('./ProcessModal'))
+const FreteModal = lazy(() => import('./FreteModal'))
+const NewProcessSheet = lazy(() => import('./NewProcessSheet'))
+const RegistriesModal = lazy(() => import('./RegistriesModal'))
+const CommandPalette = lazy(() => import('./CommandPalette'))
 
 export const TABS = [
   { value: 'import', label: 'Importações', short: 'Importação', icon: ArrowDownToLine },
@@ -24,38 +26,48 @@ export const TABS = [
   { value: 'archive', label: 'Arquivados', short: 'Arquivados', icon: Archive },
   { value: 'fretes', label: 'Fretes', short: 'Fretes', icon: ReceiptText },
 ]
+const SECTIONS = [
+  { title: 'Processos', tabs: TABS.slice(0, 3) },
+  { title: 'Comercial', tabs: TABS.slice(3) },
+]
+const SUBTITULOS = {
+  import: 'Processos de importação em andamento',
+  export: 'Processos de exportação em andamento',
+  archive: 'Processos concluídos e arquivados',
+  fretes: 'Valores e peculiaridades de cada cliente',
+}
 
 const isTyping = (el) => el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))
-const isMobile = () => window.matchMedia('(max-width: 1023px)').matches
 
-// Tela logada. Desktop: menu lateral com o formulário de novo processo +
-// painel principal. Celular: cabeçalho compacto + navegação inferior, e o
-// formulário abre em tela cheia.
+// Tela logada. Desktop: barra lateral (navegação) + área principal com
+// título grande. Celular: barra superior compacta + barra de abas inferior.
 export default function AppShell() {
   const { user, logout } = useAuth()
   const { isDark, toggleTheme } = useTheme()
   const { processes, loading } = useProcesses(user.uid)
   const { fretes, loading: loadingFretes, erro: erroFretes } = useFretes()
-  const [freteOpen, setFreteOpen] = useState(null) // null | 'new' | id do frete
   const [activeTab, setActiveTab] = useState('import')
   const [openId, setOpenId] = useState(null)
+  const [freteOpen, setFreteOpen] = useState(null) // null | 'new' | id do frete
+  const [newOpen, setNewOpen] = useState(false)
   const [registriesOpen, setRegistriesOpen] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
-  const [newOpen, setNewOpen] = useState(false) // só no celular
+  const [scrolled, setScrolled] = useState(false)
   const searchRef = useRef(null)
-  const activeTabRef = useRef(activeTab)
-  useEffect(() => {
-    activeTabRef.current = activeTab
-  }, [activeTab])
+  const scrollRef = useRef(null)
+  const isFretes = activeTab === 'fretes'
+  const tab = TABS.find((t) => t.value === activeTab)
 
   const closeProcess = useCallback(() => setOpenId(null), [])
   // Sempre a versão mais recente do Firestore; some sozinho se for excluído.
   const openProc = processes.find((p) => p.id === openId)
 
-  const novoProcesso = useCallback(() => {
-    if (isMobile()) setNewOpen(true)
-    else document.getElementById('np-nome')?.focus()
-  }, [])
+  const activeTabRef = useRef(activeTab)
+  const novo = useCallback(() => (activeTabRef.current === 'fretes' ? setFreteOpen('new') : setNewOpen(true)), [])
+  useEffect(() => {
+    activeTabRef.current = activeTab
+    scrollRef.current?.scrollTo({ top: 0 })
+  }, [activeTab])
 
   const counts = {
     import: processes.filter((p) => p.status === 'active' && p.type === 'import').length,
@@ -64,7 +76,7 @@ export default function AppShell() {
     fretes: fretes.length,
   }
 
-  // ATALHOS DE TECLADO: Ctrl/⌘+K busca rápida, "/" busca na lista,
+  // ATALHOS DE TECLADO: Ctrl/⌘+K busca rápida, "/" filtra a lista,
   // N novo processo (ou novo frete, na aba Fretes), 1 a 4 trocam de aba.
   useEffect(() => {
     const onKey = (e) => {
@@ -80,177 +92,165 @@ export default function AppShell() {
         searchRef.current?.focus()
       } else if (e.key.toLowerCase() === 'n') {
         e.preventDefault()
-        if (activeTabRef.current === 'fretes') setFreteOpen('new')
-        else novoProcesso()
+        novo()
       } else if (['1', '2', '3', '4'].includes(e.key)) {
         setActiveTab(TABS[Number(e.key) - 1].value)
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [novoProcesso])
+  }, [novo])
 
-  const onCreated = (type) => {
-    setActiveTab(type) // mostra a aba onde o processo novo aparece
-    setNewOpen(false)
+  const onScroll = (e) => {
+    const s = e.currentTarget.scrollTop > 44
+    if (s !== scrolled) setScrolled(s)
   }
 
-  const tabOptions = TABS.map((t) => ({
-    value: t.value,
-    label: (
-      <>
-        {t.label}
-        <span className={`ml-0.5 rounded-full px-1.5 text-[11px] tabular-nums ${activeTab === t.value ? 'bg-blue-600/10 text-blue-500' : 'bg-slate-500/10 text-slate-500'}`}>
-          {counts[t.value]}
-        </span>
-      </>
-    ),
-  }))
+  const accountMenu = (
+    <AccountMenu
+      side="bottom"
+      align="end"
+      isDark={isDark}
+      onToggleTheme={toggleTheme}
+      onOpenRegistries={() => setRegistriesOpen(true)}
+      trigger={
+        <button type="button" aria-label="Conta" className="rounded-full p-0.5 transition-opacity hover:opacity-80">
+          <Avatar email={user.email} size="sm" />
+        </button>
+      }
+    />
+  )
 
   return (
-    <div className="flex h-dvh overflow-hidden">
-      {/* MENU LATERAL (desktop) */}
-      <aside className="hidden w-[350px] shrink-0 flex-col border-r border-slate-700/70 bg-navy-800 lg:flex">
-        <div className="flex h-16 items-center justify-between border-b border-slate-700/70 px-5">
-          <div className="flex items-center gap-2.5">
-            <Logo />
-            <div className="leading-tight">
-              <div className="text-[15px] font-bold tracking-tight text-ink">LogiTrack</div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Gestão Logística</div>
-            </div>
-          </div>
-          <IconButton icon={LogOut} label="Sair" onClick={logout} />
-        </div>
-        <div className="custom-scrollbar flex-1 overflow-y-auto px-5 py-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-[13px] font-semibold text-ink">Novo processo</h2>
-            <span className="kbd">N</span>
-          </div>
-          <NewProcessForm uid={user.uid} processes={processes} onCreated={onCreated} />
-        </div>
-      </aside>
+    <div className="flex h-dvh overflow-hidden bg-navy-900">
+      <Sidebar
+        sections={SECTIONS}
+        active={activeTab}
+        counts={counts}
+        onChange={setActiveTab}
+        onSearch={() => setPaletteOpen(true)}
+        isDark={isDark}
+        onToggleTheme={toggleTheme}
+        onOpenRegistries={() => setRegistriesOpen(true)}
+      />
 
-      <main className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-700/70 bg-navy-800/80 px-4 backdrop-blur sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2.5 lg:hidden">
-            <Logo />
-            <span className="text-[15px] font-bold tracking-tight text-ink">LogiTrack</span>
-          </div>
-          <Segmented className="hidden lg:flex" options={tabOptions} value={activeTab} onChange={setActiveTab} />
-
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setPaletteOpen(true)}
-              className="hidden h-9 w-60 items-center gap-2 rounded-[10px] border border-slate-700/80 bg-navy-900/60 px-3 text-sm text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-400 md:flex"
-            >
-              <Search className="size-4" />
-              <span className="flex-1 text-left">Buscar…</span>
-              <span className="kbd">Ctrl K</span>
-            </button>
-            <IconButton icon={Search} label="Buscar" className="md:hidden" onClick={() => setPaletteOpen(true)} />
-            <IconButton icon={Settings} label="Gerenciar cadastros" onClick={() => setRegistriesOpen(true)} />
-            <IconButton icon={isDark ? Sun : Moon} label={isDark ? 'Modo claro' : 'Modo escuro'} onClick={toggleTheme} />
-            <IconButton icon={LogOut} label="Sair" className="lg:hidden" onClick={logout} />
-            <div
-              title={user.email}
-              className="ml-1.5 hidden size-9 items-center justify-center rounded-full bg-blue-600/12 text-sm font-semibold text-blue-500 ring-1 ring-blue-600/20 sm:flex"
-            >
-              {(user.email || '?').charAt(0).toUpperCase()}
+      <main className="relative flex min-w-0 flex-1 flex-col">
+        {/* Barra de ferramentas: ganha material e título compacto ao rolar */}
+        <header
+          className={`absolute inset-x-0 top-0 z-30 flex h-12 items-center gap-2 px-3 pt-[env(safe-area-inset-top)] transition-[background-color,box-shadow] duration-200 sm:px-5 lg:h-14 lg:px-8 ${scrolled ? 'material-thin hairline-b' : ''}`}
+        >
+          <div className="flex flex-1 items-center gap-2" />
+          <motion.h2
+            initial={false}
+            animate={{ opacity: scrolled ? 1 : 0, y: scrolled ? 0 : 6 }}
+            transition={{ duration: 0.18 }}
+            className="pointer-events-none absolute left-1/2 -translate-x-1/2 text-[15px] font-semibold text-ink lg:static lg:order-first lg:translate-x-0"
+          >
+            {tab.label}
+          </motion.h2>
+          <div className="flex flex-1 items-center justify-end gap-1.5">
+            <IconButton icon={Search} label="Buscar" shortcut="Ctrl K" className="lg:hidden" onClick={() => setPaletteOpen(true)} />
+            <div className="hidden lg:block">
+              <Button icon={Plus} onClick={novo}>
+                {isFretes ? 'Novo cliente' : 'Novo processo'}
+              </Button>
             </div>
+            <div className="lg:hidden">{accountMenu}</div>
           </div>
         </header>
 
-        <div className="custom-scrollbar flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-6xl px-4 pb-28 pt-5 sm:px-6 lg:px-8 lg:pb-10 lg:pt-7">
-            {activeTab === 'fretes' ? (
-              <FreteList
-                fretes={fretes}
-                loading={loadingFretes}
-                erro={erroFretes}
-                onOpen={setFreteOpen}
-                onNew={() => setFreteOpen('new')}
-                searchRef={searchRef}
-              />
-            ) : (
-              <ProcessList
-                processes={processes}
-                loading={loading}
-                tab={activeTab}
-                onOpen={setOpenId}
-                searchRef={searchRef}
-                onNew={novoProcesso}
-              />
-            )}
+        <div ref={scrollRef} onScroll={onScroll} className="custom-scrollbar flex-1 overflow-y-auto">
+          <div className="mx-auto w-full max-w-5xl px-4 pb-32 pt-[calc(env(safe-area-inset-top)+3.5rem)] sm:px-6 lg:px-10 lg:pb-12 lg:pt-16">
+            <div className="mb-6">
+              <h1 className="font-display text-[32px] font-bold leading-tight tracking-[-0.025em] text-ink lg:text-[34px]">{tab.label}</h1>
+              <p className="mt-0.5 text-[15px] text-slate-400">{SUBTITULOS[activeTab]}</p>
+            </div>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, transition: { duration: 0.08 } }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+              >
+                {isFretes ? (
+                  <FreteList fretes={fretes} loading={loadingFretes} erro={erroFretes} onOpen={setFreteOpen} onNew={() => setFreteOpen('new')} searchRef={searchRef} />
+                ) : (
+                  <ProcessList processes={processes} loading={loading} tab={activeTab} onOpen={setOpenId} searchRef={searchRef} onNew={novo} />
+                )}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
       </main>
 
-      <BottomNav tabs={TABS} counts={counts} active={activeTab} onChange={setActiveTab} onNew={() => (activeTab === 'fretes' ? setFreteOpen('new') : setNewOpen(true))} />
+      <BottomNav tabs={TABS} counts={counts} active={activeTab} onChange={setActiveTab} onNew={novo} />
 
-      <AnimatePresence>
-        {(freteOpen === 'new' || fretes.some((f) => f.id === freteOpen)) && (
-          <FreteModal
-            key="frete"
-            frete={freteOpen === 'new' ? null : fretes.find((f) => f.id === freteOpen)}
-            fretes={fretes}
-            onClose={() => setFreteOpen(null)}
-            onSaved={setFreteOpen}
-          />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {openProc && <ProcessModal key={openProc.id} proc={openProc} processes={processes} onClose={closeProcess} />}
-      </AnimatePresence>
-      <AnimatePresence>{registriesOpen && <RegistriesModal key="reg" onClose={() => setRegistriesOpen(false)} />}</AnimatePresence>
-      <AnimatePresence>
-        {paletteOpen && (
-          <CommandPalette
-            key="palette"
-            processes={processes}
-            fretes={fretes}
-            onClose={() => setPaletteOpen(false)}
-            onOpenProcess={(id) => {
-              setPaletteOpen(false)
-              setOpenId(id)
-            }}
-            onOpenFrete={(id) => {
-              setPaletteOpen(false)
-              setFreteOpen(id)
-            }}
-            actions={{
-              novo: () => {
+      <Suspense fallback={null}>
+        <AnimatePresence>
+          {openProc && <ProcessModal key={openProc.id} proc={openProc} processes={processes} onClose={closeProcess} />}
+        </AnimatePresence>
+        <AnimatePresence>
+          {(freteOpen === 'new' || fretes.some((f) => f.id === freteOpen)) && (
+            <FreteModal
+              key="frete"
+              frete={freteOpen === 'new' ? null : fretes.find((f) => f.id === freteOpen)}
+              fretes={fretes}
+              onClose={() => setFreteOpen(null)}
+              onSaved={setFreteOpen}
+            />
+          )}
+        </AnimatePresence>
+        <AnimatePresence>
+          {newOpen && (
+            <NewProcessSheet
+              key="new"
+              uid={user.uid}
+              processes={processes}
+              onClose={() => setNewOpen(false)}
+              onCreated={(type) => {
+                setNewOpen(false)
+                setActiveTab(type) // mostra a aba onde o processo novo aparece
+              }}
+            />
+          )}
+        </AnimatePresence>
+        <AnimatePresence>{registriesOpen && <RegistriesModal key="reg" onClose={() => setRegistriesOpen(false)} />}</AnimatePresence>
+        <AnimatePresence>
+          {paletteOpen && (
+            <CommandPalette
+              key="palette"
+              processes={processes}
+              fretes={fretes}
+              onClose={() => setPaletteOpen(false)}
+              onOpenProcess={(id) => {
                 setPaletteOpen(false)
-                setTimeout(novoProcesso, 50)
-              },
-              tema: toggleTheme,
-              cadastros: () => {
+                setOpenId(id)
+              }}
+              onOpenFrete={(id) => {
                 setPaletteOpen(false)
-                setRegistriesOpen(true)
-              },
-              aba: (tab) => {
-                setPaletteOpen(false)
-                setActiveTab(tab)
-              },
-              sair: logout,
-            }}
-          />
-        )}
-      </AnimatePresence>
-      <AnimatePresence>
-        {newOpen && (
-          <Modal key="new" onClose={() => setNewOpen(false)} title="Novo processo" fullscreenMobile size="md">
-            <div className="flex h-14 shrink-0 items-center justify-between border-b border-slate-700/70 px-4">
-              <h2 className="text-base font-semibold text-ink">Novo processo</h2>
-              <IconButton icon={X} label="Fechar" onClick={() => setNewOpen(false)} />
-            </div>
-            <div className="custom-scrollbar flex-1 overflow-y-auto px-4 py-5 pb-10">
-              <NewProcessForm uid={user.uid} processes={processes} onCreated={onCreated} />
-            </div>
-          </Modal>
-        )}
-      </AnimatePresence>
+                setFreteOpen(id)
+              }}
+              actions={{
+                novo: () => {
+                  setPaletteOpen(false)
+                  setTimeout(novo, 60)
+                },
+                tema: toggleTheme,
+                cadastros: () => {
+                  setPaletteOpen(false)
+                  setRegistriesOpen(true)
+                },
+                aba: (t) => {
+                  setPaletteOpen(false)
+                  setActiveTab(t)
+                },
+                sair: logout,
+              }}
+            />
+          )}
+        </AnimatePresence>
+      </Suspense>
     </div>
   )
 }

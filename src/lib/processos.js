@@ -91,10 +91,10 @@ export const mascaraNumeroContainer = (valor) => {
 
 // LEMBRETE DE DEADLINE DRAFT (só exportação)
 export const draftAlertConfig = {
-  aviso:    { box: 'bg-yellow-900/15 border-yellow-500', icon: 'clock', iconColor: 'text-yellow-500', text: 'text-yellow-500', badge: 'bg-yellow-900/10 text-yellow-500 border border-yellow-600/40', border: 'border-l-yellow-500' },
-  atencao:  { box: 'bg-blue-900/10 border-blue-400', icon: 'clock', iconColor: 'text-blue-400', text: 'text-blue-400', badge: 'bg-blue-900/10 text-blue-400 border border-blue-400/40', border: 'border-l-blue-400' },
-  urgente:  { box: 'bg-blue-900/15 border-blue-600', icon: 'alert', iconColor: 'text-blue-600', text: 'text-blue-600', badge: 'bg-blue-900/15 text-blue-600 border border-blue-600/50', border: 'border-l-blue-600' },
-  atrasado: { box: 'bg-blue-900/20 border-blue-900', icon: 'alert', iconColor: 'text-blue-900', text: 'text-blue-900', badge: 'bg-blue-900/20 text-blue-900 border border-blue-900/50', border: 'border-l-blue-900' },
+  aviso:    { icon: 'clock', iconColor: 'text-yellow-500', text: 'text-yellow-500', soft: 'bg-yellow-500/10', badge: 'bg-yellow-500/12 text-yellow-500', dot: 'bg-yellow-500' },
+  atencao:  { icon: 'clock', iconColor: 'text-blue-500', text: 'text-blue-500', soft: 'bg-blue-500/8', badge: 'bg-blue-500/10 text-blue-500', dot: 'bg-blue-400' },
+  urgente:  { icon: 'alert', iconColor: 'text-red-500', text: 'text-red-500', soft: 'bg-red-500/10', badge: 'bg-red-500/12 text-red-500', dot: 'bg-red-500' },
+  atrasado: { icon: 'alert', iconColor: 'text-red-500', text: 'text-red-500', soft: 'bg-red-500/14', badge: 'bg-red-500 text-white', dot: 'bg-red-500' },
 }
 
 // Com Numeração, Tara e Lacre preenchidos o Draft já foi cumprido.
@@ -182,3 +182,14 @@ export const filtrarProcessos = (processes, tab, searchQuery) => {
 
   return filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
 }
+
+export const DOC_TIPOS = [
+  { value: 'DI', label: 'DI' },
+  { value: 'DTA', label: 'DTA' },
+  { value: 'DUIMP', label: 'DUIMP' },
+]
+
+export const DESTINOS = [
+  { value: 'devolucao', label: 'Devolução' },
+  { value: 'baixa', label: 'Baixa' },
+]

@@ -39,7 +39,7 @@ export function ToastProvider({ children }) {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.15 } }}
                 transition={{ type: 'spring', stiffness: 500, damping: 34 }}
-                className="pointer-events-auto flex max-w-sm items-center gap-2.5 rounded-2xl border border-slate-700/80 bg-navy-800/95 px-4 py-3 text-sm font-medium text-ink shadow-lift backdrop-blur"
+                className="pointer-events-auto flex max-w-sm items-center gap-2.5 rounded-full bg-navy-800/90 py-2.5 pl-3.5 pr-4 text-[14px] font-medium text-ink shadow-lift ring-[0.5px] ring-black/10 backdrop-blur-xl dark:ring-white/10"
               >
                 <Icon className={`size-[18px] shrink-0 ${cfg.color}`} strokeWidth={2.25} />
                 <span>{message}</span>

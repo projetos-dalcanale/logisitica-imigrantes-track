@@ -1,6 +1,7 @@
 import { addDoc, collection, deleteDoc, doc, updateDoc } from 'firebase/firestore'
 import { db } from './firebase'
 import { trackSave } from './saveStatus'
+import { formatarNumero } from './numeros'
 
 // TABELA DE FRETES POR CLIENTE (coleção "fretes", compartilhada com a equipe).
 // Cada documento: { cliente, campos: [{ id, label, tipo, valor, custom? }],
@@ -38,10 +39,7 @@ export const novaFicha = () => ({
   observacoes: '',
 })
 
-export const formatarValor = (valor, tipo = 'moeda') => {
-  const casas = TIPOS_CAMPO[tipo]?.casas ?? 2
-  return Number(valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas })
-}
+export const formatarValor = (valor, tipo = 'moeda') => formatarNumero(valor, TIPOS_CAMPO[tipo]?.casas ?? 2)
 
 const fretesRef = collection(db, 'fretes')
 

@@ -3,7 +3,8 @@ import Combobox from './ui/Combobox'
 
 // Seleção ligada a uma lista compartilhada (terminal, armador, tipo), com
 // busca e criação de item novo direto do texto digitado.
-export default function RegistrySelect({ cat, value = '', onChange, disabled, size }) {
+// `variant="plain"`: sem moldura, para usar dentro das linhas das listas.
+export default function RegistrySelect({ cat, value = '', onChange, disabled, size, variant, placeholder }) {
   const { lists, adicionar } = useRegistries()
   const cfg = REGISTRY_CONFIG[cat]
   return (
@@ -16,6 +17,8 @@ export default function RegistrySelect({ cat, value = '', onChange, disabled, si
       createLabel={`Adicionar ${cfg.novo}`}
       disabled={disabled}
       size={size}
+      variant={variant}
+      placeholder={placeholder}
     />
   )
 }

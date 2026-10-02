@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Pencil, Plus, Search, Trash2, X } from 'lucide-react'
+import { CirclePlus, Pencil, Trash2 } from 'lucide-react'
 import { REGISTRY_CONFIG, useRegistries } from '../contexts/RegistriesContext'
 import { useToast } from '../contexts/ToastContext'
 import { useDialog } from '../contexts/DialogContext'
-import Modal from './ui/Modal'
+import Modal, { SheetHeader } from './ui/Modal'
 import Button from './ui/Button'
 import Segmented from './ui/Segmented'
+import SearchField from './ui/SearchField'
+import { Group } from './ui/List'
 import { IconButton } from './ui/Tooltip'
 
 const TABS = [
@@ -16,8 +18,8 @@ const TABS = [
   { value: 'tipo', label: 'Tipo' },
 ]
 
-// GERENCIAR CADASTROS: adicionar, renomear e excluir itens das listas
-// compartilhadas. Acompanha em tempo real edições de outras pessoas.
+// CADASTROS: adicionar, renomear e excluir itens das listas compartilhadas.
+// Acompanha em tempo real edições de outras pessoas.
 export default function RegistriesModal({ onClose }) {
   const { lists, adicionar, writeList, sortPt } = useRegistries()
   const { confirm, prompt } = useDialog()
@@ -56,54 +58,39 @@ export default function RegistriesModal({ onClose }) {
   }
 
   return (
-    <Modal onClose={onClose} title="Gerenciar cadastros" size="md" fullscreenMobile>
-      <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-700/70 px-5">
-        <div>
-          <h2 className="text-base font-semibold text-ink">Cadastros</h2>
-          <p className="text-xs text-slate-500">Listas compartilhadas com toda a equipe</p>
-        </div>
-        <IconButton icon={X} label="Fechar" shortcut="Esc" onClick={onClose} />
-      </div>
-      <div className="shrink-0 space-y-3 px-5 pt-4">
+    <Modal onClose={onClose} title="Cadastros" size="md" sheet grouped>
+      <SheetHeader title="Cadastros" subtitle="Compartilhados com toda a equipe" right={<Button variant="plain" className="px-1 font-semibold" onClick={onClose}>OK</Button>} />
+      <div className="shrink-0 space-y-3 px-4 pb-3 sm:px-6">
         <Segmented size="sm" options={TABS} value={cat} onChange={(c) => (setCat(c), setFiltro(''))} />
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
-          <input value={filtro} onChange={(e) => setFiltro(e.target.value)} placeholder={`Filtrar ${cfg.label.toLowerCase()}…`} className="field field-sm pl-9" />
-        </div>
+        <SearchField value={filtro} onChange={setFiltro} placeholder={`Buscar em ${cfg.label.toLowerCase()}`} />
       </div>
-      <div className="custom-scrollbar min-h-48 flex-1 overflow-y-auto px-5 py-3">
-        {visiveis.length === 0 ? (
-          <p className="py-10 text-center text-sm text-slate-500">
-            {lista.length ? 'Nenhum item encontrado.' : `Nenhum item em "${cfg.label}" ainda.`}
-          </p>
-        ) : (
-          <ul className="divide-y divide-slate-700/50 overflow-hidden rounded-xl border border-slate-700/60">
-            <AnimatePresence initial={false}>
-              {visiveis.map((nome) => (
-                <motion.li
-                  key={nome}
-                  layout
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="group flex items-center justify-between gap-2 bg-navy-800 px-3.5 py-2"
-                >
-                  <span className="truncate text-sm text-ink">{nome}</span>
-                  <div className="flex shrink-0 items-center gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100">
-                    <IconButton icon={Pencil} size="sm" label="Renomear" onClick={() => editar(nome)} />
-                    <IconButton icon={Trash2} size="sm" label="Excluir" className="hover:text-red-400! hover:bg-red-400/10!" onClick={() => excluir(nome)} />
-                  </div>
-                </motion.li>
-              ))}
-            </AnimatePresence>
-          </ul>
-        )}
-        <p className="mt-3 text-[11px] leading-relaxed text-slate-500">
-          Renomear ou excluir não altera processos já criados — eles mantêm o nome antigo, marcado como "não cadastrado".
-        </p>
-      </div>
-      <div className="shrink-0 border-t border-slate-700/70 px-5 py-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))]">
-        <Button icon={Plus} className="w-full" onClick={adicionarNovo}>Adicionar {cfg.novo}</Button>
+      <div className="custom-scrollbar min-h-48 flex-1 overflow-y-auto px-4 pb-10 sm:px-6">
+        <Group
+          footer="Renomear ou excluir não altera processos já criados — eles mantêm o nome antigo, marcado como “não cadastrado”."
+        >
+          <AnimatePresence initial={false}>
+            {visiveis.map((nome) => (
+              <motion.div key={nome} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, height: 0 }} className="group flex min-h-11 items-center gap-2 px-4">
+                <span className="flex-1 truncate text-[15px] text-ink">{nome}</span>
+                <div className="flex shrink-0 items-center opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100">
+                  <IconButton icon={Pencil} size="sm" label="Renomear" onClick={() => editar(nome)} />
+                  <IconButton icon={Trash2} size="sm" label="Excluir" className="text-red-500!" onClick={() => excluir(nome)} />
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          {visiveis.length === 0 && (
+            <div className="px-4 py-3 text-[15px] text-slate-500">{lista.length ? 'Nenhum item encontrado.' : `Nenhum item em “${cfg.label}” ainda.`}</div>
+          )}
+          <button
+            type="button"
+            onClick={adicionarNovo}
+            className="flex min-h-11 w-full items-center gap-3 px-4 text-left text-[15px] text-blue-500 transition-colors hover:bg-navy-700/40"
+          >
+            <CirclePlus className="size-5 fill-emerald-500 text-white dark:text-navy-800" strokeWidth={2} />
+            Adicionar {cfg.novo}
+          </button>
+        </Group>
       </div>
     </Modal>
   )

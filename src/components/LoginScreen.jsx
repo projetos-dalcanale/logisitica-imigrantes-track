@@ -32,18 +32,16 @@ export default function LoginScreen() {
 
   return (
     <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-navy-900 px-4">
-      <div className="pointer-events-none absolute -left-32 -top-40 size-[28rem] rounded-full bg-blue-600/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-40 -right-32 size-[28rem] rounded-full bg-blue-600/10 blur-3xl" />
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 260, damping: 26 }}
-        className="card relative w-full max-w-sm p-8"
+        className="relative w-full max-w-[360px]"
       >
         <div className="mb-8 flex flex-col items-center text-center">
           <Logo size="lg" />
-          <h1 className="mt-4 text-xl font-bold tracking-tight text-ink">LogiTrack</h1>
-          <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Gestão Logística</p>
+          <h1 className="mt-5 font-display text-[28px] font-bold tracking-[-0.025em] text-ink">LogiTrack</h1>
+          <p className="mt-1 text-[15px] text-slate-400">Entre com sua conta da Transportes Imigrantes</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

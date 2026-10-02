@@ -26,7 +26,7 @@ export default function EmptyState({ title, description, search, action }) {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col items-center rounded-[20px] border border-dashed border-slate-600/70 bg-navy-800/50 px-6 py-14 text-center"
+      className="card flex flex-col items-center px-6 py-14 text-center"
     >
       <ContainerArt search={search} />
       <h3 className="mt-5 text-[15px] font-semibold text-ink">{title}</h3>

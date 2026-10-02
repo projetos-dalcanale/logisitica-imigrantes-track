@@ -1,8 +1,8 @@
 import { motion } from 'motion/react'
 
 const TONES = {
-  brand: 'bg-blue-600 border-blue-600',
-  success: 'bg-emerald-600 border-emerald-600',
+  brand: 'bg-blue-500 border-blue-500',
+  success: 'bg-emerald-500 border-emerald-500',
 }
 
 // Caixa de seleção própria, com o "check" sendo desenhado ao marcar.
@@ -18,9 +18,9 @@ export default function Checkbox({ checked, onChange, disabled, tone = 'brand', 
         e.stopPropagation()
         onChange(!checked)
       }}
-      className={`relative inline-flex size-[18px] shrink-0 items-center justify-center rounded-[6px] border-[1.5px] transition-colors duration-150 disabled:opacity-50 ${checked ? TONES[tone] : 'border-slate-500/60 bg-navy-800 hover:border-slate-400'} ${className}`}
+      className={`relative inline-flex size-[21px] shrink-0 items-center justify-center rounded-full border-[1.5px] transition-colors duration-150 disabled:opacity-50 ${checked ? TONES[tone] : 'border-slate-500/50 bg-transparent hover:border-slate-400'} ${className}`}
     >
-      <svg viewBox="0 0 16 16" className="size-3 text-white" fill="none">
+      <svg viewBox="0 0 16 16" className="size-3.5 text-white" fill="none">
         <motion.path
           d="M3.5 8.5l3 3 6-7"
           stroke="currentColor"
