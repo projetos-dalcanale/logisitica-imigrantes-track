@@ -174,7 +174,7 @@ export const filtrarProcessos = (processes, tab, searchQuery) => {
         proc.importador, proc.exportador,
         proc.documentoNumero, proc.documento, proc.booking, proc.referencia, proc.navio,
         proc.observacoes,
-        ...(proc.containers || []).map((c) => c.numero),
+        ...(proc.containers || []).flatMap((c) => [c.numero, c.motorista, c.placas]),
       ].filter(Boolean).join(' ').toLowerCase()
       return campos.includes(q)
     })
@@ -193,3 +193,23 @@ export const DESTINOS = [
   { value: 'devolucao', label: 'Devolução' },
   { value: 'baixa', label: 'Baixa' },
 ]
+
+// MOTORISTA E PLACAS POR CONTÊINER. Com um contêiner só, valem os campos do
+// processo. Com mais de um, cada contêiner pode ter o seu motorista; quem
+// ainda não tem usa o do processo (dados antigos continuam aparecendo).
+export const transportePorContainer = (proc) => {
+  const cts = proc.containers || []
+  if (cts.length <= 1) {
+    const ct = cts[0] || {}
+    return [{ ctId: ct.id, numero: ct.numero || '', motorista: proc.motorista || ct.motorista || '', placas: proc.placas || ct.placas || '' }]
+  }
+  return cts.map((ct) => ({
+    ctId: ct.id,
+    numero: ct.numero || '',
+    motorista: ct.motorista || proc.motorista || '',
+    placas: ct.placas || proc.placas || '',
+  }))
+}
+
+// Valores distintos e preenchidos (ex: os motoristas de um processo).
+export const distintos = (valores) => [...new Set(valores.map((v) => (v || '').trim()).filter(Boolean))]

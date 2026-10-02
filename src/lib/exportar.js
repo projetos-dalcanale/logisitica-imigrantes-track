@@ -1,4 +1,4 @@
-import { formatarDataHora, stepsChecklistImport } from './processos'
+import { distintos, formatarDataHora, stepsChecklistImport, transportePorContainer } from './processos'
 
 // SEGURANÇA: o PDF é montado como HTML, então todo texto digitado é escapado.
 const escapeHtml = (value) => {
@@ -15,6 +15,7 @@ const escapeHtml = (value) => {
 // do processo, colocada na área #print-area; o navegador abre a impressão e a
 // pessoa escolhe "Salvar como PDF". Não precisa de biblioteca nem internet.
 export const exportarProcessoPDF = (proc) => {
+  const transporte = transportePorContainer(proc)
   const isImport = proc.type === 'import'
   const titulo = isImport ? proc.importador || 'Processo de Importação' : proc.exportador || 'Processo de Exportação'
   const docLabel = isImport
@@ -30,15 +31,20 @@ export const exportarProcessoPDF = (proc) => {
     </div>
     <table style="width:100%; border-collapse:collapse; font-size:12px; margin-bottom:18px;">
       <tr><td style="padding:4px 8px 4px 0; color:#666; width:140px;">Armador</td><td style="padding:4px 0; font-weight:bold;">${escapeHtml(proc.armador) || '—'}</td></tr>
-      <tr><td style="padding:4px 8px 4px 0; color:#666;">Motorista</td><td style="padding:4px 0;">${escapeHtml(proc.motorista) || '—'}</td></tr>
-      <tr><td style="padding:4px 8px 4px 0; color:#666;">Placas</td><td style="padding:4px 0;">${escapeHtml(proc.placas) || '—'}</td></tr>
+      <tr><td style="padding:4px 8px 4px 0; color:#666;">Motorista</td><td style="padding:4px 0;">${escapeHtml(distintos(transporte.map((t) => t.motorista)).join(', ')) || '—'}</td></tr>
+      <tr><td style="padding:4px 8px 4px 0; color:#666;">Placas</td><td style="padding:4px 0;">${escapeHtml(distintos(transporte.map((t) => t.placas)).join(', ')) || '—'}</td></tr>
       ${isImport ? `<tr><td style="padding:4px 8px 4px 0; color:#666;">Destino do Contêiner</td><td style="padding:4px 0;">${proc.finalizacaoVazio === 'baixa' ? 'Baixa de Contêiner (sem devolução)' : 'Devolução de Vazio'}</td></tr>` : ''}
       ${proc.observacoes ? `<tr><td style="padding:4px 8px 4px 0; color:#666; vertical-align:top;">Observações</td><td style="padding:4px 0;">${escapeHtml(proc.observacoes)}</td></tr>` : ''}
     </table>`
 
+  const multi = (proc.containers || []).length > 1
   ;(proc.containers || []).forEach((ct, index) => {
     html += `<div style="border:1px solid #ccc; border-radius:6px; padding:12px 14px; margin-bottom:12px; break-inside: avoid;">`
     html += `<div style="font-size:12px; font-weight:bold; margin-bottom:8px;">Contêiner ${index + 1} — ${escapeHtml(ct.numero) || 'Sem número'} ${ct.tipo ? '(' + escapeHtml(ct.tipo) + ')' : ''}</div>`
+    if (multi) {
+      const t = transporte[index]
+      html += `<div style="font-size:11px; color:#444; margin-bottom:8px;">Motorista: ${escapeHtml(t.motorista) || '—'} &nbsp;|&nbsp; Placas: ${escapeHtml(t.placas) || '—'}</div>`
+    }
     if (!isImport) {
       html += `<div style="font-size:11px; color:#444; margin-bottom:8px;">Tara: ${escapeHtml(ct.tara) || '—'} &nbsp;|&nbsp; Lacre: ${escapeHtml(ct.lacre) || '—'}</div>`
     }
@@ -92,12 +98,13 @@ export const exportarProcessosCSV = (lista, tab) => {
     const isImport = proc.type === 'import'
     const documento = isImport ? [proc.documentoTipo, proc.documentoNumero].filter(Boolean).join(' ') : proc.booking || ''
     const containersValidos = (proc.containers || []).filter((c) => c.numero)
+    const transporte = transportePorContainer(proc)
     return [
       isImport ? 'Importação' : 'Exportação',
       proc.status === 'archived' ? 'Arquivado' : 'Ativo',
       proc.armador || '',
-      proc.motorista || '',
-      proc.placas || '',
+      distintos(transporte.map((t) => t.motorista)).join(' | '),
+      distintos(transporte.map((t) => t.placas)).join(' | '),
       isImport ? proc.importador || '' : proc.exportador || '',
       documento,
       proc.referencia || '',
@@ -105,7 +112,16 @@ export const exportarProcessosCSV = (lista, tab) => {
       isImport ? proc.termCarga || '' : '',
       isImport ? proc.termVazio || '' : '',
       isImport ? (proc.finalizacaoVazio === 'baixa' ? 'Baixa de Contêiner' : 'Devolução de Vazio') : '',
-      containersValidos.map((c) => (c.tipo ? `${c.numero} (${c.tipo})` : c.numero)).join(' | '),
+      (proc.containers || [])
+        .map((c, i) => {
+          if (!c.numero) return null
+          const base = c.tipo ? `${c.numero} (${c.tipo})` : c.numero
+          // Com vários contêineres, mostra o motorista de cada um.
+          const m = transporte.length > 1 && transporte[i].motorista
+          return m ? `${base} - ${m}` : base
+        })
+        .filter(Boolean)
+        .join(' | '),
       containersValidos.length,
       proc.observacoes || '',
       formatarDataHora(proc.createdAt),
