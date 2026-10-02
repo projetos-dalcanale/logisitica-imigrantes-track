@@ -25,7 +25,7 @@ export const TABS = [
   { value: 'import', label: 'Importações', short: 'Importação', icon: ImportIcon },
   { value: 'export', label: 'Exportações', short: 'Exportação', icon: ExportIcon },
   { value: 'archive', label: 'Arquivados', short: 'Arquivados', icon: Archive },
-  { value: 'fretes', label: 'CTE', short: 'CTE', icon: ReceiptText },
+  { value: 'fretes', label: 'Fretes para CTE', short: 'Fretes CTE', icon: ReceiptText },
 ]
 const SECTIONS = [
   { title: 'Processos', tabs: TABS.slice(0, 3) },
