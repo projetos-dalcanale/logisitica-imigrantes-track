@@ -1,6 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Archive, ArrowDownToLine, ArrowUpFromLine, Plus, ReceiptText, Search } from 'lucide-react'
+import { Archive, Plus, ReceiptText, Search } from 'lucide-react'
+import { ExportIcon, ImportIcon } from './ui/icons'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../hooks/useTheme'
 import { useProcesses } from '../hooks/useProcesses'
@@ -21,8 +22,8 @@ const RegistriesModal = lazy(() => import('./RegistriesModal'))
 const CommandPalette = lazy(() => import('./CommandPalette'))
 
 export const TABS = [
-  { value: 'import', label: 'Importações', short: 'Importação', icon: ArrowDownToLine },
-  { value: 'export', label: 'Exportações', short: 'Exportação', icon: ArrowUpFromLine },
+  { value: 'import', label: 'Importações', short: 'Importação', icon: ImportIcon },
+  { value: 'export', label: 'Exportações', short: 'Exportação', icon: ExportIcon },
   { value: 'archive', label: 'Arquivados', short: 'Arquivados', icon: Archive },
   { value: 'fretes', label: 'Fretes', short: 'Fretes', icon: ReceiptText },
 ]

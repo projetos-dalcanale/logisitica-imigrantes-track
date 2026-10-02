@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowDownToLine, ArrowUpFromLine, CircleMinus, CirclePlus } from 'lucide-react'
+import { CircleMinus, CirclePlus } from 'lucide-react'
+import { ExportIcon, ImportIcon } from './ui/icons'
 import { useToast } from '../contexts/ToastContext'
 import { useDialog } from '../contexts/DialogContext'
 import { criarProcesso, novoContainer, numeroContainerDuplicado } from '../lib/processActions'
@@ -119,8 +120,8 @@ export default function NewProcessSheet({ uid, processes, onClose, onCreated }) 
         <div className="custom-scrollbar flex-1 space-y-6 overflow-y-auto px-4 pb-10 pt-2 sm:px-5">
           <Segmented
             options={[
-              { value: 'import', label: 'Importação', icon: ArrowDownToLine },
-              { value: 'export', label: 'Exportação', icon: ArrowUpFromLine },
+              { value: 'import', label: 'Importação', icon: ImportIcon },
+              { value: 'export', label: 'Exportação', icon: ExportIcon },
             ]}
             value={type}
             onChange={(t) => (setType(t), setUnidades([novaUnidade()]))}
