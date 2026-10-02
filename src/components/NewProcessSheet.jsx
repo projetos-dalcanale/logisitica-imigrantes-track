@@ -70,7 +70,7 @@ export default function NewProcessSheet({ uid, processes, onClose, onCreated }) 
             documentoTipo: form.documentoTipo,
             documentoNumero: form.documentoNumero,
             termCarga: form.termCarga,
-            termVazio: form.termVazio,
+            termVazio: form.finalizacaoVazio === 'baixa' ? '' : form.termVazio,
             finalizacaoVazio: form.finalizacaoVazio || 'devolucao',
           }
         : { exportador: form.exportador, referencia: form.referencia, booking: form.booking, navio: form.navio }),
@@ -172,10 +172,17 @@ export default function NewProcessSheet({ uid, processes, onClose, onCreated }) 
                 {isImport && (
                   <>
                     <Row label="Carregamento"><RegistrySelect variant="plain" cat="cheio" value={form.termCarga} onChange={set('termCarga')} placeholder="Terminal" /></Row>
-                    <Row label="Vazio"><RegistrySelect variant="plain" cat="vazio" value={form.termVazio} onChange={set('termVazio')} placeholder="Terminal" /></Row>
                     <Row label="Destino">
                       <Segmented size="sm" className="w-56" options={DESTINOS} value={form.finalizacaoVazio} onChange={set('finalizacaoVazio')} />
                     </Row>
+                    {/* Na baixa o contêiner não volta, então não há terminal de vazio. */}
+                    <AnimatePresence initial={false}>
+                      {form.finalizacaoVazio !== 'baixa' && (
+                        <motion.div key="vazio" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                          <Row label="Vazio"><RegistrySelect variant="plain" cat="vazio" value={form.termVazio} onChange={set('termVazio')} placeholder="Terminal" /></Row>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </>
                 )}
               </Group>

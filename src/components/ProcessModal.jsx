@@ -63,7 +63,8 @@ function DetalhesGroup({ proc, archived }) {
   const salvar = async () => {
     setSaving(true)
     try {
-      await atualizarProcesso(proc.id, form)
+      // Na baixa não há devolução, então o terminal de vazio é apagado.
+      await atualizarProcesso(proc.id, form.finalizacaoVazio === 'baixa' ? { ...form, termVazio: '' } : form)
       setEditando(false)
     } finally {
       setSaving(false)
@@ -88,8 +89,8 @@ function DetalhesGroup({ proc, archived }) {
             <Row label={docLabel}>{valor(proc.documentoTipo ? proc.documentoNumero : proc.documento)}</Row>
             <Row label="Armador">{valor(proc.armador)}</Row>
             <Row label="Carregamento">{valor(proc.termCarga)}</Row>
-            <Row label="Vazio">{valor(proc.termVazio)}</Row>
             <Row label="Destino">{valor(proc.finalizacaoVazio === 'baixa' ? 'Baixa (sem devolução)' : 'Devolução de vazio')}</Row>
+            {proc.finalizacaoVazio !== 'baixa' && <Row label="Vazio">{valor(proc.termVazio)}</Row>}
           </>
         ) : (
           <>
@@ -111,8 +112,10 @@ function DetalhesGroup({ proc, archived }) {
           <Row label="Número">{input('documentoNumero', 'Nº do documento')}</Row>
           <Row label="Armador"><RegistrySelect variant="plain" cat="armador" value={form.armador} onChange={set('armador')} /></Row>
           <Row label="Carregamento"><RegistrySelect variant="plain" cat="cheio" value={form.termCarga} onChange={set('termCarga')} placeholder="Terminal" /></Row>
-          <Row label="Vazio"><RegistrySelect variant="plain" cat="vazio" value={form.termVazio} onChange={set('termVazio')} placeholder="Terminal" /></Row>
           <Row label="Destino"><Segmented size="sm" className="w-56" options={DESTINOS} value={form.finalizacaoVazio} onChange={set('finalizacaoVazio')} /></Row>
+          {form.finalizacaoVazio !== 'baixa' && (
+            <Row label="Vazio"><RegistrySelect variant="plain" cat="vazio" value={form.termVazio} onChange={set('termVazio')} placeholder="Terminal" /></Row>
+          )}
         </>
       ) : (
         <>
