@@ -110,7 +110,7 @@ export const exportarProcessosCSV = (lista, tab) => {
       proc.referencia || '',
       proc.navio || '',
       isImport ? proc.termCarga || '' : '',
-      isImport ? proc.termVazio || '' : '',
+      isImport && proc.finalizacaoVazio !== 'baixa' ? proc.termVazio || '' : '',
       isImport ? (proc.finalizacaoVazio === 'baixa' ? 'Baixa de Contêiner' : 'Devolução de Vazio') : '',
       (proc.containers || [])
         .map((c, i) => {
