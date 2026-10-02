@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Archive, ArchiveRestore, CirclePlus, FileText, Trash2 } from 'lucide-react'
+import { Archive, ArchiveRestore, CirclePlus, FileText } from 'lucide-react'
 import { ExportIcon, ImportIcon } from './ui/icons'
 import { useToast } from '../contexts/ToastContext'
 import { useDialog } from '../contexts/DialogContext'
@@ -30,6 +30,7 @@ import SaveIndicator from './SaveIndicator'
 import { DraftIcon } from './ProcessCard'
 import Modal, { SheetHeader } from './ui/Modal'
 import Button from './ui/Button'
+import DeleteButton from './ui/DeleteButton'
 import Checkbox from './ui/Checkbox'
 import DateTimeField from './ui/DateTimeField'
 import Segmented from './ui/Segmented'
@@ -275,22 +276,19 @@ export default function ProcessModal({ proc, processes, onClose }) {
     showToast(arquivar ? 'Processo arquivado.' : 'Processo restaurado para Ativos.')
   }
 
-  const excluir = async () => {
-    const ok = await confirm({
-      title: 'Excluir processo?',
-      message: `"${title}" será excluído permanentemente, com todos os contêineres. Essa ação não pode ser desfeita.`,
-      confirmLabel: 'Excluir',
-      danger: true,
-    })
-    if (!ok) return
-    try {
-      await excluirProcesso(proc.id)
-      onClose()
-      showToast('Processo excluído.')
-    } catch (error) {
-      console.error('Erro ao excluir:', error)
-      showToast('Não foi possível excluir. Verifique as regras de segurança do Firestore.', 'error')
-    }
+  // A confirmação acontece no próprio botão (lixeira → ✓/✕). Espera o check
+  // aparecer antes de excluir, senão a ficha fecha antes da animação.
+  const excluir = () => {
+    setTimeout(async () => {
+      try {
+        await excluirProcesso(proc.id)
+        onClose()
+        showToast('Processo excluído.')
+      } catch (error) {
+        console.error('Erro ao excluir:', error)
+        showToast('Não foi possível excluir. Verifique as regras de segurança do Firestore.', 'error')
+      }
+    }, 700)
   }
 
   return (
@@ -376,9 +374,7 @@ export default function ProcessModal({ proc, processes, onClose }) {
       </div>
 
       <footer className="hairline-t flex shrink-0 items-center gap-2 bg-navy-900/80 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:px-6">
-        <Button variant="danger" icon={Trash2} onClick={excluir} aria-label="Excluir processo">
-          <span className="hidden sm:inline">Excluir</span>
-        </Button>
+        <DeleteButton label="Excluir processo" onConfirm={excluir} />
         <div className="ml-auto flex gap-2">
           <Button variant="gray" icon={FileText} onClick={() => exportarProcessoPDF(proc)}>PDF</Button>
           {archived ? (
