@@ -1,5 +1,6 @@
-import { motion } from 'motion/react'
-import { ChevronsUpDown, Search } from 'lucide-react'
+import { useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
+import { ChevronDown, ChevronsUpDown, Search } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import AccountMenu, { Avatar } from './AccountMenu'
 import Logo from './Logo'
@@ -31,6 +32,8 @@ function NavItem({ tab, active, count, onClick, shortcut }) {
 // seções, busca e conta no rodapé. Só aparece no desktop.
 export default function Sidebar({ sections, active, counts, onChange, onSearch, isDark, onToggleTheme, onOpenRegistries }) {
   const { user } = useAuth()
+  const [fechadas, setFechadas] = useState({})
+  const alternar = (titulo) => setFechadas((f) => ({ ...f, [titulo]: !f[titulo] }))
   const atalho = Object.fromEntries(sections.flatMap((s) => s.tabs).map((t, i) => [t.value, i + 1]))
   return (
     <aside className="material hairline-r hidden w-[248px] shrink-0 flex-col lg:flex">
@@ -55,16 +58,37 @@ export default function Sidebar({ sections, active, counts, onChange, onSearch, 
       </div>
 
       <nav className="custom-scrollbar flex-1 space-y-5 overflow-y-auto px-3 pt-2">
-        {sections.map((section) => (
-          <div key={section.title}>
-            <div className="mb-1 px-2.5 text-[11px] font-semibold text-slate-500">{section.title}</div>
-            <div className="space-y-0.5">
-              {section.tabs.map((tab) => (
-                <NavItem key={tab.value} tab={tab} shortcut={atalho[tab.value]} active={tab.value === active} count={counts[tab.value]} onClick={() => onChange(tab.value)} />
-              ))}
+        {sections.map((section) => {
+          const aberta = !fechadas[section.title]
+          return (
+            <div key={section.title}>
+              <button
+                type="button"
+                onClick={() => alternar(section.title)}
+                aria-expanded={aberta}
+                className="mb-1 flex w-full items-center gap-1 rounded-md px-2.5 py-0.5 text-left text-[11px] font-semibold text-slate-500 transition-colors hover:text-slate-300"
+              >
+                <span className="flex-1">{section.title}</span>
+                <ChevronDown className={`size-3.5 transition-transform duration-200 ${aberta ? '' : '-rotate-90'}`} strokeWidth={2.4} />
+              </button>
+              <AnimatePresence initial={false}>
+                {aberta && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                    className="space-y-0.5 overflow-hidden"
+                  >
+                    {section.tabs.map((tab) => (
+                      <NavItem key={tab.value} tab={tab} shortcut={atalho[tab.value]} active={tab.value === active} count={counts[tab.value]} onClick={() => onChange(tab.value)} />
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </nav>
 
       <div className="p-3">
