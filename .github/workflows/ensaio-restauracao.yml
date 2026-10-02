@@ -36,7 +36,7 @@ jobs:
           ID=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow backup.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId')
           [ -n "$ID" ] || { echo "::error::Nenhum backup bem-sucedido encontrado."; exit 1; }
           gh run download "$ID" --repo "$GITHUB_REPOSITORY" --dir baixado
-          ARQ=$(find baixado -name '*.json.enc' | head -1)
+          ARQ=$(find baixado -type f -name '*.json.enc' | head -1)
           echo "Backup: $ARQ (execução $ID)"
           echo "ARQ=$ARQ" >> "$GITHUB_ENV"
 
