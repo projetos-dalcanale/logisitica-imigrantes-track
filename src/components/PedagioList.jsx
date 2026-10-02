@@ -5,6 +5,13 @@ import { formatarNumero } from '../lib/numeros'
 import EmptyState from './ui/EmptyState'
 import Button from './ui/Button'
 import SearchField from './ui/SearchField'
+import Segmented from './ui/Segmented'
+
+const FILTROS = [
+  { value: 'todas', label: 'Todas' },
+  { value: 'ida', label: 'Somente ida' },
+  { value: 'idaVolta', label: 'Ida e volta' },
+]
 
 function PedagioRow({ rota, onOpen }) {
   const Seta = rota.idaVolta ? ArrowLeftRight : ArrowRight
@@ -38,7 +45,14 @@ function PedagioRow({ rota, onOpen }) {
 export default function PedagioList({ pedagios, loading, erro, onOpen, onNew, searchRef }) {
   const [busca, setBusca] = useState('')
   const termo = busca.toLowerCase().trim()
-  const visiveis = termo ? pedagios.filter((p) => [p.nome, p.origem, ...(p.pontos || []), p.destino].join(' ').toLowerCase().includes(termo)) : pedagios
+  const [trajeto, setTrajeto] = useState('todas') // 'todas' | 'ida' | 'idaVolta'
+  const filtrando = Boolean(termo) || trajeto !== 'todas'
+  const visiveis = pedagios.filter(
+    (p) =>
+      (trajeto === 'todas' || Boolean(p.idaVolta) === (trajeto === 'idaVolta')) &&
+      (!termo || [p.nome, p.origem, ...(p.pontos || []), p.destino].join(' ').toLowerCase().includes(termo))
+  )
+  const limpar = () => (setBusca(''), setTrajeto('todas'))
 
   if (erro === 'permission-denied') {
     return (
@@ -54,7 +68,8 @@ export default function PedagioList({ pedagios, loading, erro, onOpen, onNew, se
 
   return (
     <>
-      <SearchField inputRef={searchRef} value={busca} onChange={setBusca} placeholder="Buscar rota, origem ou destino" hint="/" className="mb-5" />
+      <SearchField inputRef={searchRef} value={busca} onChange={setBusca} placeholder="Buscar rota, origem ou destino" hint="/" className="mb-3" />
+      <Segmented className="mb-5 max-w-md" options={FILTROS} value={trajeto} onChange={setTrajeto} />
 
       {loading ? (
         <div className="card divide-y divide-slate-700/80 overflow-hidden">
@@ -68,8 +83,8 @@ export default function PedagioList({ pedagios, loading, erro, onOpen, onNew, se
           ))}
         </div>
       ) : visiveis.length === 0 ? (
-        termo ? (
-          <EmptyState search title="Nenhuma rota encontrada" description={`Nada encontrado para “${busca}”.`} action={<Button variant="gray" size="sm" icon={X} onClick={() => setBusca('')}>Limpar busca</Button>} />
+        filtrando ? (
+          <EmptyState search title="Nenhuma rota encontrada" description={termo ? `Nada encontrado para “${busca}” neste filtro.` : 'Nenhuma rota cadastrada neste tipo de trajeto.'} action={<Button variant="gray" size="sm" icon={X} onClick={limpar}>Limpar filtros</Button>} />
         ) : (
           <EmptyState title="Nenhuma rota cadastrada" description="Cadastre a primeira rota para guardar os valores de pedágio." action={<Button size="sm" icon={Plus} onClick={onNew}>Nova rota</Button>} />
         )
