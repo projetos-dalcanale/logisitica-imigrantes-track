@@ -9,7 +9,7 @@ const docDe = (p) =>
 
 function Item({ icon: Icon, children, onSelect, value, hint }) {
   return (
-    <Command.Item value={value} onSelect={onSelect} className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-ink">
+    <Command.Item value={value} onSelect={onSelect} className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-[14px] text-ink">
       <Icon className="size-4 shrink-0 text-slate-500" strokeWidth={2} />
       <span className="flex-1 truncate">{children}</span>
       {hint && <span className="kbd">{hint}</span>}
@@ -27,14 +27,14 @@ export default function CommandPalette({ processes, fretes = [], onClose, onOpen
   })
 
   return (
-    <Modal onClose={onClose} title="Busca rápida" size="md" className="self-start mt-[12vh] sm:mt-0 sm:self-auto">
+    <Modal onClose={onClose} title="Busca rápida" size="md" className="bg-navy-800/90! backdrop-blur-2xl sm:max-w-xl!">
       <Command loop className="flex max-h-[70vh] flex-col">
-        <div className="flex items-center gap-3 border-b border-slate-700/70 px-4">
+        <div className="hairline-b flex items-center gap-3 px-4">
           <Search className="size-5 text-slate-500" />
           <Command.Input
             data-autofocus
             placeholder="Buscar processo, contêiner, cliente ou ação…"
-            className="h-14 w-full bg-transparent text-[15px] text-ink outline-none placeholder:text-slate-500"
+            className="h-14 w-full bg-transparent text-[19px] font-light text-ink outline-none placeholder:text-slate-500"
           />
           <span className="kbd">Esc</span>
         </div>
@@ -54,9 +54,9 @@ export default function CommandPalette({ processes, fretes = [], onClose, onOpen
                   key={p.id}
                   value={`${busca} ${p.id}`}
                   onSelect={() => onOpenProcess(p.id)}
-                  className="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5"
+                  className="group flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-1.5"
                 >
-                  <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${p.status === 'archived' ? 'bg-slate-500/10 text-slate-500' : 'bg-blue-600/10 text-blue-500'}`}>
+                  <div className={`cmdk-icon flex size-8 shrink-0 items-center justify-center rounded-lg ${p.status === 'archived' ? 'bg-slate-500/10 text-slate-500' : 'bg-blue-500/10 text-blue-500'}`}>
                     <Icon className="size-4" strokeWidth={2.25} />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -78,9 +78,9 @@ export default function CommandPalette({ processes, fretes = [], onClose, onOpen
                   key={f.id}
                   value={`frete ${f.cliente} ${f.observacoes || ''} ${f.id}`}
                   onSelect={() => onOpenFrete(f.id)}
-                  className="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5"
+                  className="group flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-1.5"
                 >
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-slate-500/10 text-slate-400">
+                  <div className="cmdk-icon flex size-8 shrink-0 items-center justify-center rounded-lg bg-slate-500/12 text-slate-400">
                     <Building2 className="size-4" strokeWidth={2.25} />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -104,7 +104,7 @@ export default function CommandPalette({ processes, fretes = [], onClose, onOpen
             <Item icon={LogOut} value="sair logout" onSelect={actions.sair}>Sair</Item>
           </Command.Group>
         </Command.List>
-        <div className="hidden items-center gap-4 border-t border-slate-700/70 px-4 py-2.5 text-xs text-slate-500 sm:flex">
+        <div className="hairline-t hidden items-center gap-4 px-4 py-2.5 text-xs text-slate-500 sm:flex">
           <span className="flex items-center gap-1.5"><span className="kbd">↑</span><span className="kbd">↓</span> navegar</span>
           <span className="flex items-center gap-1.5"><span className="kbd">↵</span> abrir</span>
           <span className="ml-auto flex items-center gap-1.5"><span className="kbd">/</span> busca na lista</span>

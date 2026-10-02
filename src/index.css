@@ -1,23 +1,29 @@
 @import "tailwindcss";
+@import "@fontsource-variable/inter/opsz.css";
 @import "react-day-picker/style.css";
 
-/* Paleta baseada na assinatura de e-mail da Transportes Imigrantes.
-   Mesmos nomes de classe do app original (navy-*, slate-*, blue-*), só que
-   cada cor aponta pra uma variável CSS com um valor no tema claro e outro
-   no escuro. O Tailwind v4 continua aceitando opacidade (ex: bg-blue-600/20). */
-@theme {
-  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+/* "dark:" segue o tema escolhido no app (data-theme), não só o do sistema. */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
-  --color-navy-900: rgb(var(--navy-900)); /* fundo da página */
-  --color-navy-800: rgb(var(--navy-800)); /* superfície dos cards/painéis */
-  --color-navy-700: rgb(var(--navy-700)); /* preenchimento dos campos */
+/* Linguagem visual inspirada nos apps da Apple: neutros do macOS/iOS,
+   materiais translúcidos, cantos generosos, separadores finos e o vermelho
+   da marca reservado para ações e alertas. Os nomes de classe antigos
+   (navy-*, slate-*, blue-*) continuam valendo — só mudam os valores. */
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter Variable", "Segoe UI", system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter Variable", "Segoe UI", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Consolas, monospace;
+
+  --color-navy-900: rgb(var(--navy-900)); /* fundo da janela */
+  --color-navy-800: rgb(var(--navy-800)); /* superfícies (cards, folhas) */
+  --color-navy-700: rgb(var(--navy-700)); /* preenchimentos (campos, chips) */
 
   --color-slate-200: rgb(var(--slate-200));
   --color-slate-300: rgb(var(--slate-300));
-  --color-slate-400: rgb(var(--slate-400));
-  --color-slate-500: rgb(var(--slate-500));
-  --color-slate-600: rgb(var(--slate-600));
-  --color-slate-700: rgb(var(--slate-700));
+  --color-slate-400: rgb(var(--slate-400)); /* texto secundário */
+  --color-slate-500: rgb(var(--slate-500)); /* texto terciário */
+  --color-slate-600: rgb(var(--slate-600)); /* separador forte */
+  --color-slate-700: rgb(var(--slate-700)); /* separador fino */
 
   /* "blue" é a cor de destaque -> vermelho da marca */
   --color-blue-300: rgb(var(--blue-300));
@@ -28,93 +34,119 @@
   --color-blue-900: rgb(var(--blue-900));
 
   --color-red-400: rgb(var(--red-400));
-  --color-emerald-400: rgb(var(--emerald-400));
-  --color-yellow-400: rgb(var(--yellow-400));
-  --color-yellow-500: rgb(var(--yellow-500));
+  --color-red-500: rgb(var(--red-500));
+  --color-red-600: rgb(var(--red-500));
+  --color-emerald-400: rgb(var(--green));
+  --color-emerald-500: rgb(var(--green));
+  --color-emerald-600: rgb(var(--green));
+  --color-yellow-400: rgb(var(--orange));
+  --color-yellow-500: rgb(var(--orange));
   --color-ink: rgb(var(--ink));
 
-  --shadow-soft: 0 1px 2px rgb(0 0 0 / .04), 0 4px 16px rgb(0 0 0 / .05);
-  --shadow-lift: 0 2px 6px rgb(0 0 0 / .05), 0 16px 40px rgb(0 0 0 / .10);
-  --shadow-float: 0 24px 80px rgb(0 0 0 / .22), 0 6px 20px rgb(0 0 0 / .10);
+  --radius-card: 18px;
+  --shadow-soft: 0 0 0 0.5px rgb(0 0 0 / .04), 0 1px 2px rgb(0 0 0 / .04), 0 2px 8px rgb(0 0 0 / .04);
+  --shadow-lift: 0 0 0 0.5px rgb(0 0 0 / .05), 0 4px 12px rgb(0 0 0 / .06), 0 16px 36px rgb(0 0 0 / .08);
+  --shadow-float: 0 0 0 0.5px rgb(0 0 0 / .08), 0 12px 32px rgb(0 0 0 / .14), 0 40px 100px rgb(0 0 0 / .20);
 }
 
-/* Tema CLARO (padrão), em "R G B". */
+/* Tema CLARO, em "R G B" (para aceitar opacidade). */
 :root {
-  --navy-900: 244 242 238;
-  --navy-800: 254 253 251;
-  --navy-700: 236 232 226;
-  --slate-200: 31 31 31;
-  --slate-300: 42 42 42;
-  --slate-400: 92 90 87;
-  --slate-500: 110 108 107;
-  --slate-600: 216 212 206;
-  --slate-700: 234 231 226;
-  --blue-300: 140 2 6;
-  --blue-400: 193 8 11;
-  --blue-500: 214 42 46;
-  --blue-600: 177 0 4;
-  --blue-800: 178 50 57;
-  --blue-900: 122 2 9;
-  --red-400: 200 39 45;
-  --emerald-400: 11 125 84;
-  --yellow-400: 146 64 14;
-  --yellow-500: 180 83 9;
-  --ink: 26 26 26;
+  --navy-900: 245 245 247;
+  --navy-800: 255 255 255;
+  --navy-700: 233 233 238;
+  --slate-200: 29 29 31;
+  --slate-300: 44 44 46;
+  --slate-400: 110 110 115;
+  --slate-500: 134 134 139;
+  --slate-600: 210 210 215;
+  --slate-700: 229 229 234;
+  --blue-300: 150 0 10;
+  --blue-400: 190 6 18;
+  --blue-500: 206 17 30;
+  --blue-600: 190 6 18;
+  --blue-800: 170 40 48;
+  --blue-900: 120 0 8;
+  --red-400: 215 0 21;
+  --red-500: 215 0 21;
+  --green: 36 138 61;
+  --orange: 178 80 0;
+  --ink: 29 29 31;
+  --material: 246 246 248;
 }
 
-/* Tema ESCURO — ativado com data-theme="dark" na tag <html>. */
+/* Tema ESCURO — data-theme="dark" na tag <html>. */
 :root[data-theme="dark"] {
-  --navy-900: 18 22 31;
-  --navy-800: 27 33 48;
-  --navy-700: 38 46 66;
-  --slate-200: 236 237 238;
-  --slate-300: 211 214 218;
-  --slate-400: 155 163 176;
-  --slate-500: 124 135 151;
-  --slate-600: 55 65 90;
-  --slate-700: 44 52 72;
-  --blue-300: 194 58 65;
-  --blue-400: 226 58 62;
-  --blue-500: 229 72 77;
-  --blue-600: 217 31 36;
-  --blue-800: 140 42 48;
-  --blue-900: 92 18 22;
-  --red-400: 255 107 110;
-  --emerald-400: 52 211 153;
-  --yellow-400: 251 191 36;
-  --yellow-500: 245 158 11;
-  --ink: 243 241 238;
+  --navy-900: 0 0 0;
+  --navy-800: 28 28 30;
+  --navy-700: 44 44 46;
+  --slate-200: 245 245 247;
+  --slate-300: 229 229 234;
+  --slate-400: 152 152 157;
+  --slate-500: 110 110 115;
+  --slate-600: 72 72 74;
+  --slate-700: 56 56 58;
+  --blue-300: 255 140 130;
+  --blue-400: 255 105 97;
+  --blue-500: 255 69 58;
+  --blue-600: 235 55 48;
+  --blue-800: 160 40 35;
+  --blue-900: 140 30 26;
+  --red-400: 255 105 97;
+  --red-500: 255 69 58;
+  --green: 48 209 88;
+  --orange: 255 159 10;
+  --ink: 245 245 247;
+  --material: 30 30 32;
+  --shadow-soft: 0 0 0 0.5px rgb(255 255 255 / .06);
 }
 
 @layer base {
-  /* Tailwind v4 usa "currentColor" como borda padrão; aqui é o cinza da paleta. */
-  *, ::after, ::before { border-color: var(--color-slate-700); }
+  *, ::after, ::before { border-color: rgb(var(--slate-700)); }
   html { -webkit-tap-highlight-color: transparent; }
   body {
-    font-feature-settings: "cv11", "ss01", "ss03";
+    font-optical-sizing: auto;
+    letter-spacing: -0.006em;
     text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
+  h1, h2, h3 { letter-spacing: -0.022em; }
   button:not(:disabled) { cursor: pointer; }
   input::placeholder, textarea::placeholder { color: rgb(var(--slate-500)); opacity: 1; }
   ::selection { background: rgb(var(--blue-500) / .2); }
   input, textarea { color-scheme: light; }
   :root[data-theme="dark"] input, :root[data-theme="dark"] textarea { color-scheme: dark; }
+  :root[data-theme="dark"] { color-scheme: dark; }
 }
 
 /* Troca de tema suave: só cores, sem afetar as animações de movimento. */
 .theme-transition, .theme-transition *, .theme-transition *::before, .theme-transition *::after {
-  transition: background-color .3s ease, border-color .3s ease, color .3s ease, fill .3s ease !important;
+  transition: background-color .35s ease, border-color .35s ease, color .35s ease, fill .35s ease !important;
 }
 
 @layer components {
-  /* Campo "preenchido": fundo suave, borda só no hover/foco, anel de foco
-     na cor da marca. Usado em inputs, textareas e nos gatilhos de seleção. */
+  /* Material translúcido (barra lateral, barras de ferramentas, abas). */
+  .material {
+    background-color: rgb(var(--material) / .78);
+    -webkit-backdrop-filter: saturate(180%) blur(24px);
+    backdrop-filter: saturate(180%) blur(24px);
+  }
+  .material-thin {
+    background-color: rgb(var(--navy-800) / .72);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+  }
+  .hairline-b { box-shadow: inset 0 -0.5px 0 rgb(var(--slate-600)); }
+  .hairline-t { box-shadow: inset 0 0.5px 0 rgb(var(--slate-600)); }
+  .hairline-r { box-shadow: inset -0.5px 0 0 rgb(var(--slate-600)); }
+
+  /* Campo "preenchido" estilo macOS: fundo suave, anel de foco na cor da marca. */
   .field {
     width: 100%;
-    min-height: 2.5rem;
+    min-height: 2.375rem;
     border-radius: 0.625rem;
     border: 1px solid transparent;
-    background-color: rgb(var(--navy-700) / .6);
+    background-color: rgb(var(--navy-700) / .55);
     padding: 0.5rem 0.75rem;
     font-size: 0.875rem;
     line-height: 1.25rem;
@@ -122,29 +154,39 @@
     outline: none;
     transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
   }
-  .field:hover:not(:disabled) { border-color: rgb(var(--slate-600)); }
+  .field:hover:not(:disabled) { background-color: rgb(var(--navy-700) / .8); }
   .field:focus, .field:focus-visible, .field[data-state="open"] {
     background-color: rgb(var(--navy-800));
-    border-color: rgb(var(--blue-500) / .7);
-    box-shadow: 0 0 0 3px rgb(var(--blue-500) / .14);
+    border-color: rgb(var(--blue-500) / .55);
+    box-shadow: 0 0 0 3.5px rgb(var(--blue-500) / .16);
   }
   .field:disabled, .field[data-disabled] { opacity: .55; cursor: not-allowed; }
-  .field-sm { min-height: 2.125rem; padding: 0.375rem 0.625rem; font-size: 0.8125rem; border-radius: 0.5rem; }
+  .field-sm { min-height: 2rem; padding: 0.3125rem 0.625rem; font-size: 0.8125rem; border-radius: 0.5rem; }
+
+  /* Campo "sem moldura", usado dentro das linhas das listas agrupadas. */
+  .field-plain {
+    width: 100%;
+    min-height: 1.5rem;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    font-size: 0.9375rem;
+    color: rgb(var(--ink));
+    outline: none;
+  }
+  .field-plain:disabled { opacity: .6; }
 
   .label {
     display: block;
     margin-bottom: 0.375rem;
-    font-size: 0.6875rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: rgb(var(--slate-500));
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: rgb(var(--slate-400));
   }
 
   .card {
     background-color: rgb(var(--navy-800));
-    border: 1px solid rgb(var(--slate-700) / .8);
-    border-radius: 1.25rem;
+    border-radius: var(--radius-card);
     box-shadow: var(--shadow-soft);
   }
 
@@ -156,55 +198,56 @@
     height: 1.25rem;
     padding: 0 0.3rem;
     border-radius: 0.3rem;
-    border: 1px solid rgb(var(--slate-600));
-    background: rgb(var(--navy-900));
+    background: rgb(var(--navy-700) / .8);
     font-size: 0.6875rem;
-    font-weight: 600;
-    color: rgb(var(--slate-500));
+    font-weight: 500;
+    color: rgb(var(--slate-400));
+    font-family: var(--font-sans);
   }
 }
 
-.custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+.custom-scrollbar::-webkit-scrollbar { width: 10px; height: 10px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: rgb(var(--slate-600)); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgb(var(--slate-500)); }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgb(var(--slate-500) / .45); border-radius: 10px; border: 3px solid transparent; background-clip: padding-box; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgb(var(--slate-500) / .7); }
 
-button:focus-visible, a:focus-visible, [role="checkbox"]:focus-visible, [role="tab"]:focus-visible {
+button:focus-visible, a:focus-visible, [role="checkbox"]:focus-visible, [role="tab"]:focus-visible, [role="button"]:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px rgb(var(--navy-800)), 0 0 0 4px rgb(var(--blue-500) / .7);
+  box-shadow: 0 0 0 3px rgb(var(--blue-500) / .35);
 }
 
 /* Calendário (react-day-picker) nas cores do app. */
 .rdp-root {
-  --rdp-accent-color: rgb(var(--blue-600));
-  --rdp-accent-background-color: rgb(var(--blue-600) / .1);
+  --rdp-accent-color: rgb(var(--blue-500));
+  --rdp-accent-background-color: rgb(var(--blue-500) / .1);
   --rdp-today-color: rgb(var(--blue-500));
   --rdp-day-height: 2.25rem;
   --rdp-day-width: 2.25rem;
   --rdp-day_button-height: 2.125rem;
   --rdp-day_button-width: 2.125rem;
-  --rdp-day_button-border-radius: 0.5rem;
+  --rdp-day_button-border-radius: 999px;
   --rdp-selected-border: 0;
   --rdp-nav-height: 2.25rem;
   color: rgb(var(--ink));
   font-size: 0.8125rem;
 }
-.rdp-root .rdp-selected .rdp-day_button { background: rgb(var(--blue-600)); color: #fff; font-weight: 600; }
+.rdp-root .rdp-selected .rdp-day_button { background: rgb(var(--blue-500)); color: #fff; font-weight: 600; }
 .rdp-root .rdp-day_button:hover { background: rgb(var(--navy-700)); }
-.rdp-root .rdp-caption_label { font-weight: 600; font-size: 0.875rem; text-transform: capitalize; }
+.rdp-root .rdp-caption_label { font-weight: 600; font-size: 0.9375rem; text-transform: capitalize; }
 .rdp-root .rdp-weekday { font-size: 0.6875rem; font-weight: 600; color: rgb(var(--slate-500)); text-transform: uppercase; }
-.rdp-root .rdp-chevron { fill: rgb(var(--slate-400)); }
+.rdp-root .rdp-chevron { fill: rgb(var(--blue-500)); }
 
 /* Busca/lista do cmdk */
-[cmdk-item][data-selected="true"] { background: rgb(var(--navy-700) / .7); }
+[cmdk-item][data-selected="true"] { background: rgb(var(--blue-500)); color: #fff; }
+[cmdk-item][data-selected="true"] * { color: #fff !important; }
+[cmdk-item][data-selected="true"] .cmdk-icon { background: rgb(255 255 255 / .2) !important; }
 [cmdk-group-heading] {
-  padding: 0.5rem 0.75rem 0.25rem;
+  padding: 0.625rem 0.75rem 0.25rem;
   font-size: 0.6875rem;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: rgb(var(--slate-500));
 }
+
 
 /* Exportar processo em PDF: #print-area fica escondida na tela e é a única
    coisa visível na impressão, em preto no branco (independe do tema). */
@@ -221,8 +264,13 @@ button:focus-visible, a:focus-visible, [role="checkbox"]:focus-visible, [role="t
     background: #fff;
     color: #111;
     padding: 24px;
-    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter Variable", "Segoe UI", sans-serif;
   }
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(-4px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -231,9 +279,4 @@ button:focus-visible, a:focus-visible, [role="checkbox"]:focus-visible, [role="t
     animation-iteration-count: 1 !important;
     transition-duration: .01ms !important;
   }
-}
-
-@keyframes pop-in {
-  from { opacity: 0; transform: translateY(-4px) scale(.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
 }

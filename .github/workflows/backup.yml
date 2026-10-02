@@ -1,0 +1,69 @@
+# Backup diário do Firestore (processos, fretes e cadastros).
+# Roda todo dia às 03:00 (horário de Brasília) e também sob demanda
+# (aba Actions → "Backup do Firestore" → Run workflow).
+#
+# O arquivo é criptografado (AES-256) antes de ser guardado, porque o
+# repositório é público. Fica disponível por 90 dias na execução do workflow.
+#
+# Precisa de dois segredos em Settings → Secrets and variables → Actions:
+#   FIREBASE_SERVICE_ACCOUNT  conteúdo do JSON da conta de serviço do Firebase
+#   BACKUP_PASSWORD           senha usada para criptografar (guarde-a bem!)
+# Sem eles o workflow só avisa e não faz nada. Passo a passo no README.
+name: Backup do Firestore
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    name: Exportar e criptografar
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      BACKUP_PASSWORD: ${{ secrets.BACKUP_PASSWORD }}
+    steps:
+      - name: Conferir configuração
+        id: config
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ] || [ -z "$BACKUP_PASSWORD" ]; then
+            echo "::warning::Backup não configurado: faltam os segredos FIREBASE_SERVICE_ACCOUNT e/ou BACKUP_PASSWORD (veja o README)."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.config.outputs.ok == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.config.outputs.ok == 'true'
+        with:
+          node-version: 22
+
+      - name: Exportar coleções
+        if: steps.config.outputs.ok == 'true'
+        run: |
+          npm install --no-save --no-package-lock firebase-admin@13
+          node scripts/backup-firestore.mjs backup.json
+
+      - name: Criptografar
+        if: steps.config.outputs.ok == 'true'
+        run: |
+          NOME="logitrack-backup-$(date -u +%Y-%m-%d).json.enc"
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -in backup.json -out "$NOME" -pass env:BACKUP_PASSWORD
+          rm backup.json
+          echo "ARQUIVO=$NOME" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        if: steps.config.outputs.ok == 'true'
+        with:
+          name: ${{ env.ARQUIVO }}
+          path: ${{ env.ARQUIVO }}
+          retention-days: 90
+          if-no-files-found: error

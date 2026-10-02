@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import * as Popover from '@radix-ui/react-popover'
 import { Command } from 'cmdk'
-import { Check, ChevronDown, Plus, Search, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronsUpDown, Plus, Search, X } from 'lucide-react'
 
 // Seleção com busca (Popover + cmdk). Dá pra criar um item novo direto do
 // texto digitado (`onCreate`). Valores antigos fora da lista continuam
@@ -17,7 +17,9 @@ export default function Combobox({
   disabled,
   size = 'md',
   allowClear = true,
+  variant = 'field',
 }) {
+  const plain = variant === 'plain'
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const term = search.trim()
@@ -46,21 +48,25 @@ export default function Combobox({
       <Popover.Trigger asChild disabled={disabled}>
         <button
           type="button"
-          className={`field ${size === 'sm' ? 'field-sm' : ''} flex items-center justify-between gap-2 text-left`}
+          className={plain ? 'field-plain flex items-center justify-end gap-1.5 text-right' : `field ${size === 'sm' ? 'field-sm' : ''} flex items-center justify-between gap-2 text-left`}
         >
-          <span className={`truncate ${value ? 'text-ink' : 'text-slate-500'}`}>
+          <span className={`truncate ${plain ? (value ? 'text-slate-400' : 'text-slate-500') : value ? 'text-ink' : 'text-slate-500'}`}>
             {value || placeholder}
             {foraDaLista && <span className="ml-1.5 text-[11px] text-yellow-500">(não cadastrado)</span>}
           </span>
-          <ChevronDown className={`size-4 shrink-0 text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+          {plain ? (
+            <ChevronsUpDown className="size-3.5 shrink-0 text-slate-500" />
+          ) : (
+            <ChevronDown className={`size-4 shrink-0 text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+          )}
         </button>
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
-          align="start"
+          align={plain ? 'end' : 'start'}
           sideOffset={6}
           collisionPadding={12}
-          className="z-[70] w-[var(--radix-popover-trigger-width)] min-w-[220px] overflow-hidden rounded-xl border border-slate-700/80 bg-navy-800 shadow-lift data-[state=open]:animate-[pop-in_.14s_ease-out]"
+          className="z-[70] w-[var(--radix-popover-trigger-width)] min-w-[240px] overflow-hidden rounded-xl bg-navy-800 shadow-lift ring-[0.5px] ring-black/5 dark:ring-white/10 data-[state=open]:animate-[pop-in_.14s_ease-out]"
         >
           <Command loop>
             <div className="flex items-center gap-2 border-b border-slate-700/70 px-3">

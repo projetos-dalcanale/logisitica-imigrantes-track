@@ -1,12 +1,13 @@
 import * as RadixTooltip from '@radix-ui/react-tooltip'
 
 export const TooltipProvider = ({ children }) => (
-  <RadixTooltip.Provider delayDuration={350} skipDelayDuration={150}>
+  <RadixTooltip.Provider delayDuration={500} skipDelayDuration={150}>
     {children}
   </RadixTooltip.Provider>
 )
 
-// Dica ao passar o mouse (e no foco por teclado). `shortcut` mostra a tecla.
+// Dica ao passar o mouse (e no foco por teclado), no estilo do macOS.
+// `shortcut` mostra a tecla de atalho.
 export default function Tooltip({ label, shortcut, side = 'bottom', children }) {
   if (!label) return children
   return (
@@ -16,10 +17,11 @@ export default function Tooltip({ label, shortcut, side = 'bottom', children }) 
         <RadixTooltip.Content
           side={side}
           sideOffset={6}
-          className="z-[80] flex items-center gap-2 rounded-lg bg-slate-200 px-2.5 py-1.5 text-xs font-medium text-navy-800 shadow-lg"
+          collisionPadding={8}
+          className="z-[80] flex max-w-72 items-center gap-2 rounded-md bg-navy-800/95 px-2 py-1 text-xs text-ink shadow-lift ring-[0.5px] ring-black/10 backdrop-blur-xl dark:ring-white/15"
         >
           {label}
-          {shortcut && <span className="rounded bg-navy-800/20 px-1.5 py-0.5 text-[10px] font-semibold">{shortcut}</span>}
+          {shortcut && <span className="text-slate-500">{shortcut}</span>}
         </RadixTooltip.Content>
       </RadixTooltip.Portal>
     </RadixTooltip.Root>
@@ -34,10 +36,10 @@ export function IconButton({ icon: Icon, label, shortcut, className = '', size =
       <button
         type="button"
         aria-label={label}
-        className={`${dim} shrink-0 inline-flex items-center justify-center rounded-[10px] text-slate-400 hover:text-ink hover:bg-navy-700/70 transition-colors active:scale-95 ${className}`}
+        className={`${dim} inline-flex shrink-0 items-center justify-center rounded-full text-blue-500 transition-[background-color,transform] hover:bg-slate-500/10 active:scale-95 ${className}`}
         {...rest}
       >
-        <Icon className={size === 'sm' ? 'size-4' : 'size-[18px]'} strokeWidth={2} />
+        <Icon className={size === 'sm' ? 'size-4' : 'size-[19px]'} strokeWidth={2} />
       </button>
     </Tooltip>
   )

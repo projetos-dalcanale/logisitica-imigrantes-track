@@ -17,7 +17,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Download, Plus, Search, X } from 'lucide-react'
+import { Download, Plus, X } from 'lucide-react'
 import { filtrarProcessos } from '../lib/processos'
 import { useCardOrder } from '../hooks/useCardOrder'
 import { useToast } from '../contexts/ToastContext'
@@ -27,6 +27,7 @@ import ResumoBar from './ResumoBar'
 import EmptyState from './ui/EmptyState'
 import Button from './ui/Button'
 import Tooltip from './ui/Tooltip'
+import SearchField from './ui/SearchField'
 
 function SortableCard(props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.proc.id })
@@ -132,40 +133,24 @@ export default function ProcessList({ processes, loading, tab, onOpen, searchRef
     <>
       <ResumoBar processes={processes} tab={tab} now={now} />
 
-      <div className="mb-4 flex gap-2">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
-          <input
-            ref={searchRef}
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => e.key === 'Escape' && (setSearch(''), e.currentTarget.blur())}
-            placeholder="Filtrar processos…"
-            title="Filtra por nome, armador, motorista, placa, documento/booking ou contêiner"
-            className="field h-11 pl-10 pr-10 bg-navy-800 border-slate-700/80 shadow-soft"
-          />
-          {search ? (
-            <button
-              type="button"
-              onClick={() => setSearch('')}
-              aria-label="Limpar busca"
-              className="absolute right-2.5 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-slate-500 hover:bg-navy-700 hover:text-ink"
-            >
-              <X className="size-4" />
-            </button>
-          ) : (
-            <span className="kbd pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 sm:inline-flex">/</span>
-          )}
-        </div>
+      <div className="mb-4 flex items-center gap-2">
+        <SearchField
+          inputRef={searchRef}
+          value={search}
+          onChange={setSearch}
+          placeholder="Filtrar processos"
+          hint="/"
+          title="Filtra por nome, armador, motorista, placa, documento/booking ou contêiner"
+          className="flex-1"
+        />
         <Tooltip label="Exportar esta lista para Excel (CSV)">
-          <Button variant="secondary" icon={Download} onClick={exportarCSV} className="h-11 shadow-soft">
+          <Button variant="gray" icon={Download} onClick={exportarCSV} aria-label="Exportar para Excel">
             <span className="hidden sm:inline">Exportar</span>
           </Button>
         </Tooltip>
       </div>
 
-      <div className="space-y-3">{content}</div>
+      <div className="space-y-2.5">{content}</div>
     </>
   )
 }

@@ -5,6 +5,22 @@ import { defineConfig } from 'vite'
 
 // https://vite.dev/config/
 export default defineConfig({
+  build: {
+    // O Firebase sozinho passa de 500 kB; fica num arquivo próprio, em cache.
+    chunkSizeWarningLimit: 600,
+    rolldownOptions: {
+      output: {
+        // Bibliotecas grandes em arquivos separados: mudam pouco, então o
+        // navegador reaproveita do cache entre uma versão e outra do app.
+        codeSplitting: {
+          groups: [
+            { name: 'firebase', test: /node_modules[\\/](@firebase|firebase)[\\/]/ },
+            { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
+          ],
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     tailwindcss(),

@@ -62,6 +62,9 @@ O LogiTrack Pro organiza cada processo de importação ou exportação em um car
 - **Motion** — animações.
 - **Lucide** — ícones.
 - **react-day-picker** — calendário de data e hora.
+- **vaul** — folhas deslizantes (arrastar para fechar) no celular.
+- **Vitest** — testes automáticos das regras de negócio.
+- **GitHub Actions** — verificação antes de cada merge e backup diário do Firestore.
 - **Vercel** — hospedagem e deploy contínuo a partir deste repositório.
 
 ## Estrutura do projeto
@@ -72,6 +75,8 @@ O LogiTrack Pro organiza cada processo de importação ou exportação em um car
 ├── vercel.json              # Como a Vercel faz o build (npm run build → dist/)
 ├── firestore_1.rules        # Regras de segurança do Firestore (aplicar no Firebase Console)
 ├── public/icons/            # Ícones do app
+├── scripts/                 # Backup e restauração do Firestore
+├── .github/workflows/       # Verificação (CI) e backup diário
 └── src/
     ├── main.jsx             # Ponto de entrada
     ├── App.jsx              # Login x tela principal
@@ -102,6 +107,37 @@ No Firebase Console:
 ## Deploy
 
 A Vercel está conectada a este repositório: qualquer `push` para a branch principal publica a nova versão em produção, e outras branches geram um endereço de teste (preview). O `vercel.json` informa o build (`npm run build`, saída em `dist/`).
+
+## Testes e verificação
+
+```bash
+npm test         # testes automáticos (regras de processo, prazos, ISO 6346, números)
+npm run check    # lint + testes + build, o mesmo que o GitHub roda
+```
+
+Todo Pull Request e todo push no `main` e no `teste` rodam a verificação **Lint, testes e build** (`.github/workflows/ci.yml`). O `main` está protegido: só aceita merge com a verificação aprovada.
+
+## Endereço de teste fixo
+
+A branch `teste` tem um endereço permanente na Vercel:
+
+https://logisitica-imigrantes-track-git-teste-imigrantes.vercel.app
+
+Para testar uma mudança antes da produção, envie-a para a branch `teste`. Esse endereço fica liberado de vez na chave do Firebase, então não é preciso liberar um endereço novo a cada mudança. Depois de aprovada, abra o Pull Request para o `main`.
+
+## Backup do Firestore
+
+O workflow **Backup do Firestore** (`.github/workflows/backup.yml`) exporta todas as coleções (processos, fretes e cadastros) todo dia às 03:00, criptografa o arquivo com AES-256 e o guarda por 90 dias na aba **Actions** do GitHub. Também dá para rodar na hora: Actions → Backup do Firestore → Run workflow.
+
+**Configuração (uma vez só):**
+
+1. Firebase Console → ⚙️ Configurações do projeto → **Contas de serviço** → **Gerar nova chave privada**. Baixa um arquivo `.json`.
+2. GitHub → Settings → Secrets and variables → **Actions** → New repository secret:
+   - `FIREBASE_SERVICE_ACCOUNT`: cole o conteúdo inteiro do arquivo `.json`.
+   - `BACKUP_PASSWORD`: uma senha forte. **Guarde-a**: sem ela o backup não abre.
+3. Apague o arquivo `.json` do computador depois de cadastrar os segredos.
+
+**Para restaurar:** baixe o arquivo `.json.enc` da execução desejada na aba Actions e siga as instruções no início de `scripts/restaurar-backup.mjs`.
 
 ## Segurança
 

@@ -24,7 +24,8 @@ const formatar = (d) => {
 
 // Data + hora com calendário próprio. Só grava ao fechar (uma escrita por
 // edição), com o valor no mesmo formato usado desde o app original.
-export default function DateTimeField({ value = '', onChange, disabled, size = 'md', placeholder = 'Definir data e hora' }) {
+export default function DateTimeField({ value = '', onChange, disabled, size = 'md', placeholder = 'Definir data e hora', variant = 'field' }) {
+  const pill = variant === 'pill'
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState(value)
   const atual = parse(value)
@@ -39,10 +40,17 @@ export default function DateTimeField({ value = '', onChange, disabled, size = '
 
   return (
     <Popover.Root open={open} onOpenChange={onOpenChange}>
-      <div className="relative">
+      <div className={pill ? 'inline-flex items-center gap-1' : 'relative'}>
         <Popover.Trigger asChild disabled={disabled}>
-          <button type="button" className={`field ${size === 'sm' ? 'field-sm' : ''} flex items-center gap-2 text-left pr-8`}>
-            <CalendarDays className="size-4 shrink-0 text-slate-500" />
+          <button
+            type="button"
+            className={
+              pill
+                ? 'inline-flex h-8 items-center rounded-lg bg-navy-700/70 px-2.5 text-[14px] transition-colors hover:bg-navy-700 disabled:opacity-60 data-[state=open]:text-blue-500'
+                : `field ${size === 'sm' ? 'field-sm' : ''} flex items-center gap-2 pr-8 text-left`
+            }
+          >
+            {!pill && <CalendarDays className="size-4 shrink-0 text-slate-500" />}
             <span className={`truncate tabular-nums ${atual ? 'text-ink' : 'text-slate-500'}`}>
               {atual ? formatar(atual) : placeholder}
             </span>
@@ -53,7 +61,7 @@ export default function DateTimeField({ value = '', onChange, disabled, size = '
             type="button"
             aria-label="Limpar data"
             onClick={() => onChange('')}
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 flex size-6 items-center justify-center rounded-md text-slate-500 hover:bg-navy-700 hover:text-ink"
+            className={`flex size-6 items-center justify-center rounded-full text-slate-500 hover:bg-navy-700 hover:text-ink ${pill ? '' : 'absolute right-1.5 top-1/2 -translate-y-1/2'}`}
           >
             <X className="size-3.5" />
           </button>
@@ -64,7 +72,7 @@ export default function DateTimeField({ value = '', onChange, disabled, size = '
           align="start"
           sideOffset={6}
           collisionPadding={12}
-          className="z-[70] rounded-2xl border border-slate-700/80 bg-navy-800 p-3 shadow-lift data-[state=open]:animate-[pop-in_.14s_ease-out]"
+          className="z-[70] rounded-2xl bg-navy-800 ring-[0.5px] ring-black/5 dark:ring-white/10 p-3 shadow-lift data-[state=open]:animate-[pop-in_.14s_ease-out]"
         >
           <DayPicker
             mode="single"
