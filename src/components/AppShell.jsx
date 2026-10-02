@@ -84,12 +84,10 @@ export default function AppShell() {
     scrollRef.current?.scrollTo({ top: 0 })
   }, [activeTab])
 
+  // Só os processos em andamento mostram contagem; as demais abas são de consulta.
   const counts = {
     import: processes.filter((p) => p.status === 'active' && p.type === 'import').length,
     export: processes.filter((p) => p.status === 'active' && p.type === 'export').length,
-    archive: processes.filter((p) => p.status === 'archived').length,
-    fretes: fretes.length,
-    pedagios: pedagios.length,
   }
 
   // ATALHOS DE TECLADO: Ctrl/⌘+K busca rápida, "/" filtra a lista,
