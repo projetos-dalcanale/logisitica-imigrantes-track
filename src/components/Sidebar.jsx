@@ -66,10 +66,10 @@ export default function Sidebar({ sections, active, counts, onChange, onSearch, 
                 type="button"
                 onClick={() => alternar(section.title)}
                 aria-expanded={aberta}
-                className="mb-1 flex w-full items-center gap-1 rounded-md px-2.5 py-0.5 text-left text-[11px] font-semibold text-slate-500 transition-colors hover:text-slate-300"
+                className="mb-1 flex w-full items-center gap-1 rounded-md px-2.5 py-1 text-left text-[13px] font-semibold text-slate-300 transition-colors hover:text-ink"
               >
                 <span className="flex-1">{section.title}</span>
-                <ChevronDown className={`size-3.5 transition-transform duration-200 ${aberta ? '' : '-rotate-90'}`} strokeWidth={2.4} />
+                <ChevronDown className={`size-4 text-slate-400 transition-transform duration-200 ${aberta ? '' : '-rotate-90'}`} strokeWidth={2.4} />
               </button>
               <AnimatePresence initial={false}>
                 {aberta && (
