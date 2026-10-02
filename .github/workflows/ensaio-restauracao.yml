@@ -1,0 +1,56 @@
+# Ensaio de restauração: baixa o último backup bem-sucedido, abre com a senha
+# do backup e restaura em coleções temporárias ("ensaio_*"), comparando com o
+# original. Não altera os dados reais e apaga as cópias no fim.
+#
+# Rodar: Actions → "Ensaio de restauração" → Run workflow
+# (ou um push na branch ensaio-restauracao).
+name: Ensaio de restauração
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ensaio-restauracao]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  ensaio:
+    name: Restaurar em cópia temporária e conferir
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      BACKUP_PASSWORD: ${{ secrets.BACKUP_PASSWORD }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Baixar o último backup
+        run: |
+          ID=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow backup.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+          [ -n "$ID" ] || { echo "::error::Nenhum backup bem-sucedido encontrado."; exit 1; }
+          gh run download "$ID" --repo "$GITHUB_REPOSITORY" --dir baixado
+          ARQ=$(find baixado -name '*.json.enc' | head -1)
+          echo "Backup: $ARQ (execução $ID)"
+          echo "ARQ=$ARQ" >> "$GITHUB_ENV"
+
+      - name: Descriptografar com a senha do backup
+        run: openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in "$ARQ" -out backup.json -pass env:BACKUP_PASSWORD
+
+      - name: Conferir o script de restauração (sem gravar nada)
+        run: |
+          npm install --no-save --no-package-lock firebase-admin@13
+          node scripts/restaurar-backup.mjs backup.json
+
+      - name: Restaurar em cópia temporária e comparar
+        run: node scripts/ensaio-restauracao.mjs backup.json
+
+      - name: Apagar o backup aberto
+        if: always()
+        run: rm -f backup.json

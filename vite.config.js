@@ -2,9 +2,17 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { defineConfig } from 'vite'
+import { readFileSync } from 'node:fs'
+
+// Mesmos cabeçalhos de segurança da produção (vercel.json) no `npm run preview`,
+// para testar a CSP localmente antes de publicar.
+const cabecalhosProducao = Object.fromEntries(
+  JSON.parse(readFileSync(new URL('./vercel.json', import.meta.url), 'utf8')).headers[0].headers.map((h) => [h.key, h.value])
+)
 
 // https://vite.dev/config/
 export default defineConfig({
+  preview: { headers: cabecalhosProducao },
   build: {
     // O Firebase sozinho passa de 500 kB; fica num arquivo próprio, em cache.
     chunkSizeWarningLimit: 600,
