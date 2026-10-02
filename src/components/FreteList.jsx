@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion } from 'motion/react'
 import { ChevronRight, CircleAlert, Plus, X } from 'lucide-react'
-import { RESP_SEGURO, formatarValor } from '../lib/fretes'
+import { formatarValor } from '../lib/fretes'
 import EmptyState from './ui/EmptyState'
 import Button from './ui/Button'
 import SearchField from './ui/SearchField'
@@ -14,7 +14,6 @@ const inicial = (nome) => {
 function FreteRow({ frete, onOpen }) {
   const campos = frete.campos || []
   const principal = campos.find((c) => c.valor) || campos[0]
-  const resp = RESP_SEGURO.find((r) => r.value === frete.respSeguro)?.label
   return (
     <button
       type="button"
@@ -27,7 +26,7 @@ function FreteRow({ frete, onOpen }) {
       <div className="min-w-0 flex-1">
         <div className="truncate text-[15px] font-medium text-ink">{frete.cliente || 'Sem nome'}</div>
         <div className="truncate text-[13px] text-slate-400">
-          {[`${campos.length} ${campos.length === 1 ? 'campo' : 'campos'}`, resp && `Seguro: ${resp}`, frete.observacoes && 'Com observações'].filter(Boolean).join(' · ')}
+          {[`${campos.length} ${campos.length === 1 ? 'campo' : 'campos'}`, frete.observacoes && 'Com observações'].filter(Boolean).join(' · ')}
         </div>
       </div>
       {principal && (
