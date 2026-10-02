@@ -30,7 +30,7 @@ export default function BottomNav({ tabs, active, onChange, onNew }) {
             type="button"
             whileTap={{ scale: 0.9 }}
             onClick={onNew}
-            aria-label={active === 'fretes' ? 'Novo frete' : 'Novo processo'}
+            aria-label={active === 'fretes' ? 'Novo frete' : active === 'pedagios' ? 'Nova rota' : 'Novo processo'}
             className="flex size-10 items-center justify-center rounded-full bg-blue-500 text-white shadow-[0_2px_8px_rgb(var(--blue-500)/0.35)]"
           >
             <Plus className="size-[22px]" strokeWidth={2.6} />
@@ -38,6 +38,7 @@ export default function BottomNav({ tabs, active, onChange, onNew }) {
         </div>
         {tab(tabs[2])}
         {tab(tabs[3])}
+        {tab(tabs[4])}
       </div>
     </nav>
   )

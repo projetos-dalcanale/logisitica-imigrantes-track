@@ -65,6 +65,17 @@ service cloud.firestore {
                             && request.resource.data.campos is list;
     }
 
+    // Rotas e valores de pedágio (guia "Pedágios"), compartilhadas com toda a
+    // equipe: qualquer usuário autenticado consulta, cadastra, edita e exclui.
+    match /pedagios/{pedagioId} {
+      allow read, delete: if request.auth != null;
+      allow create, update: if request.auth != null
+                            && request.resource.data.origem is string
+                            && request.resource.data.origem.size() > 0
+                            && request.resource.data.destino is string
+                            && request.resource.data.destino.size() > 0;
+    }
+
     // Nega tudo o que não foi explicitamente liberado acima.
     match /{document=**} {
       allow read, write: if false;

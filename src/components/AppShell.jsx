@@ -1,13 +1,15 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Archive, Plus, ReceiptText, Search } from 'lucide-react'
+import { Archive, Plus, ReceiptText, Route, Search } from 'lucide-react'
 import { ExportIcon, ImportIcon } from './ui/icons'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../hooks/useTheme'
 import { useProcesses } from '../hooks/useProcesses'
 import { useFretes } from '../hooks/useFretes'
+import { usePedagios } from '../hooks/usePedagios'
 import ProcessList from './ProcessList'
 import FreteList from './FreteList'
+import PedagioList from './PedagioList'
 import Sidebar from './Sidebar'
 import BottomNav from './BottomNav'
 import AccountMenu, { Avatar } from './AccountMenu'
@@ -17,6 +19,7 @@ import { IconButton } from './ui/Tooltip'
 // Janelas carregadas só quando abertas (deixa a abertura do app mais rápida).
 const ProcessModal = lazy(() => import('./ProcessModal'))
 const FreteModal = lazy(() => import('./FreteModal'))
+const PedagioModal = lazy(() => import('./PedagioModal'))
 const NewProcessSheet = lazy(() => import('./NewProcessSheet'))
 const RegistriesModal = lazy(() => import('./RegistriesModal'))
 const CommandPalette = lazy(() => import('./CommandPalette'))
@@ -26,16 +29,19 @@ export const TABS = [
   { value: 'export', label: 'Exportações', short: 'Exportação', icon: ExportIcon },
   { value: 'archive', label: 'Arquivados', short: 'Arquivados', icon: Archive },
   { value: 'fretes', label: 'Fretes para CTE', short: 'Fretes CTE', icon: ReceiptText },
+  { value: 'pedagios', label: 'Rotas e Valores', short: 'Pedágios', icon: Route },
 ]
 const SECTIONS = [
   { title: 'Processos', tabs: TABS.slice(0, 3) },
-  { title: 'Comercial', tabs: TABS.slice(3) },
+  { title: 'Comercial', tabs: TABS.slice(3, 4) },
+  { title: 'Pedágios', tabs: TABS.slice(4) },
 ]
 const SUBTITULOS = {
   import: 'Processos de importação em andamento',
   export: 'Processos de exportação em andamento',
   archive: 'Processos concluídos e arquivados',
   fretes: 'Valores e peculiaridades de cada cliente',
+  pedagios: 'Rotas e valores de pedágio por número de eixos',
 }
 
 const isTyping = (el) => el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))
@@ -47,9 +53,11 @@ export default function AppShell() {
   const { isDark, toggleTheme } = useTheme()
   const { processes, loading } = useProcesses(user.uid)
   const { fretes, loading: loadingFretes, erro: erroFretes } = useFretes()
+  const { pedagios, loading: loadingPedagios, erro: erroPedagios } = usePedagios()
   const [activeTab, setActiveTab] = useState('import')
   const [openId, setOpenId] = useState(null)
   const [freteOpen, setFreteOpen] = useState(null) // null | 'new' | id do frete
+  const [pedagioOpen, setPedagioOpen] = useState(null) // null | 'new' | id da rota
   const [newOpen, setNewOpen] = useState(false)
   const [registriesOpen, setRegistriesOpen] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
@@ -57,6 +65,7 @@ export default function AppShell() {
   const searchRef = useRef(null)
   const scrollRef = useRef(null)
   const isFretes = activeTab === 'fretes'
+  const isPedagios = activeTab === 'pedagios'
   const tab = TABS.find((t) => t.value === activeTab)
 
   const closeProcess = useCallback(() => setOpenId(null), [])
@@ -64,7 +73,12 @@ export default function AppShell() {
   const openProc = processes.find((p) => p.id === openId)
 
   const activeTabRef = useRef(activeTab)
-  const novo = useCallback(() => (activeTabRef.current === 'fretes' ? setFreteOpen('new') : setNewOpen(true)), [])
+  const novo = useCallback(() => {
+    const aba = activeTabRef.current
+    if (aba === 'fretes') setFreteOpen('new')
+    else if (aba === 'pedagios') setPedagioOpen('new')
+    else setNewOpen(true)
+  }, [])
   useEffect(() => {
     activeTabRef.current = activeTab
     scrollRef.current?.scrollTo({ top: 0 })
@@ -75,10 +89,11 @@ export default function AppShell() {
     export: processes.filter((p) => p.status === 'active' && p.type === 'export').length,
     archive: processes.filter((p) => p.status === 'archived').length,
     fretes: fretes.length,
+    pedagios: pedagios.length,
   }
 
   // ATALHOS DE TECLADO: Ctrl/⌘+K busca rápida, "/" filtra a lista,
-  // N novo processo (ou novo frete, na aba Fretes), 1 a 4 trocam de aba.
+  // N novo processo (ou novo frete / nova rota, nas abas de Fretes e Pedágios), 1 a 5 trocam de aba.
   useEffect(() => {
     const onKey = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -94,7 +109,7 @@ export default function AppShell() {
       } else if (e.key.toLowerCase() === 'n') {
         e.preventDefault()
         novo()
-      } else if (['1', '2', '3', '4'].includes(e.key)) {
+      } else if (['1', '2', '3', '4', '5'].includes(e.key)) {
         setActiveTab(TABS[Number(e.key) - 1].value)
       }
     }
@@ -153,7 +168,7 @@ export default function AppShell() {
             <IconButton icon={Search} label="Buscar" shortcut="Ctrl K" className="lg:hidden" onClick={() => setPaletteOpen(true)} />
             <div className="hidden lg:block">
               <Button icon={Plus} onClick={novo}>
-                {isFretes ? 'Novo cliente' : 'Novo processo'}
+                {isFretes ? 'Novo cliente' : isPedagios ? 'Nova rota' : 'Novo processo'}
               </Button>
             </div>
             <div className="lg:hidden">{accountMenu}</div>
@@ -176,6 +191,8 @@ export default function AppShell() {
               >
                 {isFretes ? (
                   <FreteList fretes={fretes} loading={loadingFretes} erro={erroFretes} onOpen={setFreteOpen} onNew={() => setFreteOpen('new')} searchRef={searchRef} />
+                ) : isPedagios ? (
+                  <PedagioList pedagios={pedagios} loading={loadingPedagios} erro={erroPedagios} onOpen={setPedagioOpen} onNew={() => setPedagioOpen('new')} searchRef={searchRef} />
                 ) : (
                   <ProcessList processes={processes} loading={loading} tab={activeTab} onOpen={setOpenId} searchRef={searchRef} onNew={novo} />
                 )}
@@ -200,6 +217,11 @@ export default function AppShell() {
               onClose={() => setFreteOpen(null)}
               onSaved={setFreteOpen}
             />
+          )}
+        </AnimatePresence>
+        <AnimatePresence>
+          {(pedagioOpen === 'new' || pedagios.some((p) => p.id === pedagioOpen)) && (
+            <PedagioModal key="pedagio" rota={pedagioOpen === 'new' ? null : pedagios.find((p) => p.id === pedagioOpen)} onClose={() => setPedagioOpen(null)} />
           )}
         </AnimatePresence>
         <AnimatePresence>
