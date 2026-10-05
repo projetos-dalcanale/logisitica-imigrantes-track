@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import * as Popover from '@radix-ui/react-popover'
 import { Command } from 'cmdk'
-import { Check, ChevronDown, Copy, Download, Plus, Search, Type } from 'lucide-react'
+import { Check, ChevronDown, Copy, Download, Image as ImageIcon, Plus, Search, Type } from 'lucide-react'
 import { ExportIcon, ImportIcon } from './ui/icons'
 import { useToast } from '../contexts/ToastContext'
 import { dadosDoProcesso, montarStatus } from '../lib/status'
@@ -231,6 +231,17 @@ export default function StatusClientes({ processes, loading, procInicial }) {
     }
   }
 
+  // Alguns Outlooks descartam a versão em HTML e não colam nada; para eles
+  // vai só a imagem, já reduzida para a largura do e-mail.
+  const copiarSoImagem = async () => {
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': imagemReduzida(canvasRef.current) })])
+      showToast('Imagem copiada. É só colar no e-mail.')
+    } catch {
+      showToast('Não foi possível copiar. Use “Baixar imagem” e anexe no e-mail.', 'error')
+    }
+  }
+
   const baixarImagem = async () => {
     const blob = await imagemDoCanvas(canvasRef.current)
     const url = URL.createObjectURL(blob)
@@ -330,6 +341,7 @@ export default function StatusClientes({ processes, loading, procInicial }) {
               <Button size="lg" variant="gray" icon={Download} onClick={baixarImagem}>Baixar</Button>
             </div>
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+              <Button variant="plain" size="sm" icon={ImageIcon} className="px-0" onClick={copiarSoImagem} title="Use se o Outlook não colar nada com “Copiar imagem”">Copiar só imagem</Button>
               <Button variant="plain" size="sm" icon={Copy} className="px-0" onClick={() => copiarTexto(textoParaEmail().assunto, 'Assunto copiado.')}>Copiar assunto</Button>
               <Button variant="plain" size="sm" icon={Type} className="px-0" onClick={() => copiarTexto(textoParaEmail().texto, 'Texto copiado.')}>Copiar como texto</Button>
             </div>
