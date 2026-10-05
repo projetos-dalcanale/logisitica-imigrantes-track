@@ -1,6 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Archive, Plus, ReceiptText, Route, Search } from 'lucide-react'
+import { Archive, Mail, Plus, ReceiptText, Route, Search } from 'lucide-react'
 import { ExportIcon, ImportIcon } from './ui/icons'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../hooks/useTheme'
@@ -23,23 +23,29 @@ const PedagioModal = lazy(() => import('./PedagioModal'))
 const NewProcessSheet = lazy(() => import('./NewProcessSheet'))
 const RegistriesModal = lazy(() => import('./RegistriesModal'))
 const CommandPalette = lazy(() => import('./CommandPalette'))
+const StatusClientes = lazy(() => import('./StatusClientes'))
 
 export const TABS = [
   { value: 'import', label: 'Importações', short: 'Importação', icon: ImportIcon },
   { value: 'export', label: 'Exportações', short: 'Exportação', icon: ExportIcon },
   { value: 'archive', label: 'Arquivados', short: 'Arquivados', icon: Archive },
+  { value: 'status', label: 'Status para clientes', short: 'Status', icon: Mail },
   { value: 'fretes', label: 'Fretes para CTE', short: 'Fretes CTE', icon: ReceiptText },
-  { value: 'pedagios', label: 'Rotas e Valores', short: 'Pedágios', icon: Route },
+  { value: 'pedagios', label: 'Rotas e Valores de Pedágio', short: 'Pedágios', icon: Route },
 ]
 const SECTIONS = [
   { title: 'Processos', tabs: TABS.slice(0, 3) },
-  { title: 'Comercial', tabs: TABS.slice(3, 4) },
-  { title: 'Pedágios', tabs: TABS.slice(4) },
+  { title: 'Status', tabs: TABS.slice(3, 4) },
+  { title: 'Comercial', tabs: TABS.slice(4) }, // Fretes para CTE e pedágios
 ]
+// No celular a barra inferior não comporta todas: "Status" abre pela ficha
+// do processo (botão Status) ou pela busca.
+const TABS_CELULAR = TABS.filter((t) => t.value !== 'status')
 const SUBTITULOS = {
   import: 'Processos de importação em andamento',
   export: 'Processos de exportação em andamento',
   archive: 'Processos concluídos e arquivados',
+  status: 'Atualização de um processo por e-mail, pronta para colar',
   fretes: 'Valores e peculiaridades de cada cliente',
   pedagios: 'Rotas e valores de pedágio por número de eixos',
 }
@@ -58,6 +64,8 @@ export default function AppShell() {
   const { fretes, loading: loadingFretes, erro: erroFretes } = useFretes()
   const { pedagios, loading: loadingPedagios, erro: erroPedagios } = usePedagios()
   const [openId, setOpenId] = useState(null)
+  const [statusProc, setStatusProc] = useState(null) // processo vindo do botão "Status" da ficha
+  const [statusPedido, setStatusPedido] = useState(0)
   const [freteOpen, setFreteOpen] = useState(null) // null | 'new' | id do frete
   const [pedagioOpen, setPedagioOpen] = useState(null) // null | 'new' | id da rota
   const [newOpen, setNewOpen] = useState(false)
@@ -92,7 +100,7 @@ export default function AppShell() {
   }
 
   // ATALHOS DE TECLADO: Ctrl/⌘+K busca rápida, "/" filtra a lista,
-  // N novo processo (ou novo frete / nova rota, nas abas de Fretes e Pedágios), 1 a 5 trocam de aba.
+  // N novo processo (ou novo frete / nova rota, nas abas de Fretes e Pedágios), 1 a 6 trocam de aba.
   useEffect(() => {
     const onKey = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -108,7 +116,7 @@ export default function AppShell() {
       } else if (e.key.toLowerCase() === 'n') {
         e.preventDefault()
         novo()
-      } else if (['1', '2', '3', '4', '5'].includes(e.key)) {
+      } else if (['1', '2', '3', '4', '5', '6'].includes(e.key)) {
         setActiveTab(TABS[Number(e.key) - 1].value)
       }
     }
@@ -188,7 +196,11 @@ export default function AppShell() {
                 exit={{ opacity: 0, transition: { duration: 0.08 } }}
                 transition={{ duration: 0.2, ease: 'easeOut' }}
               >
-                {isFretes ? (
+                {activeTab === 'status' ? (
+                  <Suspense fallback={null}>
+                    <StatusClientes key={statusPedido} processes={processes} loading={loading} procInicial={statusProc} />
+                  </Suspense>
+                ) : isFretes ? (
                   <FreteList fretes={fretes} loading={loadingFretes} erro={erroFretes} onOpen={setFreteOpen} onNew={() => setFreteOpen('new')} searchRef={searchRef} />
                 ) : isPedagios ? (
                   <PedagioList pedagios={pedagios} loading={loadingPedagios} erro={erroPedagios} onOpen={setPedagioOpen} onNew={() => setPedagioOpen('new')} searchRef={searchRef} />
@@ -201,11 +213,24 @@ export default function AppShell() {
         </div>
       </main>
 
-      <BottomNav tabs={TABS} counts={counts} active={activeTab} onChange={setActiveTab} onNew={novo} />
+      <BottomNav tabs={TABS_CELULAR} counts={counts} active={activeTab} onChange={setActiveTab} onNew={novo} />
 
       <Suspense fallback={null}>
         <AnimatePresence>
-          {openProc && <ProcessModal key={openProc.id} proc={openProc} processes={processes} onClose={closeProcess} />}
+          {openProc && (
+            <ProcessModal
+              key={openProc.id}
+              proc={openProc}
+              processes={processes}
+              onClose={closeProcess}
+              onEnviarStatus={(id) => {
+                setStatusProc(id)
+                setStatusPedido((n) => n + 1)
+                setOpenId(null)
+                setActiveTab('status')
+              }}
+            />
+          )}
         </AnimatePresence>
         <AnimatePresence>
           {(freteOpen === 'new' || fretes.some((f) => f.id === freteOpen)) && (
