@@ -16,9 +16,9 @@ export const opcoesDeStatus = (proc) => {
     return [
       { id: 'vazio', titulo: 'Vazio retirado', etapa: 0 },
       { id: 'estufado', titulo: 'Estufagem concluída', etapa: 1 },
-      // Numeração, tara e lacre para o cliente conferir. Sem barra de progresso:
-      // pode ir bem antes do embarque (retirada antecipada para cumprir o Draft).
-      // (as fotos vão anexadas no e-mail).
+      // Numeração, tara e lacre para o cliente conferir (as fotos vão anexadas
+      // no e-mail). Sem barra de progresso: pode ir bem antes do embarque
+      // (retirada antecipada para cumprir o Draft).
       { id: 'dados', titulo: 'Dados do contêiner', etapa: null, tabela: true, detalhes: 'Segue abaixo dados do container e fotos em anexo para conferência.' },
       { id: 'rota', titulo: 'Veículo em rota', etapa: 2 },
       { id: 'terminal', titulo: 'Cheio entregue no terminal', etapa: 3 },
