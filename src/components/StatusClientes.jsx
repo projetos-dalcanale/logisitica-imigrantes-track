@@ -87,7 +87,7 @@ function EscolherProcesso({ processos, valor, onChange }) {
           <Command loop>
             <div className="flex items-center gap-2 border-b border-slate-700/70 px-3">
               <Search className="size-4 text-slate-500" />
-              <Command.Input placeholder="Cliente, DTA/DI/DUIMP, booking ou contêiner" className="h-10 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-slate-500" />
+              <Command.Input placeholder="Cliente, DTA/DI/DUIMP, booking ou contêiner…" className="h-10 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-slate-500" />
             </div>
             <Command.List className="custom-scrollbar max-h-72 overflow-y-auto p-1.5">
               <Command.Empty className="py-6 text-center text-sm text-slate-500">Nenhum processo encontrado.</Command.Empty>

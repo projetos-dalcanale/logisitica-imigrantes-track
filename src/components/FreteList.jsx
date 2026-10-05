@@ -89,7 +89,7 @@ export default function FreteList({ fretes, loading, erro, onOpen, onNew, search
 
   return (
     <>
-      <SearchField inputRef={searchRef} value={busca} onChange={setBusca} placeholder="Buscar cliente" hint="/" className="mb-5" />
+      <SearchField inputRef={searchRef} value={busca} onChange={setBusca} placeholder="Buscar cliente…" hint="/" className="mb-5" />
 
       {loading ? (
         <div className="card divide-y divide-slate-700/80 overflow-hidden">

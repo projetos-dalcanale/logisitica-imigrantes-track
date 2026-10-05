@@ -172,7 +172,7 @@ export default function ProcessList({ processes, loading, tab, onOpen, searchRef
           inputRef={searchRef}
           value={search}
           onChange={setSearch}
-          placeholder="Filtrar processos"
+          placeholder="Filtrar processos…"
           hint="/"
           title="Filtra por nome, armador, motorista, placa, documento/booking ou contêiner"
           className="flex-1"

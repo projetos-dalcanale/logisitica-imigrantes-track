@@ -6,9 +6,10 @@ const TONES = {
 }
 
 // Caixa de seleção própria, com o "check" sendo desenhado ao marcar.
-export default function Checkbox({ checked, onChange, disabled, tone = 'brand', label, className = '' }) {
+export default function Checkbox({ id, checked, onChange, disabled, tone = 'brand', label, className = '' }) {
   return (
     <button
+      id={id}
       type="button"
       role="checkbox"
       aria-checked={checked}

@@ -146,6 +146,13 @@ export default function AppShell() {
 
   return (
     <div className="flex h-dvh overflow-hidden bg-navy-900">
+      {/* Teclado: o primeiro Tab oferece pular direto para o conteúdo. */}
+      <a
+        href="#conteudo"
+        className="sr-only z-[200] rounded-lg bg-blue-500 px-4 py-2 text-sm font-semibold text-white focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
+      >
+        Pular para o conteúdo
+      </a>
       <Sidebar
         sections={SECTIONS}
         active={activeTab}
@@ -182,7 +189,7 @@ export default function AppShell() {
           </div>
         </header>
 
-        <div ref={scrollRef} onScroll={onScroll} className="custom-scrollbar flex-1 overflow-y-auto">
+        <div ref={scrollRef} id="conteudo" tabIndex={-1} onScroll={onScroll} className="custom-scrollbar flex-1 overflow-y-auto outline-none">
           <div className="mx-auto w-full max-w-5xl px-4 pb-32 pt-[calc(env(safe-area-inset-top)+3.5rem)] sm:px-6 lg:px-10 lg:pb-12 lg:pt-16">
             <div className="mb-6">
               <h1 className="font-display text-[32px] font-bold leading-tight tracking-[-0.025em] text-ink lg:text-[34px]">{tab.label}</h1>

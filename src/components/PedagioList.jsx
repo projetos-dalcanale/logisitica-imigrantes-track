@@ -71,7 +71,7 @@ export default function PedagioList({ pedagios, loading, erro, onOpen, onNew, se
 
   return (
     <>
-      <SearchField inputRef={searchRef} value={busca} onChange={setBusca} placeholder="Buscar rota, origem ou destino" hint="/" className="mb-3" />
+      <SearchField inputRef={searchRef} value={busca} onChange={setBusca} placeholder="Buscar rota, origem ou destino…" hint="/" className="mb-3" />
       <Segmented className="mb-5 max-w-md" options={FILTROS} value={trajeto} onChange={setTrajeto} />
 
       {loading ? (
