@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { crc32, etapasDaImagem, opcoesDeStatus, pngComDpi, quebrarLinhas } from './statusImagem'
+import { crc32, dadosDosContainers, etapasDaImagem, opcoesDeStatus, pngComDpi, quebrarLinhas } from './statusImagem'
 
 describe('imagem de status', () => {
   it('etapas e situações por tipo de processo', () => {
@@ -32,5 +32,21 @@ describe('imagem de status', () => {
     const ppm = new DataView(out.buffer).getUint32(41)
     expect(ppm).toBe(Math.round(192 / 0.0254))
     expect(out.subarray(54)).toEqual(png.subarray(33))
+  })
+})
+
+describe('dados do contêiner (exportação)', () => {
+  it('existe só na exportação, com texto pronto e tabela', () => {
+    const dados = opcoesDeStatus({ type: 'export' }).find((o) => o.id === 'dados')
+    expect(dados).toMatchObject({ tabela: true, detalhes: 'Segue abaixo dados do container e fotos em anexo para conferência.' })
+    expect(opcoesDeStatus({ type: 'import' }).some((o) => o.id === 'dados')).toBe(false)
+  })
+
+  it('numeração, tara (com kg quando só número) e lacre de cada contêiner', () => {
+    const proc = { containers: [{ numero: 'MSCU 999.888-7', tara: '3800', lacre: 'L123' }, { numero: '', tara: '3.750 kg', lacre: '' }] }
+    expect(dadosDosContainers(proc)).toEqual([
+      { numero: 'MSCU 999.888-7', tara: '3.800 kg', lacre: 'L123' },
+      { numero: '—', tara: '3.750 kg', lacre: '—' },
+    ])
   })
 })

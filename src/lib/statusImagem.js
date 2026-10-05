@@ -16,6 +16,9 @@ export const opcoesDeStatus = (proc) => {
     return [
       { id: 'vazio', titulo: 'Vazio retirado', etapa: 0 },
       { id: 'estufado', titulo: 'Estufagem concluída', etapa: 1 },
+      // Antes do carregamento: numeração, tara e lacre para o cliente conferir
+      // (as fotos vão anexadas no e-mail).
+      { id: 'dados', titulo: 'Dados do contêiner', etapa: 1, tabela: true, detalhes: 'Segue abaixo dados do container e fotos em anexo para conferência.' },
       { id: 'rota', titulo: 'Veículo em rota', etapa: 2 },
       { id: 'terminal', titulo: 'Cheio entregue no terminal', etapa: 3 },
       { id: 'outro', titulo: 'Atualização do processo', etapa: null },
@@ -31,6 +34,17 @@ export const opcoesDeStatus = (proc) => {
   ]
   return proc.finalizacaoVazio === 'baixa' ? opcoes.filter((o) => o.id !== 'devolvido') : opcoes
 }
+
+// Numeração, tara e lacre de cada contêiner (tara só com números ganha "kg").
+export const dadosDosContainers = (proc) =>
+  (proc.containers || []).map((ct) => {
+    const tara = String(ct.tara || '').trim()
+    return {
+      numero: String(ct.numero || '').trim() || '—',
+      tara: /^\d+$/.test(tara) ? `${Number(tara).toLocaleString('pt-BR')} kg` : tara || '—',
+      lacre: String(ct.lacre || '').trim() || '—',
+    }
+  })
 
 // Quebra um texto em linhas que caibam na largura (medida injetável para teste).
 export const quebrarLinhas = (texto, largura, medir) => {
@@ -122,7 +136,7 @@ const retanguloArredondado = (ctx, x, y, w, h, r) => {
 }
 
 // Calcula a altura e desenha o cartão. `canvas` é redimensionado.
-export const desenharStatus = (canvas, { proc, titulo, detalhes, etapa, data = new Date() }) => {
+export const desenharStatus = (canvas, { proc, titulo, detalhes, etapa, tabela = false, data = new Date() }) => {
   const ctx = canvas.getContext('2d')
   const { cliente, documento, containers } = dadosDoProcesso(proc)
   const M = 36 // margem interna
@@ -139,9 +153,12 @@ export const desenharStatus = (canvas, { proc, titulo, detalhes, etapa, data = n
   const info = [
     ['Cliente', cliente || '—'],
     [documento?.rotulo || 'Documento', documento?.numero || '—'],
-    // Um contêiner por linha, para o número não quebrar no meio.
-    [containers.length > 1 ? 'Contêineres' : 'Contêiner', containers.join('\n') || '—'],
-  ]
+    // Um contêiner por linha, para o número não quebrar no meio. Com a
+    // tabela de dados, os contêineres aparecem nela.
+    !tabela && [containers.length > 1 ? 'Contêineres' : 'Contêiner', containers.join('\n') || '—'],
+  ].filter(Boolean)
+  const linhasTabela = tabela ? dadosDosContainers(proc) : []
+  const alturaTabela = tabela ? 38 + Math.max(linhasTabela.length, 1) * 40 + 6 : 0
   const colunas = info.length
   const larguraColuna = (W - 2 * M - (colunas - 1) * 12) / colunas
   const linhasInfo = info.map(([, v]) => quebrarLinhas(v, larguraColuna - 28, medir(fonte(600, 15))))
@@ -152,6 +169,7 @@ export const desenharStatus = (canvas, { proc, titulo, detalhes, etapa, data = n
   if (etapas) altura += 30 + 62
   if (linhasDetalhes.length) altura += 22 + linhasDetalhes.length * 25
   altura += 28 + alturaInfo + 28 + 1 + 44
+  if (tabela) altura += 12 + alturaTabela
 
   canvas.width = W * ESCALA
   canvas.height = Math.ceil(altura) * ESCALA
@@ -304,7 +322,44 @@ export const desenharStatus = (canvas, { proc, titulo, detalhes, etapa, data = n
     ctx.fillStyle = COR.tinta
     linhasInfo[i].forEach((linha, j) => ctx.fillText(linha, x + 14, y + 46 + j * 21))
   })
-  y += alturaInfo + 28
+  y += alturaInfo
+
+  // Tabela com numeração, tara e lacre de cada contêiner.
+  if (tabela) {
+    y += 12
+    const largura = W - 2 * M
+    const util = largura - 32
+    ctx.fillStyle = COR.fundoInfo
+    retanguloArredondado(ctx, M, y, largura, alturaTabela, 12)
+    ctx.fill()
+    // [rótulo, campo, início da coluna (fração), fim da coluna (fração)]
+    const cols = [
+      ['Contêiner', 'numero', 0, 0.45],
+      ['Tara', 'tara', 0.45, 0.7],
+      ['Lacre', 'lacre', 0.7, 1],
+    ]
+    ctx.font = fonte(600, 11)
+    ctx.fillStyle = COR.cinzaClaro
+    ctx.letterSpacing = '1px'
+    cols.forEach(([rotulo, , ini]) => ctx.fillText(rotulo.toUpperCase(), M + 16 + ini * util, y + 25))
+    ctx.letterSpacing = '0px'
+    ctx.font = fonte(600, 15)
+    linhasTabela.forEach((linha, i) => {
+      const ly = y + 38 + i * 40
+      ctx.fillStyle = COR.linha
+      ctx.fillRect(M + 16, ly, util, 1)
+      ctx.fillStyle = COR.tinta
+      cols.forEach(([, campo, ini, fim]) => {
+        // Corta com "…" se não couber na coluna.
+        const max = (fim - ini) * util - 12
+        let texto = linha[campo]
+        while (texto.length > 1 && ctx.measureText(texto).width > max) texto = `${texto.slice(0, -2)}…`
+        ctx.fillText(texto, M + 16 + ini * util, ly + 26)
+      })
+    })
+    y += alturaTabela
+  }
+  y += 28
 
   // Rodapé.
   ctx.fillStyle = COR.linha

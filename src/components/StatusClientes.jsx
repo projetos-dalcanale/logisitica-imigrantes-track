@@ -5,7 +5,7 @@ import { Check, ChevronDown, Copy, Download, Plus, Search, Type } from 'lucide-r
 import { ExportIcon, ImportIcon } from './ui/icons'
 import { useToast } from '../contexts/ToastContext'
 import { dadosDoProcesso, montarStatus } from '../lib/status'
-import { desenharStatus, htmlDaImagem, imagemDoCanvas, imagemReduzida, opcoesDeStatus } from '../lib/statusImagem'
+import { dadosDosContainers, desenharStatus, htmlDaImagem, imagemDoCanvas, imagemReduzida, opcoesDeStatus } from '../lib/statusImagem'
 import Button from './ui/Button'
 import EmptyState from './ui/EmptyState'
 
@@ -167,12 +167,17 @@ export default function StatusClientes({ processes, loading, procInicial }) {
 
   useEffect(() => {
     if (!proc || !opcao || !canvasRef.current) return
-    desenharStatus(canvasRef.current, { proc, titulo: titulo.trim() || opcao.titulo, detalhes: detalhes.trim(), etapa: opcao.etapa })
+    desenharStatus(canvasRef.current, { proc, titulo: titulo.trim() || opcao.titulo, detalhes: detalhes.trim(), etapa: opcao.etapa, tabela: !!opcao.tabela })
   }, [proc, opcao, titulo, detalhes, fontesProntas])
 
+  // Situações com texto pronto (ex.: Dados do contêiner) preenchem os
+  // detalhes; ao sair delas, o texto pronto que não foi mexido é limpo.
   const escolherStatus = (o) => {
+    const anterior = opcoes.find((x) => x.id === statusId)
     setStatusId(o.id)
     setTitulo(o.titulo)
+    if (o.detalhes) setDetalhes(o.detalhes)
+    else if (anterior?.detalhes && detalhes.trim() === anterior.detalhes) setDetalhes('')
   }
 
   const escolherProcesso = (id) => {
@@ -199,7 +204,12 @@ export default function StatusClientes({ processes, loading, procInicial }) {
     })
   }
 
-  const textoParaEmail = () => montarStatus(proc, [titulo.trim() || opcao.titulo, detalhes.trim()].filter(Boolean).join('\n'))
+  const textoParaEmail = () => {
+    const tabela = opcao.tabela
+      ? dadosDosContainers(proc).map((c) => `Contêiner ${c.numero} · Tara: ${c.tara} · Lacre: ${c.lacre}`).join('\n')
+      : ''
+    return montarStatus(proc, [titulo.trim() || opcao.titulo, detalhes.trim(), tabela].filter(Boolean).join('\n\n'))
+  }
 
   const copiarImagem = async () => {
     const canvas = canvasRef.current
