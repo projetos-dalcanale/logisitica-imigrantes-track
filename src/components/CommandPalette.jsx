@@ -101,7 +101,7 @@ export default function CommandPalette({ processes, fretes = [], onClose, onOpen
             <Item icon={Archive} value="ir arquivados" onSelect={() => actions.aba('archive')} hint="3">Ir para Arquivados</Item>
             <Item icon={Mail} value="status para clientes enviar email e-mail atualizacao" onSelect={() => actions.aba('status')} hint="4">Enviar status para clientes</Item>
             <Item icon={ReceiptText} value="ir cte fretes tabela de frete clientes" onSelect={() => actions.aba('fretes')} hint="5">Ir para Fretes para CTE</Item>
-            <Item icon={Route} value="ir pedagios rotas e valores eixos" onSelect={() => actions.aba('pedagios')} hint="6">Ir para Rotas e Valores</Item>
+            <Item icon={Route} value="ir pedagios rotas e valores eixos" onSelect={() => actions.aba('pedagios')} hint="6">Ir para Rotas e Valores de Pedágio</Item>
             <Item icon={ListChecks} value="gerenciar cadastros terminais armadores tipos" onSelect={actions.cadastros}>Gerenciar cadastros</Item>
             <Item icon={Moon} value="alternar tema modo escuro claro" onSelect={actions.tema}>Alternar modo claro/escuro</Item>
             <Item icon={LogOut} value="sair logout" onSelect={actions.sair}>Sair</Item>

@@ -31,13 +31,12 @@ export const TABS = [
   { value: 'archive', label: 'Arquivados', short: 'Arquivados', icon: Archive },
   { value: 'status', label: 'Status para clientes', short: 'Status', icon: Mail },
   { value: 'fretes', label: 'Fretes para CTE', short: 'Fretes CTE', icon: ReceiptText },
-  { value: 'pedagios', label: 'Rotas e Valores', short: 'Pedágios', icon: Route },
+  { value: 'pedagios', label: 'Rotas e Valores de Pedágio', short: 'Pedágios', icon: Route },
 ]
 const SECTIONS = [
   { title: 'Processos', tabs: TABS.slice(0, 3) },
   { title: 'Status', tabs: TABS.slice(3, 4) },
-  { title: 'Comercial', tabs: TABS.slice(4, 5) },
-  { title: 'Pedágios', tabs: TABS.slice(5) },
+  { title: 'Comercial', tabs: TABS.slice(4) }, // Fretes para CTE e pedágios
 ]
 // No celular a barra inferior não comporta todas: "Status" abre pela ficha
 // do processo (botão Status) ou pela busca.
