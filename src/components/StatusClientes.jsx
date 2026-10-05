@@ -5,7 +5,7 @@ import { Check, ChevronDown, Copy, Download, Plus, Search, Type } from 'lucide-r
 import { ExportIcon, ImportIcon } from './ui/icons'
 import { useToast } from '../contexts/ToastContext'
 import { dadosDoProcesso, montarStatus } from '../lib/status'
-import { desenharStatus, imagemDoCanvas, LARGURA, opcoesDeStatus } from '../lib/statusImagem'
+import { desenharStatus, htmlDaImagem, imagemDoCanvas, imagemReduzida, opcoesDeStatus } from '../lib/statusImagem'
 import Button from './ui/Button'
 import EmptyState from './ui/EmptyState'
 
@@ -203,12 +203,19 @@ export default function StatusClientes({ processes, loading, procInicial }) {
 
   const copiarImagem = async () => {
     const canvas = canvasRef.current
+    // Vai como HTML (imagem nítida com a largura travada) e, para quem só
+    // aceita imagem, uma versão já no tamanho do e-mail.
+    const html = htmlDaImagem(canvas, `Status: ${titulo || opcao.titulo}`)
     try {
-      // O Blob vai como promessa para o navegador manter a permissão do clique.
-      await navigator.clipboard.write([new ClipboardItem({ 'image/png': imagemDoCanvas(canvas) })])
+      // Os Blobs vão como promessa para o navegador manter a permissão do clique.
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'image/png': imagemReduzida(canvas),
+        }),
+      ])
       showToast('Imagem copiada. É só colar no e-mail.')
     } catch {
-      const html = `<img src="${canvas.toDataURL('image/png')}" width="${LARGURA}" alt="${(titulo || opcao.titulo).replace(/"/g, '')}">`
       if (copiarPorSelecao({ html })) showToast('Imagem copiada. É só colar no e-mail.')
       else showToast('Não foi possível copiar. Use “Baixar imagem” e anexe no e-mail.', 'error')
     }

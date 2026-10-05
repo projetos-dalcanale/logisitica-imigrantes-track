@@ -333,3 +333,28 @@ export const imagemDoCanvas = (canvas) =>
       resolve(new Blob([pngComDpi(bytes, 96 * ESCALA)], { type: 'image/png' }))
     }, 'image/png')
   })
+
+// Largura com que a imagem aparece no e-mail (o corpo de um e-mail comum
+// tem uns 600 px). Muitos programas ignoram o DPI do PNG e colam a imagem
+// no tamanho real em pixels, então o tamanho vai travado no HTML copiado.
+export const LARGURA_EMAIL = 560
+
+// Versão reduzida (pixels reais = largura de exibição), para os programas
+// que colam só a imagem.
+export const imagemReduzida = (canvas, largura = LARGURA_EMAIL) =>
+  new Promise((resolve, reject) => {
+    const menor = document.createElement('canvas')
+    menor.width = largura
+    menor.height = Math.round((canvas.height * largura) / canvas.width)
+    const ctx = menor.getContext('2d')
+    ctx.imageSmoothingQuality = 'high'
+    ctx.drawImage(canvas, 0, 0, menor.width, menor.height)
+    menor.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('Falha ao gerar a imagem'))), 'image/png')
+  })
+
+// HTML com a imagem em alta resolução, mas exibida na largura do e-mail.
+export const htmlDaImagem = (canvas, alt, largura = LARGURA_EMAIL) => {
+  const altura = Math.round((canvas.height * largura) / canvas.width)
+  const texto = String(alt || '').replace(/[<>"&]/g, '')
+  return `<img src="${canvas.toDataURL('image/png')}" width="${largura}" height="${altura}" alt="${texto}" style="width:${largura}px;height:${altura}px;max-width:100%;border:0;display:block">`
+}
