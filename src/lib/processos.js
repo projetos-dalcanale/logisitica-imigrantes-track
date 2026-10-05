@@ -1,17 +1,19 @@
 // Regras de negócio dos processos, sem nada de tela — reaproveitadas pelos
 // cards, pelo modal de detalhes, pelo resumo e pela exportação.
 
-// CHECKLIST DE IMPORTAÇÃO (nesta ordem exata)
+// CHECKLIST DE IMPORTAÇÃO (nesta ordem exata). Nas etapas "datetime" a data
+// é só o agendamento (informativo) e o check "<id>_check" marca que o
+// carregamento/devolução aconteceu de fato.
 export const importChecklistSteps = [
-  { id: 'ag_carga', label: 'Agendamento de Carregamento', type: 'datetime' },
+  { id: 'ag_carga', label: 'Carregamento concluído', type: 'datetime' },
   { id: 'gerar_cte', label: 'Gerar CTe', type: 'checkbox' },
   { id: 'gerar_ciot', label: 'Gerar CIOT', type: 'checkbox' },
   { id: 'gerar_mdfe', label: 'Gerar MDFE', type: 'checkbox' },
   { id: 'encerrar_mdfe', label: 'Encerrar MDFE', type: 'checkbox' },
-  { id: 'ag_vazio', label: 'Agendamento de Vazio', type: 'datetime' },
+  { id: 'ag_vazio', label: 'Devolução concluída', type: 'datetime' },
 ]
 
-// "Baixa de Contêiner" (sem devolução) não tem Agendamento de Vazio.
+// "Baixa de Contêiner" (sem devolução) não tem a etapa de devolução do vazio.
 // Processos antigos sem finalizacaoVazio contam como "devolucao".
 export const stepsChecklistImport = (proc) =>
   proc?.finalizacaoVazio === 'baixa'
@@ -19,7 +21,7 @@ export const stepsChecklistImport = (proc) =>
     : importChecklistSteps
 
 // Checklist "zerado" para um novo contêiner de importação. Etapas datetime
-// ganham um campo extra "<id>_check" que marca o agendamento como confirmado.
+// ganham um campo extra "<id>_check" que marca a etapa como concluída.
 export const novoChecklistImport = () => {
   const checklist = {}
   importChecklistSteps.forEach((step) => {
@@ -28,6 +30,15 @@ export const novoChecklistImport = () => {
   })
   return checklist
 }
+
+// ETAPAS DA EXPORTAÇÃO (nesta ordem). Cada uma tem a data agendada (`id`)
+// e o check (`check`) que marca que aconteceu de fato. Deadline Draft e
+// Deadline Carga são só informativos e não contam como etapa.
+export const exportSteps = [
+  { id: 'agVazio', check: 'agVazioCheck', label: 'Retirada do vazio', feito: 'Vazio retirado', terminal: 'termVazioExp', cat: 'vazio' },
+  { id: 'estufagem', check: 'estufagemCheck', label: 'Estufagem', feito: 'Estufagem concluída' },
+  { id: 'agCheio', check: 'agCheioCheck', label: 'Depósito do cheio', feito: 'Cheio depositado', terminal: 'termCheioExp', cat: 'cheio' },
+]
 
 const pad = (n) => String(n).padStart(2, '0')
 
@@ -130,8 +141,7 @@ export const getDraftDeadlineInfo = (proc, now = Date.now()) => {
   return { nivel, texto: `Draft vence em ${diasRestantes} dia${diasRestantes > 1 ? 's' : ''}` }
 }
 
-// Progresso 0-100. Importação: etapas do checklist concluídas.
-// Exportação: campos de prazo/agendamento preenchidos.
+// Progresso 0-100: etapas concluídas (checks marcados) em todos os contêineres.
 export const getProcessProgress = (proc) => {
   if (!proc.containers || proc.containers.length === 0) return 0
   let total = 0
@@ -147,11 +157,10 @@ export const getProcessProgress = (proc) => {
       })
     })
   } else {
-    const exportFields = ['deadlineDraft', 'deadlineCarga', 'agVazio', 'agCheio']
     proc.containers.forEach((ct) => {
-      exportFields.forEach((f) => {
+      exportSteps.forEach((step) => {
         total++
-        if (ct[f]) done++
+        if (ct[step.check] === 'true') done++
       })
     })
   }
@@ -211,5 +220,19 @@ export const transportePorContainer = (proc) => {
   }))
 }
 
+// A retirada do vazio precisa ser antes do Deadline Draft. true quando as
+// duas datas existem e o vazio ficou para depois (ou na mesma hora).
+export const vazioDepoisDoDraft = (agVazio, deadlineDraft) => {
+  const vazio = new Date(agVazio || '').getTime()
+  const draft = new Date(deadlineDraft || '').getTime()
+  return !isNaN(vazio) && !isNaN(draft) && vazio >= draft
+}
+
 // Valores distintos e preenchidos (ex: os motoristas de um processo).
 export const distintos = (valores) => [...new Set(valores.map((v) => (v || '').trim()).filter(Boolean))]
+
+// Placas para exibição: "abc1d23" -> "ABC-1D23" (Mercosul) e "abc1234" ->
+// "ABC-1234" (antiga). Funciona com várias placas no mesmo texto; o que não
+// for placa fica como está. O valor salvo não muda.
+export const formatarPlacas = (texto) =>
+  (texto || '').replace(/\b([A-Za-z]{3})[-\s]?(\d[A-Za-z0-9]\d{2})\b/g, (_, l, n) => `${l.toUpperCase()}-${n.toUpperCase()}`)

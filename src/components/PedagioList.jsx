@@ -32,9 +32,12 @@ function PedagioRow({ rota, onOpen }) {
           {[rota.idaVolta ? 'Ida e volta' : 'Somente ida', rota.pontos?.length > 0 && `${rota.pontos.length} ${rota.pontos.length === 1 ? 'parada' : 'paradas'}`,`${rota.eixos || 0} ${rota.eixos === 1 ? 'eixo' : 'eixos'}`, `${formatarNumero(rota.kmPrevisto, 1)} km`].filter(Boolean).join(' · ')}
         </div>
       </div>
-      <div className="text-right">
+      <div className="shrink-0 text-right">
         <div className="text-[11px] text-slate-500">Pedágio</div>
-        <div className="text-[14px] font-medium tabular-nums text-ink">R$ {formatarNumero(rota.valorTotal)}</div>
+        <div className="font-display text-[17px] font-semibold tracking-[-0.01em] tabular-nums text-ink">
+          <span className="mr-0.5 text-[12px] font-medium text-slate-400">R$</span>
+          {formatarNumero(rota.valorTotal)}
+        </div>
       </div>
       <ChevronRight className="size-4 shrink-0 text-slate-500/70" strokeWidth={2.4} />
     </button>
@@ -86,7 +89,7 @@ export default function PedagioList({ pedagios, loading, erro, onOpen, onNew, se
         filtrando ? (
           <EmptyState search title="Nenhuma rota encontrada" description={termo ? `Nada encontrado para “${busca}” neste filtro.` : 'Nenhuma rota cadastrada neste tipo de trajeto.'} action={<Button variant="gray" size="sm" icon={X} onClick={limpar}>Limpar filtros</Button>} />
         ) : (
-          <EmptyState title="Nenhuma rota cadastrada" description="Cadastre a primeira rota para guardar os valores de pedágio." action={<Button size="sm" icon={Plus} onClick={onNew}>Nova rota</Button>} />
+          <EmptyState art="rota" title="Nenhuma rota cadastrada" description="Cadastre a primeira rota para guardar os valores de pedágio." action={<Button size="sm" icon={Plus} onClick={onNew}>Nova rota</Button>} />
         )
       ) : (
         <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">

@@ -26,9 +26,10 @@ function Stat({ icon: Icon, label, value, tone = 'neutral' }) {
   )
 }
 
-// Algum agendamento de carregamento nas próximas 24 h (e ainda não passado)?
+// Algum carregamento agendado nas próximas 24 h (e ainda não concluído)?
 const carregaEm24h = (proc, now) =>
   (proc.containers || []).some((c) => {
+    if (c.checklist?.ag_carga_check === 'true') return false
     const t = new Date(c.checklist?.ag_carga || '').getTime()
     return !isNaN(t) && t >= now && t - now <= 86400000
   })

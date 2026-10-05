@@ -1,19 +1,13 @@
-import { LoaderCircle } from 'lucide-react'
 import { useAuth } from './contexts/AuthContext'
 import LoginScreen from './components/LoginScreen'
 import AppShell from './components/AppShell'
+import Splash from './components/Splash'
 import { RegistriesProvider } from './contexts/RegistriesContext'
 
 export default function App() {
   const { user, loading } = useAuth()
 
-  if (loading) {
-    return (
-      <div className="h-dvh flex items-center justify-center text-slate-500">
-        <LoaderCircle className="size-6 animate-spin" />
-      </div>
-    )
-  }
+  if (loading) return <Splash />
 
   // Os cadastros compartilhados só podem ser lidos por quem está logado.
   return user ? (

@@ -8,11 +8,14 @@ import {
   DESTINOS,
   DOC_TIPOS,
   draftAlertConfig,
+  exportSteps,
+  formatarDataHora,
   getDraftDeadlineInfo,
   getProcessProgress,
   mascaraNumeroContainer,
   stepsChecklistImport,
   validarNumeroContainer,
+  vazioDepoisDoDraft,
 } from '../lib/processos'
 import {
   adicionarContainer,
@@ -20,10 +23,12 @@ import {
   atualizarChecklist,
   atualizarProcesso,
   excluirProcesso,
+  marcarEtapaExport,
   numeroContainerDuplicado,
   removerContainer,
 } from '../lib/processActions'
 import { exportarProcessoPDF } from '../lib/exportar'
+import { etapaFeita, quandoRelativo } from '../lib/etapas'
 import AutoSaveInput from './AutoSaveInput'
 import RegistrySelect from './RegistrySelect'
 import SaveIndicator from './SaveIndicator'
@@ -35,6 +40,7 @@ import Checkbox from './ui/Checkbox'
 import DateTimeField from './ui/DateTimeField'
 import Segmented from './ui/Segmented'
 import { Group, Row } from './ui/List'
+import { Timeline, TimelineItem } from './ui/Timeline'
 
 const plainRight = 'field-plain text-right'
 const valor = (v) => (v ? <span className="truncate text-slate-400">{v}</span> : <span className="text-slate-500">—</span>)
@@ -130,7 +136,76 @@ function DetalhesGroup({ proc, archived }) {
   )
 }
 
-function ContainerGroup({ proc, ct, index, processes, disabled, multi }) {
+// Exportação como linha do tempo: retirada do vazio, estufagem e depósito
+// do cheio. A data diz quando está agendado; o check diz que aconteceu.
+function ExportTimeline({ proc, ct, disabled, save, salvarVazio, now }) {
+  const atual = exportSteps.findIndex((step) => ct[step.check] !== 'true')
+  return (
+    <Timeline>
+      {exportSteps.map((step, i) => {
+        const feito = ct[step.check] === 'true'
+        const data = ct[step.id]
+        const passou = data && !feito && new Date(data).getTime() < now
+        const quando = quandoRelativo(ct[`${step.check}Em`])
+        const depoisDoDraft = step.id === 'agVazio' && !feito && vazioDepoisDoDraft(data, ct.deadlineDraft)
+        let subtitle = null
+        let subtitleClass = 'text-slate-400'
+        if (feito) {
+          subtitle = quando ? `${step.feito} ${quando}` : step.feito
+          subtitleClass = 'text-emerald-500'
+        } else if (depoisDoDraft) {
+          subtitle = `Depois do Deadline Draft (${quandoRelativo(ct.deadlineDraft, now)})`
+          subtitleClass = 'text-yellow-500'
+        } else if (passou) {
+          subtitle = 'Horário passou · confirmar'
+          subtitleClass = 'text-red-500'
+        } else if (data) {
+          subtitle = 'Agendado'
+        } else if (i === atual) {
+          subtitle = 'Próxima etapa · definir data'
+        }
+        return (
+          <TimelineItem
+            key={step.id}
+            done={feito}
+            atual={i === atual}
+            last={i === exportSteps.length - 1}
+            title={step.label}
+            subtitle={subtitle}
+            subtitleClass={subtitleClass}
+            onClick={disabled ? undefined : () => marcarEtapaExport(proc, ct.id, step, !feito)}
+            node={<Checkbox tone="success" checked={feito} disabled={disabled} label={`${step.label}: ${step.feito.toLowerCase()}`} onChange={(v) => marcarEtapaExport(proc, ct.id, step, v)} />}
+          >
+            <div className="flex flex-col items-end gap-1">
+              {step.terminal && <RegistrySelect variant="plain" cat={step.cat} value={ct[step.terminal]} disabled={disabled} onChange={save(step.terminal)} placeholder="Terminal" />}
+              <DateTimeField variant="pill" placeholder="Agendar" value={data} disabled={disabled} onChange={step.id === 'agVazio' ? salvarVazio : save(step.id)} />
+            </div>
+          </TimelineItem>
+        )
+      })}
+    </Timeline>
+  )
+}
+
+// Agendamentos da importação (informativos): datas de carregamento e de
+// devolução do vazio, guardadas no contêiner. Sem devolução na baixa.
+function AgendamentosRows({ proc, ct, disabled }) {
+  const salvar = (campo) => (v) => atualizarChecklist(proc, ct.id, campo, v)
+  return (
+    <>
+      <Row label="Agendamento de carregamento">
+        <DateTimeField variant="pill" placeholder="Definir" value={ct.checklist?.ag_carga} disabled={disabled} onChange={salvar('ag_carga')} />
+      </Row>
+      {proc.finalizacaoVazio !== 'baixa' && (
+        <Row label="Agendamento de vazio">
+          <DateTimeField variant="pill" placeholder="Definir" value={ct.checklist?.ag_vazio} disabled={disabled} onChange={salvar('ag_vazio')} />
+        </Row>
+      )}
+    </>
+  )
+}
+
+function ContainerGroup({ proc, ct, index, processes, disabled, multi, now }) {
   const showToast = useToast()
   const { confirm } = useDialog()
   const [numeroDigitado, setNumeroDigitado] = useState(ct.numero || '')
@@ -159,6 +234,32 @@ function ContainerGroup({ proc, ct, index, processes, disabled, multi }) {
       }
     }
     await save('numero')(value)
+  }
+
+  // A retirada do vazio tem que ser antes do Deadline Draft: avisa (sem
+  // bloquear) ao agendar depois dele, ou ao mudar o Draft para antes do vazio.
+  const draftCt = isImport ? null : getDraftDeadlineInfo({ ...proc, containers: [ct] }, now)
+  const salvarVazio = async (valor) => {
+    if (vazioDepoisDoDraft(valor, ct.deadlineDraft)) {
+      const ok = await confirm({
+        title: 'Retirada depois do Deadline Draft',
+        message: `O Deadline Draft deste contêiner é ${formatarDataHora(ct.deadlineDraft)}. A retirada do vazio precisa ser agendada antes dele. Agendar para ${formatarDataHora(valor)} mesmo assim?`,
+        confirmLabel: 'Agendar',
+      })
+      if (!ok) return
+    }
+    await save('agVazio')(valor)
+  }
+  const salvarDraft = async (valor) => {
+    if (ct.agVazioCheck !== 'true' && vazioDepoisDoDraft(ct.agVazio, valor)) {
+      const ok = await confirm({
+        title: 'Deadline Draft antes da retirada',
+        message: `A retirada do vazio está agendada para ${formatarDataHora(ct.agVazio)}, depois deste Deadline Draft (${formatarDataHora(valor)}). Salvar mesmo assim?`,
+        confirmLabel: 'Salvar',
+      })
+      if (!ok) return
+    }
+    await save('deadlineDraft')(valor)
   }
 
   const remover = async () => {
@@ -212,37 +313,41 @@ function ContainerGroup({ proc, ct, index, processes, disabled, multi }) {
           </>
         )}
 
+        {isImport && multi && <AgendamentosRows proc={proc} ct={ct} disabled={disabled} />}
+
         {isImport ? (
-          steps.map((step) => {
-            const val = ct.checklist?.[step.id] || ''
-            if (step.type === 'checkbox') {
-              const feito = val === 'true'
+          <Timeline>
+            {steps.map((step, i) => {
+              // Só o check: as datas de agendamento ficam em "Agendamentos".
+              const chave = step.type === 'checkbox' ? step.id : `${step.id}_check`
+              const feito = etapaFeita(ct, step)
+              const atual = !feito && i === steps.findIndex((s) => !etapaFeita(ct, s))
+              const quando = quandoRelativo(ct.checklist?.[`${chave}_em`])
               return (
-                <label key={step.id} className={`flex min-h-11 items-center gap-3 px-4 py-1.5 text-[15px] ${disabled ? '' : 'cursor-pointer hover:bg-navy-700/30'}`}>
-                  <Checkbox checked={feito} disabled={disabled} label={step.label} onChange={(v) => atualizarChecklist(proc, ct.id, step.id, v)} />
-                  <span className={`flex-1 transition-colors ${feito ? 'text-slate-500' : 'text-ink'}`}>{step.label}</span>
-                </label>
+                <TimelineItem
+                  key={step.id}
+                  done={feito}
+                  atual={atual}
+                  last={i === steps.length - 1}
+                  title={step.label}
+                  subtitle={feito ? (quando ? `Concluído ${quando}` : 'Concluído') : atual && 'Próxima etapa'}
+                  subtitleClass={feito ? 'text-emerald-500' : 'text-slate-400'}
+                  onClick={disabled ? undefined : () => atualizarChecklist(proc, ct.id, chave, !feito)}
+                  node={<Checkbox tone="success" checked={feito} disabled={disabled} label={step.label} onChange={(v) => atualizarChecklist(proc, ct.id, chave, v)} />}
+                />
               )
-            }
-            const agendado = ct.checklist?.[`${step.id}_check`] === 'true'
-            return (
-              <div key={step.id} className="flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-1.5 text-[15px]">
-                <Checkbox tone="success" checked={agendado} disabled={disabled} label={`${step.label}: agendado`} onChange={(v) => atualizarChecklist(proc, ct.id, `${step.id}_check`, v)} />
-                <span className={`flex-1 ${agendado ? 'text-slate-500' : 'text-ink'}`}>{step.label}</span>
-                <DateTimeField variant="pill" placeholder="Definir" value={val} disabled={disabled} onChange={(v) => atualizarChecklist(proc, ct.id, step.id, v)} />
-              </div>
-            )
-          })
+            })}
+          </Timeline>
         ) : (
           <>
             <Row label="Tara"><AutoSaveInput type="text" placeholder="—" value={ct.tara} disabled={disabled} onSave={save('tara')} className={plainRight} /></Row>
             <Row label="Lacre"><AutoSaveInput type="text" placeholder="—" value={ct.lacre} disabled={disabled} onSave={save('lacre')} className={plainRight} /></Row>
-            <Row label="Deadline Draft"><DateTimeField variant="pill" placeholder="Definir" value={ct.deadlineDraft} disabled={disabled} onChange={save('deadlineDraft')} /></Row>
+            {/* Prazos do armador: só informativos, não são etapas. */}
+            <Row label={<span>Deadline Draft{draftCt && <span className={`block text-[12px] font-medium ${draftAlertConfig[draftCt.nivel].text}`}>{draftCt.texto}</span>}</span>}>
+              <DateTimeField variant="pill" placeholder="Definir" value={ct.deadlineDraft} disabled={disabled} onChange={salvarDraft} />
+            </Row>
             <Row label="Deadline Carga"><DateTimeField variant="pill" placeholder="Definir" value={ct.deadlineCarga} disabled={disabled} onChange={save('deadlineCarga')} /></Row>
-            <Row label="Retirada vazio"><RegistrySelect variant="plain" cat="vazio" value={ct.termVazioExp} disabled={disabled} onChange={save('termVazioExp')} placeholder="Terminal" /></Row>
-            <Row label={<span className="pl-4 text-slate-400">Agendamento</span>}><DateTimeField variant="pill" placeholder="Definir" value={ct.agVazio} disabled={disabled} onChange={save('agVazio')} /></Row>
-            <Row label="Depósito cheio"><RegistrySelect variant="plain" cat="cheio" value={ct.termCheioExp} disabled={disabled} onChange={save('termCheioExp')} placeholder="Terminal" /></Row>
-            <Row label={<span className="pl-4 text-slate-400">Agendamento</span>}><DateTimeField variant="pill" placeholder="Definir" value={ct.agCheio} disabled={disabled} onChange={save('agCheio')} /></Row>
+            <ExportTimeline proc={proc} ct={ct} disabled={disabled} save={save} salvarVazio={salvarVazio} now={now} />
           </>
         )}
       </Group>
@@ -255,6 +360,8 @@ function ContainerGroup({ proc, ct, index, processes, disabled, multi }) {
 export default function ProcessModal({ proc, processes, onClose }) {
   const showToast = useToast()
   const { confirm } = useDialog()
+  // Relógio da ficha: fixado ao abrir (as marcações de horário usam a hora real).
+  const [now] = useState(() => Date.now())
   const isImport = proc.type === 'import'
   const archived = proc.status === 'archived'
   const containers = proc.containers || []
@@ -337,6 +444,13 @@ export default function ProcessModal({ proc, processes, onClose }) {
           </Group>
         )}
 
+        {/* Com um contêiner, os agendamentos ficam aqui, como o transporte. */}
+        {isImport && containers.length === 1 && (
+          <Group title="Agendamentos">
+            <AgendamentosRows proc={proc} ct={containers[0]} disabled={archived} />
+          </Group>
+        )}
+
         <Group title="Observações">
           <div className="px-4 py-3">
             <AutoSaveInput
@@ -354,7 +468,7 @@ export default function ProcessModal({ proc, processes, onClose }) {
 
         <AnimatePresence initial={false}>
           {containers.map((ct, index) => (
-            <ContainerGroup key={ct.id} proc={proc} ct={ct} index={index} processes={processes} disabled={archived} multi={containers.length > 1} />
+            <ContainerGroup key={ct.id} proc={proc} ct={ct} index={index} processes={processes} disabled={archived} multi={containers.length > 1} now={now} />
           ))}
         </AnimatePresence>
 

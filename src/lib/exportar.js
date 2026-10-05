@@ -1,4 +1,4 @@
-import { distintos, formatarDataHora, stepsChecklistImport, transportePorContainer } from './processos'
+import { distintos, exportSteps, formatarDataHora, stepsChecklistImport, transportePorContainer } from './processos'
 
 // SEGURANÇA: o PDF é montado como HTML, então todo texto digitado é escapado.
 const escapeHtml = (value) => {
@@ -47,6 +47,7 @@ export const exportarProcessoPDF = (proc) => {
     }
     if (!isImport) {
       html += `<div style="font-size:11px; color:#444; margin-bottom:8px;">Tara: ${escapeHtml(ct.tara) || '—'} &nbsp;|&nbsp; Lacre: ${escapeHtml(ct.lacre) || '—'}</div>`
+      html += `<div style="font-size:11px; color:#444; margin-bottom:8px;">Deadline Draft: ${formatarDataHora(ct.deadlineDraft)} &nbsp;|&nbsp; Deadline Carga: ${formatarDataHora(ct.deadlineCarga)}</div>`
     }
     html += `<table style="width:100%; border-collapse:collapse; font-size:11px;">`
     if (isImport) {
@@ -60,13 +61,10 @@ export const exportarProcessoPDF = (proc) => {
         }
       })
     } else {
-      ;[
-        ['Deadline Draft', ct.deadlineDraft],
-        ['Deadline Carga', ct.deadlineCarga],
-        [`Retirada Vazio${ct.termVazioExp ? ' — ' + escapeHtml(ct.termVazioExp) : ''}`, ct.agVazio],
-        [`Depósito Cheio${ct.termCheioExp ? ' — ' + escapeHtml(ct.termCheioExp) : ''}`, ct.agCheio],
-      ].forEach(([label, valor]) => {
-        html += `<tr><td style="padding:3px 0;">${label}</td><td style="padding:3px 0; text-align:right; color:#444;">${formatarDataHora(valor)}</td></tr>`
+      exportSteps.forEach((step) => {
+        const feito = ct[step.check] === 'true'
+        const terminal = step.terminal && ct[step.terminal] ? ' — ' + escapeHtml(ct[step.terminal]) : ''
+        html += `<tr><td style="padding:3px 0; width:20px;">${feito ? '&#9989;' : '&#9744;'}</td><td style="padding:3px 0;">${escapeHtml(step.label)}${terminal}</td><td style="padding:3px 0; text-align:right; color:#444;">${formatarDataHora(ct[step.id])}</td></tr>`
       })
     }
     html += `</table></div>`

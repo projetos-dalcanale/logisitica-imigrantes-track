@@ -21,14 +21,53 @@ function ContainerArt({ search }) {
   )
 }
 
-export default function EmptyState({ title, description, search, action }) {
+// Rota de pedágio: estrada tracejada entre dois pontos, com uma cancela.
+function RotaArt() {
+  return (
+    <svg viewBox="0 0 160 110" className="h-24 w-auto" fill="none">
+      <ellipse cx="80" cy="98" rx="58" ry="6" className="fill-slate-600/40" />
+      <path d="M30 78 C 60 78, 55 40, 85 40 S 120 70, 132 36" className="stroke-slate-600" strokeWidth="10" strokeLinecap="round" />
+      <path d="M30 78 C 60 78, 55 40, 85 40 S 120 70, 132 36" className="stroke-navy-800" strokeWidth="2" strokeDasharray="5 6" strokeLinecap="round" />
+      <rect x="74" y="20" width="4" height="22" rx="2" className="fill-slate-600" />
+      <rect x="76" y="20" width="30" height="5" rx="2.5" className="fill-blue-600/40" />
+      <circle cx="30" cy="78" r="7" className="fill-navy-800 stroke-slate-600" strokeWidth="2" />
+      <path d="M132 18 a10 10 0 0 1 10 10 c0 8 -10 18 -10 18 s-10 -10 -10 -18 a10 10 0 0 1 10 -10z" className="fill-blue-600/15 stroke-blue-600/60" strokeWidth="2" />
+      <circle cx="132" cy="28" r="3.5" className="fill-blue-600/60" />
+    </svg>
+  )
+}
+
+// Tabela de fretes: folha com linhas de valores e uma moeda.
+function TabelaArt() {
+  return (
+    <svg viewBox="0 0 160 110" className="h-24 w-auto" fill="none">
+      <ellipse cx="80" cy="98" rx="58" ry="6" className="fill-slate-600/40" />
+      <rect x="42" y="14" width="70" height="80" rx="7" className="fill-navy-800 stroke-slate-600" strokeWidth="2" />
+      <rect x="42" y="14" width="70" height="14" rx="7" className="fill-blue-600/15 stroke-blue-600/40" strokeWidth="2" />
+      {[40, 54, 68].map((y) => (
+        <g key={y}>
+          <line x1="52" y1={y} x2="76" y2={y} className="stroke-slate-600" strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="88" y1={y} x2="102" y2={y} className="stroke-slate-600" strokeWidth="2.5" strokeLinecap="round" />
+        </g>
+      ))}
+      <circle cx="116" cy="76" r="16" className="fill-navy-800 stroke-blue-500" strokeWidth="3" />
+      <text x="116" y="81" textAnchor="middle" className="fill-blue-500 text-[13px] font-bold">R$</text>
+    </svg>
+  )
+}
+
+const ARTES = { rota: RotaArt, tabela: TabelaArt }
+
+// `art`: "rota" (pedágios), "tabela" (fretes) ou o contêiner padrão.
+export default function EmptyState({ title, description, search, action, art }) {
+  const Arte = (!search && ARTES[art]) || null
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       className="card flex flex-col items-center px-6 py-14 text-center"
     >
-      <ContainerArt search={search} />
+      {Arte ? <Arte /> : <ContainerArt search={search} />}
       <h3 className="mt-5 text-[15px] font-semibold text-ink">{title}</h3>
       {description && <p className="mt-1 max-w-sm text-sm text-slate-500">{description}</p>}
       {action && <div className="mt-5">{action}</div>}
