@@ -59,7 +59,9 @@ const isTyping = (el) => el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'S
 // Tela logada. Desktop: barra lateral (navegação) + área principal com
 // título grande. Celular: barra superior compacta + barra de abas inferior.
 export default function AppShell() {
-  const { user, logout, nomeExibido } = useAuth()
+  const { user, logout, nome, nomeExibido } = useAuth()
+  // Na saudação, só o primeiro nome, e só se a pessoa escolheu um (não o e-mail).
+  const primeiroNome = nome.split(' ')[0]
   const { isDark, toggleTheme } = useTheme()
   const [activeTab, setActiveTab] = useState('inicio')
   // Saudação e data do Início (atualizam a cada 5 min com o app aberto).
@@ -208,7 +210,7 @@ export default function AppShell() {
           <div className="mx-auto w-full max-w-5xl px-4 pb-32 pt-[calc(env(safe-area-inset-top)+3.5rem)] sm:px-6 lg:px-10 lg:pb-12 lg:pt-16">
             <div className="mb-6">
               <h1 className="font-display text-[32px] font-bold leading-tight tracking-[-0.025em] text-ink lg:text-[34px]">
-                {activeTab === 'inicio' ? saudacao(agora) : tab.label}
+                {activeTab === 'inicio' ? (primeiroNome ? `${saudacao(agora)}, ${primeiroNome}` : saudacao(agora)) : tab.label}
               </h1>
               <p className="mt-0.5 text-[15px] text-slate-400 first-letter:uppercase">
                 {activeTab === 'inicio' ? new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }).format(agora) : SUBTITULOS[activeTab]}
