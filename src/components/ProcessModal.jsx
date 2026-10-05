@@ -318,8 +318,10 @@ function ContainerGroup({ proc, ct, index, processes, disabled, multi, now }) {
                   />
                 )
               }
-              // Agendamentos: a data fica ao lado; o marcador confirma o agendamento.
-              const passou = val && new Date(val).getTime() < now
+              // Carregamento e devolução: a data ao lado é o agendamento
+              // (informativo); o marcador diz que aconteceu.
+              const passou = val && !feito && new Date(val).getTime() < now
+              const quando = quandoRelativo(ct.checklist?.[`${step.id}_check_em`])
               return (
                 <TimelineItem
                   key={step.id}
@@ -327,11 +329,12 @@ function ContainerGroup({ proc, ct, index, processes, disabled, multi, now }) {
                   atual={atual}
                   last={last}
                   title={step.label}
-                  subtitle={feito ? 'Agendamento confirmado' : passou ? 'Horário passou · confirmar' : atual && (val ? 'Próxima etapa · confirmar agendamento' : 'Próxima etapa · definir data')}
+                  subtitle={feito ? (quando ? `Concluído ${quando}` : 'Concluído') : passou ? 'Horário passou · confirmar' : val ? 'Agendado' : atual && 'Próxima etapa · agendar'}
                   subtitleClass={feito ? 'text-emerald-500' : passou ? 'text-red-500' : 'text-slate-400'}
-                  node={<Checkbox tone="success" checked={feito} disabled={disabled} label={`${step.label}: agendado`} onChange={(v) => atualizarChecklist(proc, ct.id, `${step.id}_check`, v)} />}
+                  onClick={disabled ? undefined : () => atualizarChecklist(proc, ct.id, `${step.id}_check`, !feito)}
+                  node={<Checkbox tone="success" checked={feito} disabled={disabled} label={step.label} onChange={(v) => atualizarChecklist(proc, ct.id, `${step.id}_check`, v)} />}
                 >
-                  <DateTimeField variant="pill" placeholder="Definir" value={val} disabled={disabled} onChange={(v) => atualizarChecklist(proc, ct.id, step.id, v)} />
+                  <DateTimeField variant="pill" placeholder="Agendar" value={val} disabled={disabled} onChange={(v) => atualizarChecklist(proc, ct.id, step.id, v)} />
                 </TimelineItem>
               )
             })}

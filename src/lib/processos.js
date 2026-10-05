@@ -1,17 +1,19 @@
 // Regras de negócio dos processos, sem nada de tela — reaproveitadas pelos
 // cards, pelo modal de detalhes, pelo resumo e pela exportação.
 
-// CHECKLIST DE IMPORTAÇÃO (nesta ordem exata)
+// CHECKLIST DE IMPORTAÇÃO (nesta ordem exata). Nas etapas "datetime" a data
+// é só o agendamento (informativo) e o check "<id>_check" marca que o
+// carregamento/devolução aconteceu de fato.
 export const importChecklistSteps = [
-  { id: 'ag_carga', label: 'Agendamento de Carregamento', type: 'datetime' },
+  { id: 'ag_carga', label: 'Carregamento concluído', type: 'datetime' },
   { id: 'gerar_cte', label: 'Gerar CTe', type: 'checkbox' },
   { id: 'gerar_ciot', label: 'Gerar CIOT', type: 'checkbox' },
   { id: 'gerar_mdfe', label: 'Gerar MDFE', type: 'checkbox' },
   { id: 'encerrar_mdfe', label: 'Encerrar MDFE', type: 'checkbox' },
-  { id: 'ag_vazio', label: 'Agendamento de Vazio', type: 'datetime' },
+  { id: 'ag_vazio', label: 'Devolução concluída', type: 'datetime' },
 ]
 
-// "Baixa de Contêiner" (sem devolução) não tem Agendamento de Vazio.
+// "Baixa de Contêiner" (sem devolução) não tem a etapa de devolução do vazio.
 // Processos antigos sem finalizacaoVazio contam como "devolucao".
 export const stepsChecklistImport = (proc) =>
   proc?.finalizacaoVazio === 'baixa'
@@ -19,7 +21,7 @@ export const stepsChecklistImport = (proc) =>
     : importChecklistSteps
 
 // Checklist "zerado" para um novo contêiner de importação. Etapas datetime
-// ganham um campo extra "<id>_check" que marca o agendamento como confirmado.
+// ganham um campo extra "<id>_check" que marca a etapa como concluída.
 export const novoChecklistImport = () => {
   const checklist = {}
   importChecklistSteps.forEach((step) => {
