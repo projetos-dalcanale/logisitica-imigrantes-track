@@ -59,7 +59,7 @@ const isTyping = (el) => el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'S
 // Tela logada. Desktop: barra lateral (navegação) + área principal com
 // título grande. Celular: barra superior compacta + barra de abas inferior.
 export default function AppShell() {
-  const { user, logout } = useAuth()
+  const { user, logout, nomeExibido } = useAuth()
   const { isDark, toggleTheme } = useTheme()
   const [activeTab, setActiveTab] = useState('inicio')
   // Saudação e data do Início (atualizam a cada 5 min com o app aberto).
@@ -150,7 +150,7 @@ export default function AppShell() {
       onOpenRegistries={() => setRegistriesOpen(true)}
       trigger={
         <button type="button" aria-label="Conta" className="rounded-full p-0.5 transition-opacity hover:opacity-80">
-          <Avatar email={user.email} size="sm" />
+          <Avatar nome={nomeExibido} size="sm" />
         </button>
       }
     />

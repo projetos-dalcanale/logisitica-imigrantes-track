@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth'
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth'
 import { auth } from '../lib/firebase'
 
 const AuthContext = createContext(null)
@@ -10,10 +10,14 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   // true até o Firebase dizer se há sessão salva, pra não piscar a tela de login
   const [loading, setLoading] = useState(true)
+  // O Firebase muda o displayName no mesmo objeto `user`, então o React não
+  // percebe. Por isso o nome fica num estado próprio, que força a re-renderização.
+  const [nomeEditado, setNomeEditado] = useState(null)
 
   useEffect(() => {
     return onAuthStateChanged(auth, (u) => {
       setUser(u)
+      setNomeEditado(null)
       setLoading(false)
     })
   }, [])
@@ -21,8 +25,17 @@ export function AuthProvider({ children }) {
   const login = (email, password) => signInWithEmailAndPassword(auth, email, password)
   const logout = () => signOut(auth)
 
+  const salvarNome = async (nome) => {
+    const limpo = nome.trim()
+    await updateProfile(auth.currentUser, { displayName: limpo })
+    setNomeEditado(limpo)
+  }
+  const nome = nomeEditado ?? user?.displayName ?? ''
+  // Sem nome definido, cai no começo do e-mail, como era antes.
+  const nomeExibido = nome || user?.email?.split('@')[0] || ''
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, nome, nomeExibido, salvarNome }}>
       {children}
     </AuthContext.Provider>
   )
