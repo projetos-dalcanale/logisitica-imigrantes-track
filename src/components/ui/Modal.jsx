@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
-import { motion } from 'motion/react'
+import { motion, usePresence } from 'motion/react'
 import { Drawer } from 'vaul'
 import { useIsPhone } from '../../hooks/useMediaQuery'
 
@@ -24,10 +24,25 @@ const autoFocus = (e) => {
 
 // No celular, as janelas marcadas como `sheet` viram uma folha que sobe de
 // baixo e fecha arrastando para baixo, como no iOS.
+// Quando quem usa remove a folha (botão OK, Fechar, salvar...), o
+// <AnimatePresence> em volta a mantém na tela até ela terminar de descer.
 function PhoneSheet({ onClose, title, description, grouped, children }) {
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(true) // false = fechada arrastando
+  const [presente, liberar] = usePresence()
+
+  // Já tinha descido (arrastada) quando foi removida: libera na hora.
+  useEffect(() => {
+    if (!presente && !open) liberar?.()
+  }, [presente, open, liberar])
+
+  const fimDaAnimacao = (aberta) => {
+    if (aberta) return
+    if (presente) onClose() // fechou arrastando: avisa quem usa
+    else liberar?.() // removida por quem usa: terminou de descer
+  }
+
   return (
-    <Drawer.Root open={open} onOpenChange={(o) => !o && setOpen(false)} onAnimationEnd={(o) => !o && onClose()}>
+    <Drawer.Root open={open && presente} onOpenChange={(o) => !o && setOpen(false)} onAnimationEnd={fimDaAnimacao}>
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-50 bg-black/40" />
         <Drawer.Content
