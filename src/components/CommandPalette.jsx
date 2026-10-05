@@ -1,5 +1,5 @@
 import { Command } from 'cmdk'
-import { Archive, Building2, CornerDownLeft, ListChecks, LogOut, Moon, Plus, ReceiptText, Route, Search } from 'lucide-react'
+import { Archive, Building2, CornerDownLeft, ListChecks, Mail, LogOut, Moon, Plus, ReceiptText, Route, Search } from 'lucide-react'
 import { ExportIcon, ImportIcon } from './ui/icons'
 import Modal from './ui/Modal'
 
@@ -99,8 +99,9 @@ export default function CommandPalette({ processes, fretes = [], onClose, onOpen
             <Item icon={ImportIcon} value="ir importações" onSelect={() => actions.aba('import')} hint="1">Ir para Importações</Item>
             <Item icon={ExportIcon} value="ir exportações" onSelect={() => actions.aba('export')} hint="2">Ir para Exportações</Item>
             <Item icon={Archive} value="ir arquivados" onSelect={() => actions.aba('archive')} hint="3">Ir para Arquivados</Item>
-            <Item icon={ReceiptText} value="ir cte fretes tabela de frete clientes" onSelect={() => actions.aba('fretes')} hint="4">Ir para Fretes para CTE</Item>
-            <Item icon={Route} value="ir pedagios rotas e valores eixos" onSelect={() => actions.aba('pedagios')} hint="5">Ir para Rotas e Valores</Item>
+            <Item icon={Mail} value="status para clientes enviar email e-mail atualizacao" onSelect={() => actions.aba('status')} hint="4">Enviar status para clientes</Item>
+            <Item icon={ReceiptText} value="ir cte fretes tabela de frete clientes" onSelect={() => actions.aba('fretes')} hint="5">Ir para Fretes para CTE</Item>
+            <Item icon={Route} value="ir pedagios rotas e valores eixos" onSelect={() => actions.aba('pedagios')} hint="6">Ir para Rotas e Valores</Item>
             <Item icon={ListChecks} value="gerenciar cadastros terminais armadores tipos" onSelect={actions.cadastros}>Gerenciar cadastros</Item>
             <Item icon={Moon} value="alternar tema modo escuro claro" onSelect={actions.tema}>Alternar modo claro/escuro</Item>
             <Item icon={LogOut} value="sair logout" onSelect={actions.sair}>Sair</Item>

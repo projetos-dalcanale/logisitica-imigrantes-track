@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Archive, ArchiveRestore, CirclePlus, FileText } from 'lucide-react'
+import { Archive, ArchiveRestore, CirclePlus, FileText, Mail } from 'lucide-react'
 import { ExportIcon, ImportIcon } from './ui/icons'
 import { useToast } from '../contexts/ToastContext'
 import { useDialog } from '../contexts/DialogContext'
@@ -357,7 +357,7 @@ function ContainerGroup({ proc, ct, index, processes, disabled, multi, now }) {
 
 // FICHA DO PROCESSO. Tudo salva sozinho no Firestore, e a ficha acompanha
 // em tempo real alterações feitas em outra aba ou dispositivo.
-export default function ProcessModal({ proc, processes, onClose }) {
+export default function ProcessModal({ proc, processes, onClose, onEnviarStatus }) {
   const showToast = useToast()
   const { confirm } = useDialog()
   // Relógio da ficha: fixado ao abrir (as marcações de horário usam a hora real).
@@ -490,6 +490,9 @@ export default function ProcessModal({ proc, processes, onClose }) {
       <footer className="hairline-t flex shrink-0 items-center gap-2 bg-navy-900/80 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:px-6">
         <DeleteButton label="Excluir processo" onConfirm={excluir} />
         <div className="ml-auto flex gap-2">
+          {!archived && onEnviarStatus && (
+            <Button variant="gray" icon={Mail} onClick={() => onEnviarStatus(proc.id)}>Status</Button>
+          )}
           <Button variant="gray" icon={FileText} onClick={() => exportarProcessoPDF(proc)}>PDF</Button>
           {archived ? (
             <Button icon={ArchiveRestore} onClick={() => setStatus('active')}>Desarquivar</Button>
