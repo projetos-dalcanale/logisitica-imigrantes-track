@@ -38,7 +38,7 @@ describe('imagem de status', () => {
 describe('dados do contêiner (exportação)', () => {
   it('existe só na exportação, com texto pronto e tabela', () => {
     const dados = opcoesDeStatus({ type: 'export' }).find((o) => o.id === 'dados')
-    expect(dados).toMatchObject({ tabela: true, detalhes: 'Segue abaixo dados do container e fotos em anexo para conferência.' })
+    expect(dados).toMatchObject({ etapa: null, tabela: true, detalhes: 'Segue abaixo dados do container e fotos em anexo para conferência.' })
     expect(opcoesDeStatus({ type: 'import' }).some((o) => o.id === 'dados')).toBe(false)
   })
 
