@@ -1,19 +1,61 @@
 import { motion } from 'motion/react'
-import { CalendarCheck, CircleCheck, Clock, GripVertical, StickyNote, TriangleAlert, Truck, User } from 'lucide-react'
+import { ArrowRight, CalendarCheck, Check, CircleCheck, Clock, GripVertical, StickyNote, TriangleAlert, Truck, User } from 'lucide-react'
 import {
   draftAlertConfig,
   formatarDataHoraCurta,
   getDraftDeadlineInfo,
-  getProcessProgress,
   distintos,
   transportePorContainer,
 } from '../lib/processos'
+import { etapasProcesso, processoConcluido, proximaAcao } from '../lib/etapas'
 import Tooltip from './ui/Tooltip'
 
 // Ícone do aviso de Deadline Draft conforme o nível (relógio ou alerta).
 export function DraftIcon({ nivel, className }) {
   const Icon = draftAlertConfig[nivel].icon === 'alert' ? TriangleAlert : Clock
   return <Icon className={className} strokeWidth={2.4} />
+}
+
+// Cores da próxima ação e dos trechos da barra de etapas.
+const TOM_TEXTO = {
+  neutral: 'text-slate-400',
+  brand: 'text-ink',
+  warn: 'text-yellow-500',
+  danger: 'text-red-500',
+  success: 'text-emerald-500',
+}
+const TOM_ICONE = { neutral: ArrowRight, brand: CalendarCheck, warn: Clock, danger: TriangleAlert, success: CircleCheck }
+
+// Barra dividida por etapa: cada trecho enche conforme os contêineres que
+// já cumpriram aquela etapa. Passando o mouse, mostra a lista de etapas.
+function EtapasBar({ etapas, done }) {
+  const lista = (
+    <ul className="space-y-0.5">
+      {etapas.map((e) => (
+        <li key={e.id} className="flex items-center gap-1.5">
+          <Check className={`size-3 ${e.total && e.feitos === e.total ? 'opacity-100' : 'opacity-0'}`} strokeWidth={3} />
+          {e.label}
+          {e.total > 1 && <span className="opacity-60">{e.feitos}/{e.total}</span>}
+        </li>
+      ))}
+    </ul>
+  )
+  return (
+    <Tooltip label={lista}>
+      <div className="flex flex-1 gap-1 py-1">
+        {etapas.map((e) => (
+          <div key={e.id} className="h-1 flex-1 overflow-hidden rounded-full bg-slate-500/15">
+            <motion.div
+              className={`h-full rounded-full ${done ? 'bg-emerald-500' : 'bg-blue-500'}`}
+              initial={false}
+              animate={{ width: `${e.total ? (e.feitos / e.total) * 100 : 0}%` }}
+              transition={{ type: 'spring', stiffness: 120, damping: 22 }}
+            />
+          </div>
+        ))}
+      </div>
+    </Tooltip>
+  )
 }
 
 function Meta({ icon: Icon, children, muted }) {
@@ -36,8 +78,11 @@ export default function ProcessCard({ proc, now, onOpen, dragHandle, style, inne
   const draftInfo = getDraftDeadlineInfo(proc, now)
   const agCarga = isImport ? containers.map((c) => c.checklist?.ag_carga).filter(Boolean).sort()[0] : null
   const agCargaTexto = formatarDataHoraCurta(agCarga)
-  const progress = getProcessProgress(proc)
-  const done = progress === 100
+  const done = processoConcluido(proc, now)
+  const etapas = etapasProcesso(proc)
+  const etapasFeitas = etapas.filter((e) => e.total && e.feitos === e.total).length
+  const acao = proximaAcao(proc, now)
+  const AcaoIcon = TOM_ICONE[acao.tom]
   // Motoristas e placas de todos os contêineres (cada um pode ter o seu).
   const transporte = transportePorContainer(proc)
   const motoristas = distintos(transporte.map((t) => t.motorista))
@@ -121,16 +166,18 @@ export default function ProcessCard({ proc, now, onOpen, dragHandle, style, inne
         )}
       </div>
 
-      <div className="mt-3.5 flex items-center gap-2.5">
-        <div className="h-1 flex-1 overflow-hidden rounded-full bg-slate-500/15">
-          <motion.div
-            className={`h-full rounded-full ${done ? 'bg-emerald-500' : 'bg-blue-500'}`}
-            initial={false}
-            animate={{ width: `${progress}%` }}
-            transition={{ type: 'spring', stiffness: 120, damping: 22 }}
-          />
-        </div>
-        <span className="w-9 text-right text-[11.5px] font-medium tabular-nums text-slate-500">{progress}%</span>
+      <div className="mt-3.5 flex items-center justify-between gap-3 text-[12.5px]">
+        <span className={`inline-flex min-w-0 items-center gap-1.5 font-medium ${TOM_TEXTO[acao.tom]}`}>
+          <AcaoIcon className="size-3.5 shrink-0" strokeWidth={2.4} />
+          <span className="truncate">{acao.texto}</span>
+        </span>
+        <span className="shrink-0 text-[11.5px] font-medium tabular-nums text-slate-500">
+          <span className="sm:hidden">{etapasFeitas}/{etapas.length}</span>
+          <span className="max-sm:hidden">{etapasFeitas} de {etapas.length} etapas</span>
+        </span>
+      </div>
+      <div className="mt-1.5 flex">
+        <EtapasBar etapas={etapas} done={done} />
       </div>
     </div>
   )
@@ -143,7 +190,8 @@ export function ProcessCardSkeleton() {
       <div className="h-4 w-48 rounded-md bg-slate-500/15" />
       <div className="mt-2 h-3 w-64 rounded-md bg-slate-500/10" />
       <div className="mt-4 h-3 w-40 rounded-md bg-slate-500/10" />
-      <div className="mt-4 h-1 w-full rounded-full bg-slate-500/10" />
+      <div className="mt-4 h-3 w-56 rounded-md bg-slate-500/10" />
+      <div className="mt-2.5 h-1 w-full rounded-full bg-slate-500/10" />
     </div>
   )
 }

@@ -19,6 +19,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { Download, Plus, X } from 'lucide-react'
 import { filtrarProcessos } from '../lib/processos'
+import { agruparPorUrgencia } from '../lib/etapas'
 import { useCardOrder } from '../hooks/useCardOrder'
 import { useToast } from '../contexts/ToastContext'
 import { exportarProcessosCSV } from '../lib/exportar'
@@ -44,6 +45,24 @@ const fadeIn = {
   initial: { opacity: 0, y: 10 },
   animate: { opacity: 1, y: 0 },
   exit: { opacity: 0, scale: 0.98, transition: { duration: 0.15 } },
+}
+
+const TOM_TITULO = {
+  danger: 'text-red-500',
+  warn: 'text-yellow-500',
+  brand: 'text-blue-500',
+  neutral: 'text-ink',
+  success: 'text-emerald-500',
+}
+
+// Cabeçalho de grupo no estilo do app Lembretes: título colorido e contagem.
+function GrupoTitulo({ grupo }) {
+  return (
+    <div className="mb-2 flex items-baseline gap-2 px-1">
+      <h2 className={`font-display text-[17px] font-semibold tracking-[-0.015em] ${TOM_TITULO[grupo.tom]}`}>{grupo.label}</h2>
+      <span className="text-[13px] font-medium tabular-nums text-slate-500">{grupo.itens.length}</span>
+    </div>
+  )
 }
 
 const EMPTY_TEXT = {
@@ -86,6 +105,7 @@ export default function ProcessList({ processes, loading, tab, onOpen, searchRef
     showToast(`${filtered.length} processo(s) exportado(s).`)
   }
 
+  // Cada grupo tem o seu DndContext, então os dois cards são do mesmo grupo.
   const handleDragEnd = ({ active, over }) => {
     if (!over || active.id === over.id) return
     const ids = visible.map((p) => p.id)
@@ -105,28 +125,42 @@ export default function ProcessList({ processes, loading, tab, onOpen, searchRef
         action={tab !== 'archive' && <Button size="sm" icon={Plus} onClick={onNew}>Novo processo</Button>}
       />
     )
-  } else if (sortable && visible.length > 1) {
-    content = (
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={visible.map((p) => p.id)} strategy={verticalListSortingStrategy}>
-          {visible.map((proc, i) => (
-            <motion.div key={proc.id} {...fadeIn} transition={{ delay: Math.min(i * 0.03, 0.3) }}>
-              <SortableCard proc={proc} now={now} onOpen={onOpen} />
-            </motion.div>
-          ))}
-        </SortableContext>
-      </DndContext>
-    )
   } else {
-    content = (
-      <AnimatePresence mode="popLayout" initial={false}>
-        {visible.map((proc) => (
-          <motion.div key={proc.id} layout {...fadeIn}>
-            <ProcessCard proc={proc} now={now} onOpen={onOpen} />
-          </motion.div>
-        ))}
-      </AnimatePresence>
-    )
+    // Fora do arquivo, a lista é separada por urgência (atrasados, hoje...).
+    // A ordem arrastada vale dentro de cada grupo.
+    const grupos = tab === 'archive' ? [{ id: 'todos', itens: visible }] : agruparPorUrgencia(visible, now)
+    content = grupos.map((grupo) => {
+      let cards
+      if (sortable && grupo.itens.length > 1) {
+        cards = (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={grupo.itens.map((p) => p.id)} strategy={verticalListSortingStrategy}>
+              {grupo.itens.map((proc, i) => (
+                <motion.div key={proc.id} {...fadeIn} transition={{ delay: Math.min(i * 0.03, 0.3) }}>
+                  <SortableCard proc={proc} now={now} onOpen={onOpen} />
+                </motion.div>
+              ))}
+            </SortableContext>
+          </DndContext>
+        )
+      } else {
+        cards = (
+          <AnimatePresence mode="popLayout" initial={false}>
+            {grupo.itens.map((proc) => (
+              <motion.div key={proc.id} layout {...fadeIn}>
+                <ProcessCard proc={proc} now={now} onOpen={onOpen} />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        )
+      }
+      return (
+        <section key={grupo.id}>
+          {grupo.label && <GrupoTitulo grupo={grupo} />}
+          <div className="space-y-2.5">{cards}</div>
+        </section>
+      )
+    })
   }
 
   return (
@@ -150,7 +184,7 @@ export default function ProcessList({ processes, loading, tab, onOpen, searchRef
         </Tooltip>
       </div>
 
-      <div className="space-y-2.5">{content}</div>
+      <div className={loading || !visible.length ? 'space-y-2.5' : 'space-y-7'}>{content}</div>
     </>
   )
 }
