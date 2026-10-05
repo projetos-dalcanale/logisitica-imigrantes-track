@@ -57,7 +57,7 @@
   --slate-200: 29 29 31;
   --slate-300: 44 44 46;
   --slate-400: 110 110 115;
-  --slate-500: 134 134 139;
+  --slate-500: 117 117 122; /* texto terciário: contraste de 4,5:1 no branco (acessibilidade) */
   --slate-600: 210 210 215;
   --slate-700: 229 229 234;
   --blue-300: 150 0 10;
@@ -82,7 +82,7 @@
   --slate-200: 245 245 247;
   --slate-300: 229 229 234;
   --slate-400: 152 152 157;
-  --slate-500: 110 110 115;
+  --slate-500: 132 132 137; /* contraste de 4,5:1 nos cartões escuros */
   --slate-600: 72 72 74;
   --slate-700: 56 56 58;
   --blue-300: 255 140 130;
@@ -111,6 +111,13 @@
     -moz-osx-font-smoothing: grayscale;
   }
   h1, h2, h3 { letter-spacing: -0.022em; }
+  h1, h2 { text-wrap: balance; }
+  /* Toques sem o atraso do "toque duplo para zoom" no celular. */
+  a, button, label, input, textarea, [role="button"] { touch-action: manipulation; }
+  /* Rolar até o fim de uma janela/folha não arrasta a página de trás. */
+  [role="dialog"] .overflow-y-auto { overscroll-behavior: contain; }
+  /* "Reduzir movimento" do sistema: sem efeitos pulsando. */
+  @media (prefers-reduced-motion: reduce) { .animate-pulse { animation: none; } }
   button:not(:disabled) { cursor: pointer; }
   input::placeholder, textarea::placeholder { color: rgb(var(--slate-500)); opacity: 1; }
   ::selection { background: rgb(var(--blue-500) / .2); }
@@ -211,7 +218,7 @@
 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgb(var(--slate-500) / .45); border-radius: 10px; border: 3px solid transparent; background-clip: padding-box; }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgb(var(--slate-500) / .7); }
 
-button:focus-visible, a:focus-visible, [role="checkbox"]:focus-visible, [role="tab"]:focus-visible, [role="button"]:focus-visible {
+button:focus-visible, a:focus-visible, [role="checkbox"]:focus-visible, [role="tab"]:focus-visible, [role="radio"]:focus-visible, [role="button"]:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px rgb(var(--blue-500) / .35);
 }

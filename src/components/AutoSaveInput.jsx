@@ -20,6 +20,8 @@ export default function AutoSaveInput({ value = '', onSave, saveOnChange = false
 
   return (
     <Tag
+      autoComplete="off"
+      spellCheck={Tag === 'textarea'}
       {...rest}
       value={local}
       onChange={(e) => {

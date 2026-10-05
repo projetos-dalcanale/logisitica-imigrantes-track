@@ -11,6 +11,7 @@ function NavItem({ tab, active, count, onClick, shortcut }) {
     <button
       type="button"
       onClick={onClick}
+      aria-current={active ? 'page' : undefined}
       title={`${tab.label} (${shortcut})`}
       className={`relative flex h-8 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13.5px] transition-colors ${active ? 'text-ink' : 'text-slate-300 hover:bg-slate-500/10'}`}
     >

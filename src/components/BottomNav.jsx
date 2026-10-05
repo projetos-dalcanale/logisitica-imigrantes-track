@@ -6,6 +6,7 @@ function NavButton({ icon: Icon, label, active, onClick }) {
     <button
       type="button"
       onClick={onClick}
+      aria-current={active ? 'page' : undefined}
       className={`flex flex-1 flex-col items-center justify-center gap-[3px] pt-1 text-[10.5px] font-medium transition-colors ${active ? 'text-blue-500' : 'text-slate-500'}`}
     >
       <span className="relative flex h-7 w-12 items-center justify-center">

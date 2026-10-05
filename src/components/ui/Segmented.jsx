@@ -7,7 +7,7 @@ export default function Segmented({ options, value, onChange, size = 'md', class
   const id = useId()
   const pad = size === 'sm' ? 'h-7 text-[13px] px-2.5' : 'h-8 text-[13.5px] px-3'
   return (
-    <div role="tablist" className={`flex rounded-[9px] bg-slate-500/12 p-[2px] ${className}`}>
+    <div role="radiogroup" className={`flex rounded-[9px] bg-slate-500/12 p-[2px] ${className}`}>
       {options.map((opt) => {
         const active = opt.value === value
         const Icon = opt.icon
@@ -15,8 +15,8 @@ export default function Segmented({ options, value, onChange, size = 'md', class
           <button
             key={opt.value}
             type="button"
-            role="tab"
-            aria-selected={active}
+            role="radio"
+            aria-checked={active}
             disabled={disabled}
             onClick={() => onChange(opt.value)}
             className={`relative inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[7px] font-medium transition-colors disabled:opacity-60 ${pad} ${active ? 'text-ink' : 'text-slate-400 hover:text-ink'}`}

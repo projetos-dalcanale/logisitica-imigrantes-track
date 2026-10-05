@@ -50,14 +50,14 @@ export default function LoginScreen() {
             <label htmlFor="auth-email" className="label">E-mail</label>
             <div className="relative">
               <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
-              <input id="auth-email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className="field pl-9" />
+              <input id="auth-email" name="email" type="email" required autoComplete="email" spellCheck={false} value={email} onChange={(e) => setEmail(e.target.value)} className="field pl-9" />
             </div>
           </div>
           <div>
             <label htmlFor="auth-password" className="label">Senha</label>
             <div className="relative">
               <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
-              <input id="auth-password" type="password" required minLength={6} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className="field pl-9" />
+              <input id="auth-password" name="password" type="password" required minLength={6} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className="field pl-9" />
             </div>
           </div>
           {error && (
@@ -71,7 +71,7 @@ export default function LoginScreen() {
             </motion.div>
           )}
           <Button type="submit" size="lg" loading={submitting} className="w-full">
-            {submitting ? 'Entrando...' : 'Entrar'}
+            {submitting ? 'Entrando…' : 'Entrar'}
           </Button>
         </form>
         <p className="mt-5 flex items-center justify-center gap-1.5 text-xs text-slate-500">

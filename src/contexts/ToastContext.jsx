@@ -26,7 +26,7 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={showToast}>
       {children}
-      <div className="pointer-events-none fixed inset-x-0 bottom-20 z-[100] flex flex-col items-center gap-2 px-4 lg:bottom-5 lg:items-end lg:px-5">
+      <div role="status" aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-20 z-[100] flex flex-col items-center gap-2 px-4 lg:bottom-5 lg:items-end lg:px-5">
         <AnimatePresence initial={false}>
           {toasts.map(({ id, message, type }) => {
             const cfg = TOAST_STYLES[type] || TOAST_STYLES.success

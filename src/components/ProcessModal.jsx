@@ -173,8 +173,8 @@ function ExportTimeline({ proc, ct, disabled, save, salvarVazio, now }) {
             title={step.label}
             subtitle={subtitle}
             subtitleClass={subtitleClass}
-            onClick={disabled ? undefined : () => marcarEtapaExport(proc, ct.id, step, !feito)}
-            node={<Checkbox tone="success" checked={feito} disabled={disabled} label={`${step.label}: ${step.feito.toLowerCase()}`} onChange={(v) => marcarEtapaExport(proc, ct.id, step, v)} />}
+            alvo={`etapa-${ct.id}-${step.id}`}
+            node={<Checkbox id={`etapa-${ct.id}-${step.id}`} tone="success" checked={feito} disabled={disabled} label={`${step.label}: ${step.feito.toLowerCase()}`} onChange={(v) => marcarEtapaExport(proc, ct.id, step, v)} />}
           >
             <div className="flex flex-col items-end gap-1">
               {step.terminal && <RegistrySelect variant="plain" cat={step.cat} value={ct[step.terminal]} disabled={disabled} onChange={save(step.terminal)} placeholder="Terminal" />}
@@ -332,8 +332,8 @@ function ContainerGroup({ proc, ct, index, processes, disabled, multi, now }) {
                   title={step.label}
                   subtitle={feito ? (quando ? `Concluído ${quando}` : 'Concluído') : atual && 'Próxima etapa'}
                   subtitleClass={feito ? 'text-emerald-500' : 'text-slate-400'}
-                  onClick={disabled ? undefined : () => atualizarChecklist(proc, ct.id, chave, !feito)}
-                  node={<Checkbox tone="success" checked={feito} disabled={disabled} label={step.label} onChange={(v) => atualizarChecklist(proc, ct.id, chave, v)} />}
+                  alvo={`etapa-${ct.id}-${step.id}`}
+                  node={<Checkbox id={`etapa-${ct.id}-${step.id}`} tone="success" checked={feito} disabled={disabled} label={step.label} onChange={(v) => atualizarChecklist(proc, ct.id, chave, v)} />}
                 />
               )
             })}

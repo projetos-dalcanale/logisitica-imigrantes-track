@@ -5,6 +5,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { ToastProvider } from './contexts/ToastContext'
 import { DialogProvider } from './contexts/DialogContext'
 import { TooltipProvider } from './components/ui/Tooltip'
+import { MotionConfig } from 'motion/react'
 import App from './App'
 import ErrorBoundary from './components/ErrorBoundary'
 import { instalarRegistroDeErros } from './lib/erros'
@@ -20,15 +21,18 @@ setTimeout(() => {
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
-      <AuthProvider>
-        <ToastProvider>
-          <DialogProvider>
-            <TooltipProvider>
-              <App />
-            </TooltipProvider>
-          </DialogProvider>
-        </ToastProvider>
-      </AuthProvider>
+      {/* Respeita a opção "reduzir movimento" do sistema em todas as animações. */}
+      <MotionConfig reducedMotion="user">
+        <AuthProvider>
+          <ToastProvider>
+            <DialogProvider>
+              <TooltipProvider>
+                <App />
+              </TooltipProvider>
+            </DialogProvider>
+          </ToastProvider>
+        </AuthProvider>
+      </MotionConfig>
     </ErrorBoundary>
   </StrictMode>,
 )
