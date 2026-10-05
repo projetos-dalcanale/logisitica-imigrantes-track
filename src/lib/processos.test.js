@@ -12,6 +12,7 @@ import {
   distintos,
   validarNumeroContainer,
   formatarPlacas,
+  vazioDepoisDoDraft,
 } from './processos'
 
 const DIA = 86400000
@@ -97,9 +98,10 @@ describe('progresso do processo', () => {
     expect(getProcessProgress({ type: 'import', containers: [{ checklist }] })).toBe(83)
   })
 
-  it('exportação: conta prazos e agendamentos preenchidos', () => {
-    const proc = { type: 'export', containers: [{ deadlineDraft: 'x', deadlineCarga: 'x', agVazio: '', agCheio: '' }] }
-    expect(getProcessProgress(proc)).toBe(50)
+  it('exportação: conta só as etapas marcadas (prazos são informativos)', () => {
+    const ct = { deadlineDraft: 'x', deadlineCarga: 'x', agVazio: 'x', agVazioCheck: 'true', estufagem: 'x', agCheio: 'x' }
+    expect(getProcessProgress({ type: 'export', containers: [ct] })).toBe(33)
+    expect(getProcessProgress({ type: 'export', containers: [{ ...ct, estufagemCheck: 'true', agCheioCheck: 'true' }] })).toBe(100)
   })
 })
 
@@ -156,6 +158,19 @@ describe('filtro e busca de processos', () => {
     expect(filtrarProcessos(lista, 'import', 'msc').map((p) => p.id)).toEqual(['b'])
     expect(filtrarProcessos(lista, 'import', 'cmau 713').map((p) => p.id)).toEqual(['a'])
     expect(filtrarProcessos(lista, 'export', '13565').map((p) => p.id)).toEqual(['c'])
+  })
+})
+
+describe('retirada do vazio x Deadline Draft', () => {
+  it('avisa quando o vazio fica depois (ou na mesma hora) do Draft', () => {
+    expect(vazioDepoisDoDraft('2026-10-06T10:00', '2026-10-05T08:00')).toBe(true)
+    expect(vazioDepoisDoDraft('2026-10-05T08:00', '2026-10-05T08:00')).toBe(true)
+    expect(vazioDepoisDoDraft('2026-10-04T10:00', '2026-10-05T08:00')).toBe(false)
+  })
+
+  it('não avisa sem uma das datas', () => {
+    expect(vazioDepoisDoDraft('2026-10-06T10:00', '')).toBe(false)
+    expect(vazioDepoisDoDraft('', '2026-10-05T08:00')).toBe(false)
   })
 })
 

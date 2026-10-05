@@ -19,7 +19,8 @@ export const novoContainer = (type, id, numero = '', tipo = '') => {
   } else {
     Object.assign(ct, {
       tara: '', lacre: '', deadlineDraft: '', deadlineCarga: '',
-      agVazio: '', termVazioExp: '', agCheio: '', termCheioExp: '',
+      agVazio: '', agVazioCheck: '', termVazioExp: '', estufagem: '', estufagemCheck: '',
+      agCheio: '', agCheioCheck: '', termCheioExp: '',
     })
   }
   return ct
@@ -41,6 +42,14 @@ export const atualizarChecklist = (proc, ctId, stepId, value) =>
       if (typeof value === 'boolean') checklist[`${stepId}_em`] = value ? new Date().toISOString() : ''
       return { ...c, checklist }
     }),
+  })
+
+// Marca/desmarca uma etapa da exportação, guardando quando foi concluída.
+export const marcarEtapaExport = (proc, ctId, step, feito) =>
+  atualizarProcesso(proc.id, {
+    containers: proc.containers.map((c) =>
+      c.id === ctId ? { ...c, [step.check]: feito ? 'true' : '', [`${step.check}Em`]: feito ? new Date().toISOString() : '' } : c
+    ),
   })
 
 export const adicionarContainer = (proc) =>

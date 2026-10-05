@@ -35,9 +35,10 @@ describe('etapas do processo', () => {
     expect(etapas.find((e) => e.id === 'gerar_cte')).toMatchObject({ feitos: 1, total: 2 })
   })
 
-  it('exportação: usa os prazos e agendamentos da ficha', () => {
-    const etapas = etapasProcesso(exp([{ deadlineDraft: em(5) }]))
-    expect(etapas.map((e) => e.feitos)).toEqual([0, 1, 0, 0])
+  it('exportação: retirada do vazio, estufagem e depósito do cheio (prazos não contam)', () => {
+    const etapas = etapasProcesso(exp([{ deadlineDraft: em(5), agVazio: em(-1), agVazioCheck: 'true', estufagem: em(1) }]))
+    expect(etapas.map((e) => e.label)).toEqual(['Retirada do vazio', 'Estufagem', 'Depósito do cheio'])
+    expect(etapas.map((e) => e.feitos)).toEqual([1, 0, 0])
   })
 })
 
@@ -62,9 +63,11 @@ describe('próxima ação', () => {
     expect(proximaAcao(imp([tudoFeito]), NOW).tom).toBe('success')
   })
 
-  it('exportação: Draft perto de vencer vem primeiro', () => {
-    expect(proximaAcao(exp([{ deadlineDraft: em(1, 8) }]), NOW)).toMatchObject({ texto: 'Enviar Draft até amanhã 08:00', tom: 'danger' })
-    expect(proximaAcao(exp([{ deadlineDraft: em(10) }]), NOW).texto).toBe('Agendar retirada do vazio')
+  it('exportação: agendar, depois confirmar cada etapa na ordem', () => {
+    expect(proximaAcao(exp([{ deadlineDraft: em(1, 8) }]), NOW).texto).toBe('Agendar retirada do vazio')
+    expect(proximaAcao(exp([{ agVazio: em(1) }]), NOW)).toMatchObject({ texto: 'Retirada do vazio amanhã 14:00 · confirmar', tom: 'brand' })
+    expect(proximaAcao(exp([{ agVazio: em(-1), agVazioCheck: 'true' }]), NOW).texto).toBe('Agendar estufagem')
+    expect(proximaAcao(exp([{ agVazioCheck: 'true', estufagem: em(-1) }]), NOW).tom).toBe('danger')
   })
 })
 
@@ -81,7 +84,8 @@ describe('grupos de urgência', () => {
   it('separa por hoje, próximos 7 dias, mais adiante e sem data', () => {
     expect(grupoUrgencia(imp([{ ag_carga: em(0, 18) }]), NOW)).toBe('hoje')
     expect(grupoUrgencia(exp([{ agCheio: em(4) }]), NOW)).toBe('semana')
-    expect(grupoUrgencia(exp([{ deadlineCarga: em(20) }]), NOW)).toBe('adiante')
+    expect(grupoUrgencia(exp([{ estufagem: em(20) }]), NOW)).toBe('adiante')
+    expect(grupoUrgencia(exp([{ deadlineCarga: em(2) }]), NOW)).toBe('semData')
     expect(grupoUrgencia(imp([{}]), NOW)).toBe('semData')
   })
 
@@ -89,11 +93,10 @@ describe('grupos de urgência', () => {
     expect(grupoUrgencia(imp([tudoFeito]), NOW)).toBe('prontos')
   })
 
-  it('exportação com tudo preenchido só fica pronta depois que as datas passam', () => {
-    const cheio = { numero: 'X', tara: '1', lacre: '2', deadlineDraft: em(-5), deadlineCarga: em(-1), agVazio: em(-4) }
-    expect(grupoUrgencia(exp([{ ...cheio, agCheio: em(-2) }]), NOW)).toBe('prontos')
-    expect(grupoUrgencia(exp([{ ...cheio, agCheio: em(3) }]), NOW)).toBe('semana')
-    expect(proximaAcao(exp([{ ...cheio, agCheio: em(3) }]), NOW).texto).toBe('Entrega do cheio seg 05/10 14:00')
+  it('exportação: agendamento passado sem check atrasa; tudo marcado fica pronta', () => {
+    expect(grupoUrgencia(exp([{ agVazio: em(-1) }]), NOW)).toBe('atrasados')
+    const feito = { agVazioCheck: 'true', estufagemCheck: 'true', agCheioCheck: 'true' }
+    expect(grupoUrgencia(exp([{ ...feito, deadlineCarga: em(5) }]), NOW)).toBe('prontos')
   })
 
   it('agrupa na ordem certa, mantendo a ordem dentro do grupo e sem grupos vazios', () => {

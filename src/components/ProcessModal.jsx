@@ -8,12 +8,14 @@ import {
   DESTINOS,
   DOC_TIPOS,
   draftAlertConfig,
-  draftJaCumprido,
+  exportSteps,
+  formatarDataHora,
   getDraftDeadlineInfo,
   getProcessProgress,
   mascaraNumeroContainer,
   stepsChecklistImport,
   validarNumeroContainer,
+  vazioDepoisDoDraft,
 } from '../lib/processos'
 import {
   adicionarContainer,
@@ -21,6 +23,7 @@ import {
   atualizarChecklist,
   atualizarProcesso,
   excluirProcesso,
+  marcarEtapaExport,
   numeroContainerDuplicado,
   removerContainer,
 } from '../lib/processActions'
@@ -37,7 +40,7 @@ import Checkbox from './ui/Checkbox'
 import DateTimeField from './ui/DateTimeField'
 import Segmented from './ui/Segmented'
 import { Group, Row } from './ui/List'
-import { Marco, Timeline, TimelineItem } from './ui/Timeline'
+import { Timeline, TimelineItem } from './ui/Timeline'
 
 const plainRight = 'field-plain text-right'
 const valor = (v) => (v ? <span className="truncate text-slate-400">{v}</span> : <span className="text-slate-500">—</span>)
@@ -133,44 +136,53 @@ function DetalhesGroup({ proc, archived }) {
   )
 }
 
-// Exportação como linha do tempo: cada marco fica verde quando acontece
-// (Draft cumprido ou data já passada). A etapa da vez fica destacada.
-function ExportTimeline({ proc, ct, disabled, save, now }) {
-  const passou = (v) => !!v && new Date(v).getTime() <= now
-  const draft = getDraftDeadlineInfo({ ...proc, containers: [ct] }, now)
-  const marcos = [
-    { id: 'agVazio', label: 'Retirada do vazio', terminal: 'termVazioExp', cat: 'vazio', done: passou(ct.agVazio) },
-    {
-      id: 'deadlineDraft',
-      label: 'Deadline Draft',
-      done: draftJaCumprido(ct),
-      subtitle: draftJaCumprido(ct) ? 'Draft cumprido (numeração, tara e lacre)' : draft?.texto,
-      subtitleClass: draftJaCumprido(ct) ? 'text-emerald-500' : draft && draftAlertConfig[draft.nivel].text,
-      alerta: draft && (draft.nivel === 'aviso' ? 'warn' : draft.nivel === 'atencao' ? 'brand' : 'danger'),
-    },
-    { id: 'agCheio', label: 'Entrega do cheio', terminal: 'termCheioExp', cat: 'cheio', done: passou(ct.agCheio) },
-    { id: 'deadlineCarga', label: 'Deadline Carga', done: passou(ct.deadlineCarga) },
-  ]
-  const atual = marcos.findIndex((m) => !m.done)
+// Exportação como linha do tempo: retirada do vazio, estufagem e depósito
+// do cheio. A data diz quando está agendado; o check diz que aconteceu.
+function ExportTimeline({ proc, ct, disabled, save, salvarVazio, now }) {
+  const atual = exportSteps.findIndex((step) => ct[step.check] !== 'true')
   return (
     <Timeline>
-      {marcos.map((m, i) => (
-        <TimelineItem
-          key={m.id}
-          done={m.done}
-          atual={i === atual}
-          last={i === marcos.length - 1}
-          title={m.label}
-          subtitle={m.subtitle || (m.done ? 'Concluído' : i === atual && !ct[m.id] ? 'Próxima etapa · definir data' : null)}
-          subtitleClass={m.subtitleClass || (m.done ? 'text-emerald-500' : 'text-slate-400')}
-          node={<Marco done={m.done} alerta={m.alerta} />}
-        >
-          <div className="flex flex-col items-end gap-1">
-            {m.terminal && <RegistrySelect variant="plain" cat={m.cat} value={ct[m.terminal]} disabled={disabled} onChange={save(m.terminal)} placeholder="Terminal" />}
-            <DateTimeField variant="pill" placeholder="Definir" value={ct[m.id]} disabled={disabled} onChange={save(m.id)} />
-          </div>
-        </TimelineItem>
-      ))}
+      {exportSteps.map((step, i) => {
+        const feito = ct[step.check] === 'true'
+        const data = ct[step.id]
+        const passou = data && !feito && new Date(data).getTime() < now
+        const quando = quandoRelativo(ct[`${step.check}Em`])
+        const depoisDoDraft = step.id === 'agVazio' && !feito && vazioDepoisDoDraft(data, ct.deadlineDraft)
+        let subtitle = null
+        let subtitleClass = 'text-slate-400'
+        if (feito) {
+          subtitle = quando ? `${step.feito} ${quando}` : step.feito
+          subtitleClass = 'text-emerald-500'
+        } else if (depoisDoDraft) {
+          subtitle = `Depois do Deadline Draft (${quandoRelativo(ct.deadlineDraft, now)})`
+          subtitleClass = 'text-yellow-500'
+        } else if (passou) {
+          subtitle = 'Horário passou · confirmar'
+          subtitleClass = 'text-red-500'
+        } else if (data) {
+          subtitle = 'Agendado'
+        } else if (i === atual) {
+          subtitle = 'Próxima etapa · definir data'
+        }
+        return (
+          <TimelineItem
+            key={step.id}
+            done={feito}
+            atual={i === atual}
+            last={i === exportSteps.length - 1}
+            title={step.label}
+            subtitle={subtitle}
+            subtitleClass={subtitleClass}
+            onClick={disabled ? undefined : () => marcarEtapaExport(proc, ct.id, step, !feito)}
+            node={<Checkbox tone="success" checked={feito} disabled={disabled} label={`${step.label}: ${step.feito.toLowerCase()}`} onChange={(v) => marcarEtapaExport(proc, ct.id, step, v)} />}
+          >
+            <div className="flex flex-col items-end gap-1">
+              {step.terminal && <RegistrySelect variant="plain" cat={step.cat} value={ct[step.terminal]} disabled={disabled} onChange={save(step.terminal)} placeholder="Terminal" />}
+              <DateTimeField variant="pill" placeholder="Agendar" value={data} disabled={disabled} onChange={step.id === 'agVazio' ? salvarVazio : save(step.id)} />
+            </div>
+          </TimelineItem>
+        )
+      })}
     </Timeline>
   )
 }
@@ -204,6 +216,32 @@ function ContainerGroup({ proc, ct, index, processes, disabled, multi, now }) {
       }
     }
     await save('numero')(value)
+  }
+
+  // A retirada do vazio tem que ser antes do Deadline Draft: avisa (sem
+  // bloquear) ao agendar depois dele, ou ao mudar o Draft para antes do vazio.
+  const draftCt = isImport ? null : getDraftDeadlineInfo({ ...proc, containers: [ct] }, now)
+  const salvarVazio = async (valor) => {
+    if (vazioDepoisDoDraft(valor, ct.deadlineDraft)) {
+      const ok = await confirm({
+        title: 'Retirada depois do Deadline Draft',
+        message: `O Deadline Draft deste contêiner é ${formatarDataHora(ct.deadlineDraft)}. A retirada do vazio precisa ser agendada antes dele. Agendar para ${formatarDataHora(valor)} mesmo assim?`,
+        confirmLabel: 'Agendar',
+      })
+      if (!ok) return
+    }
+    await save('agVazio')(valor)
+  }
+  const salvarDraft = async (valor) => {
+    if (ct.agVazioCheck !== 'true' && vazioDepoisDoDraft(ct.agVazio, valor)) {
+      const ok = await confirm({
+        title: 'Deadline Draft antes da retirada',
+        message: `A retirada do vazio está agendada para ${formatarDataHora(ct.agVazio)}, depois deste Deadline Draft (${formatarDataHora(valor)}). Salvar mesmo assim?`,
+        confirmLabel: 'Salvar',
+      })
+      if (!ok) return
+    }
+    await save('deadlineDraft')(valor)
   }
 
   const remover = async () => {
@@ -302,7 +340,12 @@ function ContainerGroup({ proc, ct, index, processes, disabled, multi, now }) {
           <>
             <Row label="Tara"><AutoSaveInput type="text" placeholder="—" value={ct.tara} disabled={disabled} onSave={save('tara')} className={plainRight} /></Row>
             <Row label="Lacre"><AutoSaveInput type="text" placeholder="—" value={ct.lacre} disabled={disabled} onSave={save('lacre')} className={plainRight} /></Row>
-            <ExportTimeline proc={proc} ct={ct} disabled={disabled} save={save} now={now} />
+            {/* Prazos do armador: só informativos, não são etapas. */}
+            <Row label={<span>Deadline Draft{draftCt && <span className={`block text-[12px] font-medium ${draftAlertConfig[draftCt.nivel].text}`}>{draftCt.texto}</span>}</span>}>
+              <DateTimeField variant="pill" placeholder="Definir" value={ct.deadlineDraft} disabled={disabled} onChange={salvarDraft} />
+            </Row>
+            <Row label="Deadline Carga"><DateTimeField variant="pill" placeholder="Definir" value={ct.deadlineCarga} disabled={disabled} onChange={save('deadlineCarga')} /></Row>
+            <ExportTimeline proc={proc} ct={ct} disabled={disabled} save={save} salvarVazio={salvarVazio} now={now} />
           </>
         )}
       </Group>

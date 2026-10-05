@@ -79,7 +79,7 @@ export default function ProcessCard({ proc, now, onOpen, dragHandle, style, inne
   const draftInfo = getDraftDeadlineInfo(proc, now)
   const agCarga = isImport ? containers.map((c) => c.checklist?.ag_carga).filter(Boolean).sort()[0] : null
   const agCargaTexto = formatarDataHoraCurta(agCarga)
-  const done = processoConcluido(proc, now)
+  const done = processoConcluido(proc)
   const etapas = etapasProcesso(proc)
   const etapasFeitas = etapas.filter((e) => e.total && e.feitos === e.total).length
   const acao = proximaAcao(proc, now)
