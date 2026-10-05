@@ -1,0 +1,33 @@
+# Alerta de erros: todo dia às 08:00 (Brasília) confere a coleção "erros" do
+# Firestore. Se houver erros novos nas últimas 24 h, esta verificação FALHA
+# de propósito, e o GitHub manda um e-mail automático ("Run failed") para
+# quem mantém o repositório. Os detalhes ficam no Console do Firebase; aqui
+# só aparecem quantidades, porque os registros do GitHub deste repositório
+# são públicos.
+# Usa o mesmo segredo do backup (FIREBASE_SERVICE_ACCOUNT).
+name: Alerta de erros
+
+on:
+  schedule:
+    - cron: '0 11 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    name: Erros novos no app
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Conferir erros das últimas 24 h
+        run: |
+          npm install --no-save --no-package-lock firebase-admin@13
+          node scripts/alerta-erros.mjs
