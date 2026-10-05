@@ -17,9 +17,17 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     match /processes/{processId} {
-      // Só pode ler, atualizar ou apagar um processo se ele pertencer ao usuário autenticado.
-      allow read, update, delete: if request.auth != null
+      // Só pode ler ou apagar um processo se ele pertencer ao usuário autenticado.
+      allow read, delete: if request.auth != null
                           && request.auth.uid == resource.data.userId;
+
+      // Atualizar: só o dono, sem trocar o dono (userId) nem o tipo, e com um
+      // status válido.
+      allow update: if request.auth != null
+                          && request.auth.uid == resource.data.userId
+                          && request.resource.data.userId == resource.data.userId
+                          && request.resource.data.get('type', null) == resource.data.get('type', null)
+                          && request.resource.data.status in ['active', 'archived'];
 
       // Só pode criar um processo novo já atribuído a si mesmo (impede criar
       // documentos em nome de outro usuário).
@@ -74,6 +82,20 @@ service cloud.firestore {
                             && request.resource.data.origem.size() > 0
                             && request.resource.data.destino is string
                             && request.resource.data.destino.size() > 0;
+    }
+
+    // Registro de erros do app (src/lib/erros.js): qualquer usuário logado
+    // grava um erro em nome próprio, com campos e tamanhos limitados. Ninguém
+    // lê, altera ou apaga pelo app; a consulta é pelo Console do Firebase.
+    match /erros/{erroId} {
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.keys().hasOnly(['message', 'stack', 'componentStack', 'origem', 'pagina', 'userAgent', 'versao', 'createdAt', 'userId', 'email'])
+                    && request.resource.data.message is string
+                    && request.resource.data.message.size() <= 500
+                    && request.resource.data.stack.size() <= 4000
+                    && request.resource.data.componentStack.size() <= 4000;
+      allow read, update, delete: if false;
     }
 
     // Nega tudo o que não foi explicitamente liberado acima.

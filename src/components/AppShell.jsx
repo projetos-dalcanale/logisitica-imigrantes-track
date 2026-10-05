@@ -51,16 +51,17 @@ const isTyping = (el) => el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'S
 export default function AppShell() {
   const { user, logout } = useAuth()
   const { isDark, toggleTheme } = useTheme()
-  const { processes, loading } = useProcesses(user.uid)
+  const [activeTab, setActiveTab] = useState('import')
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  // Arquivados só carregam quando a aba deles ou a busca rápida é aberta.
+  const { processes, loading, loadingArquivo } = useProcesses(user.uid, activeTab === 'archive' || paletteOpen)
   const { fretes, loading: loadingFretes, erro: erroFretes } = useFretes()
   const { pedagios, loading: loadingPedagios, erro: erroPedagios } = usePedagios()
-  const [activeTab, setActiveTab] = useState('import')
   const [openId, setOpenId] = useState(null)
   const [freteOpen, setFreteOpen] = useState(null) // null | 'new' | id do frete
   const [pedagioOpen, setPedagioOpen] = useState(null) // null | 'new' | id da rota
   const [newOpen, setNewOpen] = useState(false)
   const [registriesOpen, setRegistriesOpen] = useState(false)
-  const [paletteOpen, setPaletteOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const searchRef = useRef(null)
   const scrollRef = useRef(null)
@@ -192,7 +193,7 @@ export default function AppShell() {
                 ) : isPedagios ? (
                   <PedagioList pedagios={pedagios} loading={loadingPedagios} erro={erroPedagios} onOpen={setPedagioOpen} onNew={() => setPedagioOpen('new')} searchRef={searchRef} />
                 ) : (
-                  <ProcessList processes={processes} loading={loading} tab={activeTab} onOpen={setOpenId} searchRef={searchRef} onNew={novo} />
+                  <ProcessList processes={processes} loading={activeTab === 'archive' ? loadingArquivo : loading} tab={activeTab} onOpen={setOpenId} searchRef={searchRef} onNew={novo} />
                 )}
               </motion.div>
             </AnimatePresence>
