@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { ChevronDown, ChevronsUpDown, Search } from 'lucide-react'
+import { ChevronDown, ChevronsUpDown, House, Search } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import AccountMenu, { Avatar } from './AccountMenu'
 import Logo from './Logo'
@@ -31,7 +31,7 @@ function NavItem({ tab, active, count, onClick, shortcut }) {
 
 // Barra lateral no estilo do macOS: material translúcido, navegação por
 // seções, busca e conta no rodapé. Só aparece no desktop.
-export default function Sidebar({ sections, active, counts, onChange, onSearch, isDark, onToggleTheme, onOpenRegistries }) {
+export default function Sidebar({ sections, active, counts, onChange, onHome, onSearch, isDark, onToggleTheme, onOpenRegistries }) {
   const { user } = useAuth()
   const [fechadas, setFechadas] = useState({})
   const alternar = (titulo) => setFechadas((f) => ({ ...f, [titulo]: !f[titulo] }))
@@ -44,6 +44,16 @@ export default function Sidebar({ sections, active, counts, onChange, onSearch, 
           <div className="text-[14px] font-semibold tracking-tight text-ink">LogiTrack</div>
           <div className="text-[11px] text-slate-500">Transportes Imigrantes</div>
         </div>
+        <button
+          type="button"
+          onClick={onHome}
+          aria-label="Início"
+          aria-current={active === 'inicio' ? 'page' : undefined}
+          title="Início (H)"
+          className={`ml-auto flex size-8 items-center justify-center rounded-lg transition-colors ${active === 'inicio' ? 'bg-slate-500/15 text-blue-500 dark:bg-white/10' : 'text-slate-400 hover:bg-slate-500/10 hover:text-ink'}`}
+        >
+          <House className="size-[18px]" strokeWidth={2.1} aria-hidden="true" />
+        </button>
       </div>
 
       <div className="px-3 pb-2">

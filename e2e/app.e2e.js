@@ -1,5 +1,5 @@
 // Roteiros principais do dia a dia, clicando como uma pessoa. Rodam em
-// ordem (o 3º arquiva o processo que o 1º confere).
+// ordem (o 4º arquiva o processo que o 2º confere).
 import { expect, test } from '@playwright/test'
 import { USUARIO } from './dados.mjs'
 
@@ -8,13 +8,25 @@ const entrar = async (page) => {
   await page.locator('#auth-email').fill(USUARIO.email)
   await page.locator('#auth-password').fill(USUARIO.senha)
   await page.getByRole('button', { name: 'Entrar' }).click()
-  await expect(page.getByRole('heading', { level: 1, name: 'Importações' })).toBeVisible()
+  // Abre na página inicial (saudação no título).
+  await expect(page.getByRole('heading', { level: 1, name: /Bom dia|Boa tarde|Boa noite/ })).toBeVisible()
 }
 
 const irPara = (page, aba) => page.locator('aside').getByRole('button', { name: new RegExp(aba) }).click()
 
+test('abre no Início com os indicadores e os atalhos', async ({ page }) => {
+  await entrar(page)
+  await expect(page.getByRole('button', { name: /Importações em andamento/ })).toContainText('1')
+  await expect(page.getByRole('button', { name: /Exportações em andamento/ })).toContainText('1')
+  await page.getByRole('button', { name: /Rotas e Valores de Pedágio Pedágio por rota/ }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Rotas e Valores de Pedágio' })).toBeVisible()
+  await page.locator('aside').getByRole('button', { name: 'Início' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: /Bom dia|Boa tarde|Boa noite/ })).toBeVisible()
+})
+
 test('entra e vê os ativos; os arquivados carregam ao abrir a aba', async ({ page }) => {
   await entrar(page)
+  await irPara(page, 'Importações')
   await expect(page.getByText('Importadora Teste')).toBeVisible()
   await expect(page.getByText('Arquivado Antigo')).toHaveCount(0)
 
@@ -34,6 +46,7 @@ test('cria um processo de importação', async ({ page }) => {
 
 test('marca uma etapa e arquiva o processo', async ({ page }) => {
   await entrar(page)
+  await irPara(page, 'Importações')
   await page.getByText('Importadora Teste').click()
   const ficha = page.getByRole('dialog')
   await ficha.getByText('Carregamento concluído', { exact: true }).click()
