@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import * as Popover from '@radix-ui/react-popover'
 import { Command } from 'cmdk'
-import { Check, ChevronDown, Copy, Mail, Plus, Search } from 'lucide-react'
+import { Check, ChevronDown, Copy, Download, Plus, Search, Type } from 'lucide-react'
 import { ExportIcon, ImportIcon } from './ui/icons'
 import { useToast } from '../contexts/ToastContext'
-import { dadosDoProcesso, FRASES, montarStatus, saudacao } from '../lib/status'
+import { dadosDoProcesso, montarStatus } from '../lib/status'
+import { desenharStatus, imagemDoCanvas, LARGURA, opcoesDeStatus } from '../lib/statusImagem'
 import Button from './ui/Button'
 import EmptyState from './ui/EmptyState'
 
 const RASCUNHO = 'logitrack-status-rascunho'
+const FRASES_DETALHES = ['Previsão de entrega às __h.', 'Previsão de chegada ao terminal às __h.', 'Motorista: __.']
 
 const lerRascunho = () => {
   try {
@@ -121,65 +123,116 @@ function EscolherProcesso({ processos, valor, onChange }) {
   )
 }
 
-// STATUS PARA CLIENTES: escolhe o processo, escreve a mensagem e copia o
-// e-mail pronto (assunto + corpo formatado) para colar no Outlook/Gmail.
-// O rascunho fica salvo neste navegador até ser trocado. Vindo do botão
-// "Status" da ficha, a tela é recriada (key) já com aquele processo.
+
+// STATUS PARA CLIENTES: escolhe o processo e a situação e gera uma imagem
+// nas cores da empresa (com barra de progresso e os dados do processo) para
+// copiar e colar no e-mail do cliente. O rascunho fica salvo neste
+// navegador. Vindo do botão "Status" da ficha, a tela é recriada (key) já
+// com aquele processo.
 export default function StatusClientes({ processes, loading, procInicial }) {
   const showToast = useToast()
-  const textoRef = useRef(null)
+  const detalhesRef = useRef(null)
+  const canvasRef = useRef(null)
   const ativos = processes
     .filter((p) => p.status === 'active' || p.id === procInicial)
     .sort((a, b) => dadosDoProcesso(a).cliente.localeCompare(dadosDoProcesso(b).cliente, 'pt-BR'))
 
-  const [procId, setProcId] = useState(() => procInicial || lerRascunho().procId || '')
-  const [mensagem, setMensagem] = useState(() => lerRascunho().mensagem || `${saudacao()} a todos.\n`)
+  const rascunho = lerRascunho()
+  const [procId, setProcId] = useState(() => procInicial || rascunho.procId || '')
+  const [statusId, setStatusId] = useState(() => rascunho.statusId || '')
+  const [titulo, setTitulo] = useState(() => rascunho.titulo || '')
+  const [detalhes, setDetalhes] = useState(() => rascunho.detalhes || '')
+  const [fontesProntas, setFontesProntas] = useState(false)
+
+  const proc = ativos.find((p) => p.id === procId)
+  const opcoes = proc ? opcoesDeStatus(proc) : []
+  const opcao = opcoes.find((o) => o.id === statusId) || null
 
   useEffect(() => {
     try {
-      localStorage.setItem(RASCUNHO, JSON.stringify({ procId, mensagem }))
+      localStorage.setItem(RASCUNHO, JSON.stringify({ procId, statusId, titulo, detalhes }))
     } catch { /* navegador sem localStorage */ }
-  }, [procId, mensagem])
+  }, [procId, statusId, titulo, detalhes])
 
-  const proc = ativos.find((p) => p.id === procId)
-  const email = proc ? montarStatus(proc, mensagem) : null
+  // A imagem usa a fonte do app; espera ela carregar antes de desenhar.
+  useEffect(() => {
+    let vivo = true
+    Promise.all([document.fonts.load('700 28px "Inter Variable"'), document.fonts.load('400 16px "Inter Variable"')])
+      .catch(() => {})
+      .finally(() => vivo && setFontesProntas(true))
+    return () => {
+      vivo = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!proc || !opcao || !canvasRef.current) return
+    desenharStatus(canvasRef.current, { proc, titulo: titulo.trim() || opcao.titulo, detalhes: detalhes.trim(), etapa: opcao.etapa })
+  }, [proc, opcao, titulo, detalhes, fontesProntas])
+
+  const escolherStatus = (o) => {
+    setStatusId(o.id)
+    setTitulo(o.titulo)
+  }
+
+  const escolherProcesso = (id) => {
+    setProcId(id)
+    // A lista de situações muda entre importação e exportação.
+    const novo = ativos.find((p) => p.id === id)
+    if (novo && !opcoesDeStatus(novo).some((o) => o.id === statusId)) {
+      setStatusId('')
+      setTitulo('')
+    }
+  }
 
   // Acrescenta a frase numa linha nova e seleciona o "__" para completar.
   const inserirFrase = (frase) => {
-    const base = mensagem.trimEnd()
+    const base = detalhes.trimEnd()
     const novo = `${base}${base ? '\n' : ''}${frase}`
-    setMensagem(novo)
+    setDetalhes(novo)
     requestAnimationFrame(() => {
-      const el = textoRef.current
+      const el = detalhesRef.current
       if (!el) return
       el.focus()
       const i = novo.lastIndexOf('__')
       if (i >= base.length) el.setSelectionRange(i, i + 2)
-      else el.setSelectionRange(novo.length, novo.length)
     })
   }
 
-  const copiar = async (conteudo, aviso) => {
+  const textoParaEmail = () => montarStatus(proc, [titulo.trim() || opcao.titulo, detalhes.trim()].filter(Boolean).join('\n'))
+
+  const copiarImagem = async () => {
+    const canvas = canvasRef.current
     try {
-      if (conteudo.html && window.ClipboardItem && navigator.clipboard?.write) {
-        await navigator.clipboard.write([
-          new ClipboardItem({
-            'text/html': new Blob([conteudo.html], { type: 'text/html' }),
-            'text/plain': new Blob([conteudo.texto], { type: 'text/plain' }),
-          }),
-        ])
-      } else {
-        await navigator.clipboard.writeText(conteudo.texto)
-      }
-      showToast(aviso)
+      // O Blob vai como promessa para o navegador manter a permissão do clique.
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': imagemDoCanvas(canvas) })])
+      showToast('Imagem copiada. É só colar no e-mail.')
     } catch {
-      if (copiarPorSelecao(conteudo)) showToast(aviso)
-      else showToast('Não foi possível copiar. Selecione o texto da prévia e copie manualmente.', 'error')
+      const html = `<img src="${canvas.toDataURL('image/png')}" width="${LARGURA}" alt="${(titulo || opcao.titulo).replace(/"/g, '')}">`
+      if (copiarPorSelecao({ html })) showToast('Imagem copiada. É só colar no e-mail.')
+      else showToast('Não foi possível copiar. Use “Baixar imagem” e anexe no e-mail.', 'error')
     }
   }
 
-  const abrirNoEmail = () => {
-    window.location.href = `mailto:?subject=${encodeURIComponent(email.assunto)}&body=${encodeURIComponent(email.texto)}`
+  const baixarImagem = async () => {
+    const blob = await imagemDoCanvas(canvasRef.current)
+    const url = URL.createObjectURL(blob)
+    const nome = `status-${dadosDoProcesso(proc).cliente || 'processo'}`.normalize('NFD').replace(/[^\w-]+/g, '-').toLowerCase()
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${nome}.png`
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+
+  const copiarTexto = async (texto, aviso) => {
+    try {
+      await navigator.clipboard.writeText(texto)
+      showToast(aviso)
+    } catch {
+      if (copiarPorSelecao({ texto })) showToast(aviso)
+      else showToast('Não foi possível copiar.', 'error')
+    }
   }
 
   if (!loading && ativos.length === 0) {
@@ -187,79 +240,88 @@ export default function StatusClientes({ processes, loading, procInicial }) {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
       <section className="min-w-0 space-y-5">
         <div>
           <label className="label">Processo</label>
-          <EscolherProcesso processos={ativos} valor={procId} onChange={setProcId} />
+          <EscolherProcesso processos={ativos} valor={procId} onChange={escolherProcesso} />
         </div>
 
-        <div>
-          <label htmlFor="status-mensagem" className="label">Mensagem</label>
-          <div className="mb-2 flex flex-wrap gap-1.5">
-            {FRASES.map((f) => (
-              <button
-                key={f}
-                type="button"
-                onClick={() => inserirFrase(f)}
-                className="inline-flex items-center gap-1 rounded-full bg-navy-700/70 px-2.5 py-1 text-[12.5px] text-slate-300 transition-colors hover:bg-navy-700 hover:text-ink"
-              >
-                <Plus className="size-3" strokeWidth={2.6} />
-                {f.replace(' às __h', '')}
-              </button>
-            ))}
+        {proc && (
+          <div>
+            <label className="label">Situação</label>
+            <div className="flex flex-wrap gap-1.5">
+              {opcoes.map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => escolherStatus(o)}
+                  className={`rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors ${o.id === statusId ? 'bg-blue-500 text-white shadow-sm' : 'bg-navy-700/70 text-slate-300 hover:bg-navy-700 hover:text-ink'}`}
+                >
+                  {o.id === 'outro' ? 'Outro' : o.titulo}
+                </button>
+              ))}
+            </div>
           </div>
-          <textarea
-            id="status-mensagem"
-            ref={textoRef}
-            value={mensagem}
-            onChange={(e) => setMensagem(e.target.value)}
-            rows={7}
-            maxLength={3000}
-            placeholder="Ex.: Bom dia a todos. Carregamento liberado e veículo está em rota com previsão de entrega às 15h."
-            className="field min-h-40 resize-y leading-relaxed"
-          />
-          <div className="mt-1.5 flex justify-between text-[12px] text-slate-500">
-            <span>O rascunho fica salvo neste navegador.</span>
-            <button type="button" className="text-blue-500 hover:opacity-80" onClick={() => setMensagem(`${saudacao()} a todos.\n`)}>
-              Limpar mensagem
-            </button>
-          </div>
-        </div>
+        )}
+
+        {opcao && (
+          <>
+            <div>
+              <label htmlFor="status-titulo" className="label">Título</label>
+              <input id="status-titulo" type="text" value={titulo} maxLength={80} onChange={(e) => setTitulo(e.target.value)} placeholder={opcao.titulo} className="field" />
+            </div>
+            <div>
+              <label htmlFor="status-detalhes" className="label">Detalhes (opcional)</label>
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                {FRASES_DETALHES.map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => inserirFrase(f)}
+                    className="inline-flex items-center gap-1 rounded-full bg-navy-700/70 px-2.5 py-1 text-[12.5px] text-slate-300 transition-colors hover:bg-navy-700 hover:text-ink"
+                  >
+                    <Plus className="size-3" strokeWidth={2.6} />
+                    {f.replace(/ (às )?__h?\.?$/, '').replace(/:$/, '')}
+                  </button>
+                ))}
+              </div>
+              <textarea
+                id="status-detalhes"
+                ref={detalhesRef}
+                value={detalhes}
+                onChange={(e) => setDetalhes(e.target.value)}
+                rows={4}
+                maxLength={600}
+                placeholder="Ex.: Carregamento liberado e veículo em rota, com previsão de entrega às 15h."
+                className="field resize-y leading-relaxed"
+              />
+            </div>
+          </>
+        )}
       </section>
 
       <section className="min-w-0">
-        <label className="label">Prévia do e-mail</label>
-        <div className="card overflow-hidden">
-          {email ? (
-            <>
-              <div className="flex items-start gap-3 border-b border-slate-700/70 px-4 py-3">
-                <div className="min-w-0 flex-1">
-                  <div className="text-[11px] font-medium uppercase tracking-wide text-slate-500">Assunto</div>
-                  <div className="mt-0.5 text-[14px] font-medium text-ink">{email.assunto}</div>
-                </div>
-                <Button variant="ghost" size="sm" icon={Copy} onClick={() => copiar({ texto: email.assunto }, 'Assunto copiado.')} aria-label="Copiar assunto">
-                  <span className="max-sm:hidden">Assunto</span>
-                </Button>
-              </div>
-              {/* Mesmo HTML que vai para a área de transferência (texto já escapado). */}
-              <div className="max-h-[420px] overflow-y-auto bg-white px-4 py-4 text-[#1d1d1f]" dangerouslySetInnerHTML={{ __html: email.html }} />
-            </>
-          ) : (
-            <p className="px-4 py-10 text-center text-sm text-slate-500">Selecione um processo para ver o e-mail.</p>
-          )}
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button size="lg" icon={Copy} disabled={!email} onClick={() => copiar(email, 'E-mail copiado. É só colar na mensagem.')} className="flex-1">
-            Copiar e-mail
-          </Button>
-          <Button size="lg" variant="gray" icon={Mail} disabled={!email} onClick={abrirNoEmail}>
-            Abrir no e-mail
-          </Button>
-        </div>
-        <p className="mt-2 text-[12px] leading-relaxed text-slate-500">
-          “Copiar e-mail” leva o texto já formatado (cole no corpo da mensagem). “Abrir no e-mail” cria a mensagem no programa de e-mail do computador, com assunto e texto preenchidos.
-        </p>
+        <label className="label">Imagem para o e-mail</label>
+        {opcao ? (
+          <>
+            <div className="rounded-2xl bg-navy-700/40 p-3 sm:p-4">
+              <canvas ref={canvasRef} className="mx-auto block h-auto w-full max-w-[720px]" role="img" aria-label={`Status: ${titulo || opcao.titulo}`} />
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button size="lg" icon={Copy} onClick={copiarImagem} className="flex-1">Copiar imagem</Button>
+              <Button size="lg" variant="gray" icon={Download} onClick={baixarImagem}>Baixar</Button>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+              <Button variant="plain" size="sm" icon={Copy} className="px-0" onClick={() => copiarTexto(textoParaEmail().assunto, 'Assunto copiado.')}>Copiar assunto</Button>
+              <Button variant="plain" size="sm" icon={Type} className="px-0" onClick={() => copiarTexto(textoParaEmail().texto, 'Texto copiado.')}>Copiar como texto</Button>
+            </div>
+          </>
+        ) : (
+          <div className="card px-6 py-12 text-center text-sm text-slate-500">
+            {proc ? 'Escolha a situação para montar a imagem.' : 'Selecione um processo para começar.'}
+          </div>
+        )}
       </section>
     </div>
   )

@@ -34,7 +34,8 @@ export const TABS = [
   { value: 'pedagios', label: 'Rotas e Valores', short: 'Pedágios', icon: Route },
 ]
 const SECTIONS = [
-  { title: 'Processos', tabs: TABS.slice(0, 4) },
+  { title: 'Processos', tabs: TABS.slice(0, 3) },
+  { title: 'Status', tabs: TABS.slice(3, 4) },
   { title: 'Comercial', tabs: TABS.slice(4, 5) },
   { title: 'Pedágios', tabs: TABS.slice(5) },
 ]

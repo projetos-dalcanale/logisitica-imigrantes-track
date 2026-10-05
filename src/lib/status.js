@@ -10,15 +10,6 @@ export const saudacao = (data = new Date()) => {
   return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'
 }
 
-// Frases prontas para montar a mensagem com um clique.
-export const FRASES = [
-  'Carregamento liberado.',
-  'Veículo em rota com previsão de entrega às __h.',
-  'Carga entregue.',
-  'Aguardando liberação do terminal.',
-  'Contêiner devolvido.',
-]
-
 // Só o que o cliente precisa: nome, documento e contêineres.
 export const dadosDoProcesso = (proc) => {
   const isImport = proc.type === 'import'
