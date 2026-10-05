@@ -42,10 +42,12 @@ jobs:
         with:
           path: ~/.cache/firebase/emulators
           key: emuladores-firebase-v1
+      # Playwright, firebase-tools e firebase-admin são devDependencies com
+      # versão fixa: o `npm ci` já instalou tudo pelo package-lock.json. Não
+      # rodar `npm install` aqui, senão o npm recalcula a árvore inteira e pode
+      # pegar versões recém-publicadas (já quebrou assim).
       - name: Preparar testes de tela
-        run: |
-          npm install --no-save --no-package-lock @playwright/test@1 firebase-tools@latest firebase-admin@13
-          npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium
       - name: Testes de tela
         run: npx firebase emulators:exec --only auth,firestore --project demo-logitrack "npx playwright test -c e2e/playwright.config.js"
       - name: Relatório dos testes de tela (só quando falham)
