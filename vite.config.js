@@ -12,6 +12,8 @@ const cabecalhosProducao = Object.fromEntries(
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Versão (commit) gravada junto com os erros registrados; a Vercel informa o commit no build.
+  define: { 'import.meta.env.VITE_VERSAO': JSON.stringify((process.env.VERCEL_GIT_COMMIT_SHA || 'local').slice(0, 7)) },
   preview: { headers: cabecalhosProducao },
   build: {
     // O Firebase sozinho passa de 500 kB; fica num arquivo próprio, em cache.
