@@ -32,7 +32,7 @@ function NavItem({ tab, active, count, onClick, shortcut }) {
 // Barra lateral no estilo do macOS: material translúcido, navegação por
 // seções, busca e conta no rodapé. Só aparece no desktop.
 export default function Sidebar({ sections, active, counts, onChange, onHome, onSearch, isDark, onToggleTheme, onOpenRegistries }) {
-  const { user } = useAuth()
+  const { nomeExibido } = useAuth()
   const [fechadas, setFechadas] = useState({})
   const alternar = (titulo) => setFechadas((f) => ({ ...f, [titulo]: !f[titulo] }))
   const atalho = Object.fromEntries(sections.flatMap((s) => s.tabs).map((t, i) => [t.value, i + 1]))
@@ -109,8 +109,8 @@ export default function Sidebar({ sections, active, counts, onChange, onHome, on
           onOpenRegistries={onOpenRegistries}
           trigger={
             <button type="button" className="flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left transition-colors hover:bg-slate-500/10">
-              <Avatar email={user.email} size="sm" />
-              <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-ink">{user.email.split('@')[0]}</span>
+              <Avatar nome={nomeExibido} size="sm" />
+              <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-ink">{nomeExibido}</span>
               <ChevronsUpDown className="size-3.5 text-slate-500" />
             </button>
           }
