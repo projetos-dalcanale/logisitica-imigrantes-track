@@ -1,33 +1,52 @@
 import { useState } from 'react'
 import { motion } from 'motion/react'
-import { CircleAlert, Lock, Mail, ShieldCheck } from 'lucide-react'
+import { CircleAlert, Lock, Mail, MailCheck, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { mensagemDeLogin } from '../lib/loginErros'
 import Button from './ui/Button'
 import Logo from './Logo'
 import LoginArt from './LoginArt'
 
 export default function LoginScreen() {
-  const { login } = useAuth()
+  const { login, resetarSenha } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [aviso, setAviso] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [enviandoLink, setEnviandoLink] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setSubmitting(true)
+    setAviso('')
     try {
       await login(email, password)
       setError('')
     } catch (err) {
-      const semAcesso = ['auth/user-not-found', 'auth/invalid-credential', 'auth/wrong-password']
-      setError(
-        semAcesso.includes(err.code)
-          ? 'E-mail ou senha incorretos, ou esta conta ainda não foi cadastrada pelo administrador.'
-          : 'Erro no login: ' + err.message
-      )
+      setError(mensagemDeLogin(err.code))
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const esqueciSenha = async () => {
+    setAviso('')
+    if (!email.trim()) {
+      setError('Digite seu e-mail acima para receber o link de nova senha.')
+      document.getElementById('auth-email')?.focus()
+      return
+    }
+    setEnviandoLink(true)
+    try {
+      await resetarSenha(email.trim())
+      setError('')
+      // Texto neutro de propósito: não revela se o e-mail tem conta ou não.
+      setAviso(`Se ${email.trim()} tiver uma conta, enviamos um link para criar uma nova senha. Confira também o spam.`)
+    } catch (err) {
+      setError(mensagemDeLogin(err.code))
+    } finally {
+      setEnviandoLink(false)
     }
   }
 
@@ -54,7 +73,17 @@ export default function LoginScreen() {
             </div>
           </div>
           <div>
-            <label htmlFor="auth-password" className="label">Senha</label>
+            <div className="flex items-baseline justify-between gap-2">
+              <label htmlFor="auth-password" className="label">Senha</label>
+              <button
+                type="button"
+                onClick={esqueciSenha}
+                disabled={enviandoLink}
+                className="text-[12.5px] font-medium text-blue-500 transition-opacity hover:underline disabled:opacity-50"
+              >
+                {enviandoLink ? 'Enviando…' : 'Esqueci minha senha'}
+              </button>
+            </div>
             <div className="relative">
               <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
               <input id="auth-password" name="password" type="password" required minLength={6} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className="field pl-9" />
@@ -68,6 +97,17 @@ export default function LoginScreen() {
             >
               <CircleAlert className="mt-0.5 size-4 shrink-0" />
               {error}
+            </motion.div>
+          )}
+          {aviso && (
+            <motion.div
+              role="status"
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-500"
+            >
+              <MailCheck className="mt-0.5 size-4 shrink-0" />
+              {aviso}
             </motion.div>
           )}
           <Button type="submit" size="lg" loading={submitting} className="w-full">

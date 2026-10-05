@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth'
+import { onAuthStateChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth'
 import { auth } from '../lib/firebase'
 
 const AuthContext = createContext(null)
@@ -24,6 +24,8 @@ export function AuthProvider({ children }) {
 
   const login = (email, password) => signInWithEmailAndPassword(auth, email, password)
   const logout = () => signOut(auth)
+  // Só funciona para contas que já existem: não abre caminho para auto-cadastro.
+  const resetarSenha = (email) => sendPasswordResetEmail(auth, email)
 
   const salvarNome = async (nome) => {
     const limpo = nome.trim()
@@ -35,7 +37,7 @@ export function AuthProvider({ children }) {
   const nomeExibido = nome || user?.email?.split('@')[0] || ''
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, nome, nomeExibido, salvarNome }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, resetarSenha, nome, nomeExibido, salvarNome }}>
       {children}
     </AuthContext.Provider>
   )
