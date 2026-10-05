@@ -187,6 +187,24 @@ function ExportTimeline({ proc, ct, disabled, save, salvarVazio, now }) {
   )
 }
 
+// Agendamentos da importação (informativos): datas de carregamento e de
+// devolução do vazio, guardadas no contêiner. Sem devolução na baixa.
+function AgendamentosRows({ proc, ct, disabled }) {
+  const salvar = (campo) => (v) => atualizarChecklist(proc, ct.id, campo, v)
+  return (
+    <>
+      <Row label="Agendamento de carregamento">
+        <DateTimeField variant="pill" placeholder="Definir" value={ct.checklist?.ag_carga} disabled={disabled} onChange={salvar('ag_carga')} />
+      </Row>
+      {proc.finalizacaoVazio !== 'baixa' && (
+        <Row label="Agendamento de vazio">
+          <DateTimeField variant="pill" placeholder="Definir" value={ct.checklist?.ag_vazio} disabled={disabled} onChange={salvar('ag_vazio')} />
+        </Row>
+      )}
+    </>
+  )
+}
+
 function ContainerGroup({ proc, ct, index, processes, disabled, multi, now }) {
   const showToast = useToast()
   const { confirm } = useDialog()
@@ -295,47 +313,28 @@ function ContainerGroup({ proc, ct, index, processes, disabled, multi, now }) {
           </>
         )}
 
+        {isImport && multi && <AgendamentosRows proc={proc} ct={ct} disabled={disabled} />}
+
         {isImport ? (
           <Timeline>
             {steps.map((step, i) => {
-              const val = ct.checklist?.[step.id] || ''
+              // Só o check: as datas de agendamento ficam em "Agendamentos".
+              const chave = step.type === 'checkbox' ? step.id : `${step.id}_check`
               const feito = etapaFeita(ct, step)
               const atual = !feito && i === steps.findIndex((s) => !etapaFeita(ct, s))
-              const last = i === steps.length - 1
-              if (step.type === 'checkbox') {
-                const quando = quandoRelativo(ct.checklist?.[`${step.id}_em`])
-                return (
-                  <TimelineItem
-                    key={step.id}
-                    done={feito}
-                    atual={atual}
-                    last={last}
-                    title={step.label}
-                    subtitle={feito ? (quando ? `Concluído ${quando}` : 'Concluído') : atual && 'Próxima etapa'}
-                    subtitleClass={feito ? 'text-emerald-500' : 'text-slate-400'}
-                    onClick={disabled ? undefined : () => atualizarChecklist(proc, ct.id, step.id, !feito)}
-                    node={<Checkbox tone="success" checked={feito} disabled={disabled} label={step.label} onChange={(v) => atualizarChecklist(proc, ct.id, step.id, v)} />}
-                  />
-                )
-              }
-              // Carregamento e devolução: a data ao lado é o agendamento
-              // (informativo); o marcador diz que aconteceu.
-              const passou = val && !feito && new Date(val).getTime() < now
-              const quando = quandoRelativo(ct.checklist?.[`${step.id}_check_em`])
+              const quando = quandoRelativo(ct.checklist?.[`${chave}_em`])
               return (
                 <TimelineItem
                   key={step.id}
                   done={feito}
                   atual={atual}
-                  last={last}
+                  last={i === steps.length - 1}
                   title={step.label}
-                  subtitle={feito ? (quando ? `Concluído ${quando}` : 'Concluído') : passou ? 'Horário passou · confirmar' : val ? 'Agendado' : atual && 'Próxima etapa · agendar'}
-                  subtitleClass={feito ? 'text-emerald-500' : passou ? 'text-red-500' : 'text-slate-400'}
-                  onClick={disabled ? undefined : () => atualizarChecklist(proc, ct.id, `${step.id}_check`, !feito)}
-                  node={<Checkbox tone="success" checked={feito} disabled={disabled} label={step.label} onChange={(v) => atualizarChecklist(proc, ct.id, `${step.id}_check`, v)} />}
-                >
-                  <DateTimeField variant="pill" placeholder="Agendar" value={val} disabled={disabled} onChange={(v) => atualizarChecklist(proc, ct.id, step.id, v)} />
-                </TimelineItem>
+                  subtitle={feito ? (quando ? `Concluído ${quando}` : 'Concluído') : atual && 'Próxima etapa'}
+                  subtitleClass={feito ? 'text-emerald-500' : 'text-slate-400'}
+                  onClick={disabled ? undefined : () => atualizarChecklist(proc, ct.id, chave, !feito)}
+                  node={<Checkbox tone="success" checked={feito} disabled={disabled} label={step.label} onChange={(v) => atualizarChecklist(proc, ct.id, chave, v)} />}
+                />
               )
             })}
           </Timeline>
@@ -442,6 +441,13 @@ export default function ProcessModal({ proc, processes, onClose }) {
           <Group title="Transporte">
             <Row label="Motorista"><AutoSaveInput type="text" placeholder="Nome" maxLength={150} value={proc.motorista} disabled={archived} onSave={saveProcField('motorista')} className={plainRight} /></Row>
             <Row label="Placas"><AutoSaveInput type="text" placeholder="ABC1D23" maxLength={150} value={proc.placas} disabled={archived} onSave={saveProcField('placas')} className={plainRight} /></Row>
+          </Group>
+        )}
+
+        {/* Com um contêiner, os agendamentos ficam aqui, como o transporte. */}
+        {isImport && containers.length === 1 && (
+          <Group title="Agendamentos">
+            <AgendamentosRows proc={proc} ct={containers[0]} disabled={archived} />
           </Group>
         )}
 
