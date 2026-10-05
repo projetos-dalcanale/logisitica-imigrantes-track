@@ -5,6 +5,7 @@ import {
   formatarDataHoraCurta,
   getDraftDeadlineInfo,
   distintos,
+  formatarPlacas,
   transportePorContainer,
 } from '../lib/processos'
 import { etapasProcesso, processoConcluido, proximaAcao } from '../lib/etapas'
@@ -86,11 +87,11 @@ export default function ProcessCard({ proc, now, onOpen, dragHandle, style, inne
   // Motoristas e placas de todos os contêineres (cada um pode ter o seu).
   const transporte = transportePorContainer(proc)
   const motoristas = distintos(transporte.map((t) => t.motorista))
-  const placas = distintos(transporte.map((t) => t.placas))
+  const placas = distintos(transporte.map((t) => formatarPlacas(t.placas)))
   const resumo = (lista, vazio, plural) => (lista.length === 0 ? vazio : lista.length <= 2 ? lista.join(' · ') : `${lista.length} ${plural}`)
   const detalheTransporte =
     transporte.length > 1
-      ? transporte.map((t, i) => `${t.numero || `Contêiner ${i + 1}`}: ${t.motorista || 'sem motorista'}${t.placas ? ` (${t.placas})` : ''}`).join('\n')
+      ? transporte.map((t, i) => `${t.numero || `Contêiner ${i + 1}`}: ${t.motorista || 'sem motorista'}${t.placas ? ` (${formatarPlacas(t.placas)})` : ''}`).join('\n')
       : null
 
   let status

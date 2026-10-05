@@ -8,9 +8,19 @@ function NavButton({ icon: Icon, label, active, onClick }) {
       onClick={onClick}
       className={`flex flex-1 flex-col items-center justify-center gap-[3px] pt-1 text-[10.5px] font-medium transition-colors ${active ? 'text-blue-500' : 'text-slate-500'}`}
     >
-      <motion.span animate={{ scale: active ? 1.06 : 1 }} transition={{ type: 'spring', stiffness: 500, damping: 30 }}>
-        <Icon className="size-[23px]" strokeWidth={active ? 2.2 : 1.8} />
-      </motion.span>
+      <span className="relative flex h-7 w-12 items-center justify-center">
+        {/* Pílula que desliza até a aba ativa. */}
+        {active && (
+          <motion.span
+            layoutId="bottomnav-ativa"
+            className="absolute inset-0 rounded-full bg-blue-500/12"
+            transition={{ type: 'spring', stiffness: 500, damping: 38 }}
+          />
+        )}
+        <motion.span className="relative" animate={{ scale: active ? 1.06 : 1 }} transition={{ type: 'spring', stiffness: 500, damping: 30 }}>
+          <Icon className="size-[22px]" strokeWidth={active ? 2.2 : 1.8} />
+        </motion.span>
+      </span>
       {label}
     </button>
   )

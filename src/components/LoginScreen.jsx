@@ -4,6 +4,7 @@ import { CircleAlert, Lock, Mail, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import Button from './ui/Button'
 import Logo from './Logo'
+import LoginArt from './LoginArt'
 
 export default function LoginScreen() {
   const { login } = useAuth()
@@ -31,7 +32,8 @@ export default function LoginScreen() {
   }
 
   return (
-    <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-navy-900 px-4">
+    <div className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-navy-900 px-4 py-10">
+      <LoginArt />
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
@@ -43,7 +45,7 @@ export default function LoginScreen() {
           <h1 className="mt-5 font-display text-[28px] font-bold tracking-[-0.025em] text-ink">LogiTrack</h1>
           <p className="mt-1 text-[15px] text-slate-400">Entre com sua conta da Transportes Imigrantes</p>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="card space-y-4 p-5 shadow-lift sm:p-6">
           <div>
             <label htmlFor="auth-email" className="label">E-mail</label>
             <div className="relative">
@@ -71,12 +73,15 @@ export default function LoginScreen() {
           <Button type="submit" size="lg" loading={submitting} className="w-full">
             {submitting ? 'Entrando...' : 'Entrar'}
           </Button>
-          <p className="flex items-center justify-center gap-1.5 pt-1 text-xs text-slate-500">
-            <ShieldCheck className="size-3.5" />
-            Acesso restrito a contas criadas pelo administrador.
-          </p>
         </form>
+        <p className="mt-5 flex items-center justify-center gap-1.5 text-xs text-slate-500">
+          <ShieldCheck className="size-3.5" />
+          Acesso restrito a contas criadas pelo administrador.
+        </p>
       </motion.div>
+      <p className="absolute inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom))] text-center text-[11px] text-slate-500">
+        LogiTrack Pro · Transportes Imigrantes
+      </p>
     </div>
   )
 }

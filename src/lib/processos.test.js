@@ -11,6 +11,7 @@ import {
   transportePorContainer,
   distintos,
   validarNumeroContainer,
+  formatarPlacas,
 } from './processos'
 
 const DIA = 86400000
@@ -155,6 +156,20 @@ describe('filtro e busca de processos', () => {
     expect(filtrarProcessos(lista, 'import', 'msc').map((p) => p.id)).toEqual(['b'])
     expect(filtrarProcessos(lista, 'import', 'cmau 713').map((p) => p.id)).toEqual(['a'])
     expect(filtrarProcessos(lista, 'export', '13565').map((p) => p.id)).toEqual(['c'])
+  })
+})
+
+describe('placas', () => {
+  it('formata Mercosul e antiga com hífen, em maiúsculas', () => {
+    expect(formatarPlacas('abc1d23')).toBe('ABC-1D23')
+    expect(formatarPlacas('ABC 1234')).toBe('ABC-1234')
+    expect(formatarPlacas('ABC-1D23')).toBe('ABC-1D23')
+  })
+
+  it('formata várias placas e não mexe no resto', () => {
+    expect(formatarPlacas('ABC1D23 / XYZ9A87 (carreta)')).toBe('ABC-1D23 / XYZ-9A87 (carreta)')
+    expect(formatarPlacas('a definir')).toBe('a definir')
+    expect(formatarPlacas('')).toBe('')
   })
 })
 

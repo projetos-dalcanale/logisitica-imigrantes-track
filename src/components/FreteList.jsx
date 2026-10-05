@@ -6,6 +6,23 @@ import EmptyState from './ui/EmptyState'
 import Button from './ui/Button'
 import SearchField from './ui/SearchField'
 
+// Cor do avatar escolhida pelo nome (sempre a mesma para o mesmo cliente),
+// como no app Contatos.
+const CORES_AVATAR = [
+  'from-[#ff8a80] to-[#e5484d]',
+  'from-[#ffb366] to-[#f76b15]',
+  'from-[#7dd3a8] to-[#30a46c]',
+  'from-[#6cc4f5] to-[#0090ff]',
+  'from-[#a78bfa] to-[#6e56cf]',
+  'from-[#f9a8d4] to-[#d6409f]',
+  'from-[#9ca3af] to-[#6b7280]',
+]
+const corAvatar = (nome) => {
+  let h = 0
+  for (const c of nome || '') h = (h * 31 + c.charCodeAt(0)) >>> 0
+  return CORES_AVATAR[h % CORES_AVATAR.length]
+}
+
 const inicial = (nome) => {
   const c = (nome || '#').trim().charAt(0).toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
   return /[A-Z]/.test(c) ? c : '#'
@@ -20,7 +37,7 @@ function FreteRow({ frete, onOpen }) {
       onClick={() => onOpen(frete.id)}
       className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-navy-700/40 active:bg-navy-700/70"
     >
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-slate-400 to-slate-500 text-[13px] font-semibold text-white">
+      <span className={`flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-b ${corAvatar(frete.cliente)} text-[13px] font-semibold text-white`}>
         {(frete.cliente || '?').trim().slice(0, 2).toUpperCase()}
       </span>
       <div className="min-w-0 flex-1">
@@ -30,9 +47,12 @@ function FreteRow({ frete, onOpen }) {
         </div>
       </div>
       {principal && (
-        <div className="hidden text-right sm:block">
-          <div className="text-[11px] text-slate-500">{principal.label}</div>
-          <div className="text-[14px] font-medium tabular-nums text-ink">{formatarValor(principal.valor, principal.tipo)}</div>
+        <div className="max-w-[45%] shrink-0 text-right">
+          <div className="truncate text-[11px] text-slate-500">{principal.label}</div>
+          <div className="font-display text-[17px] font-semibold tracking-[-0.01em] tabular-nums text-ink">
+            {(principal.tipo || 'moeda') === 'moeda' && <span className="mr-0.5 text-[12px] font-medium text-slate-400">R$</span>}
+            {formatarValor(principal.valor, principal.tipo)}
+          </div>
         </div>
       )}
       <ChevronRight className="size-4 shrink-0 text-slate-500/70" strokeWidth={2.4} />
@@ -87,7 +107,7 @@ export default function FreteList({ fretes, loading, erro, onOpen, onNew, search
         termo ? (
           <EmptyState search title="Nenhum cliente encontrado" description={`Nada encontrado para “${busca}”.`} action={<Button variant="gray" size="sm" icon={X} onClick={() => setBusca('')}>Limpar busca</Button>} />
         ) : (
-          <EmptyState title="Nenhum frete cadastrado" description="Cadastre o primeiro cliente para tirar a tabela de fretes do papel." action={<Button size="sm" icon={Plus} onClick={onNew}>Novo cliente</Button>} />
+          <EmptyState art="tabela" title="Nenhum frete cadastrado" description="Cadastre o primeiro cliente para tirar a tabela de fretes do papel." action={<Button size="sm" icon={Plus} onClick={onNew}>Novo cliente</Button>} />
         )
       ) : (
         <div className="space-y-5">

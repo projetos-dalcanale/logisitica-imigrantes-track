@@ -213,3 +213,9 @@ export const transportePorContainer = (proc) => {
 
 // Valores distintos e preenchidos (ex: os motoristas de um processo).
 export const distintos = (valores) => [...new Set(valores.map((v) => (v || '').trim()).filter(Boolean))]
+
+// Placas para exibição: "abc1d23" -> "ABC-1D23" (Mercosul) e "abc1234" ->
+// "ABC-1234" (antiga). Funciona com várias placas no mesmo texto; o que não
+// for placa fica como está. O valor salvo não muda.
+export const formatarPlacas = (texto) =>
+  (texto || '').replace(/\b([A-Za-z]{3})[-\s]?(\d[A-Za-z0-9]\d{2})\b/g, (_, l, n) => `${l.toUpperCase()}-${n.toUpperCase()}`)
