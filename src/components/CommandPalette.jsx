@@ -1,5 +1,5 @@
 import { Command } from 'cmdk'
-import { Archive, Building2, CornerDownLeft, ListChecks, Mail, LogOut, Moon, Plus, ReceiptText, Route, Search } from 'lucide-react'
+import { Archive, Building2, House, CornerDownLeft, ListChecks, Mail, LogOut, Moon, Plus, ReceiptText, Route, Search } from 'lucide-react'
 import { ExportIcon, ImportIcon } from './ui/icons'
 import Modal from './ui/Modal'
 
@@ -96,6 +96,7 @@ export default function CommandPalette({ processes, fretes = [], onClose, onOpen
 
           <Command.Group heading="Ações">
             <Item icon={Plus} value="novo processo criar" onSelect={actions.novo} hint="N">Novo processo</Item>
+            <Item icon={House} value="ir inicio pagina inicial agenda hoje" onSelect={() => actions.aba('inicio')} hint="H">Ir para o Início</Item>
             <Item icon={ImportIcon} value="ir importações" onSelect={() => actions.aba('import')} hint="1">Ir para Importações</Item>
             <Item icon={ExportIcon} value="ir exportações" onSelect={() => actions.aba('export')} hint="2">Ir para Exportações</Item>
             <Item icon={Archive} value="ir arquivados" onSelect={() => actions.aba('archive')} hint="3">Ir para Arquivados</Item>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { agruparPorUrgencia, etapasProcesso, grupoUrgencia, proximaAcao, quandoRelativo } from './etapas'
+import { agendaDoDia, agruparPorUrgencia, compromissos, etapasProcesso, grupoUrgencia, proximaAcao, quandoRelativo } from './etapas'
 import { novoChecklistImport } from './processos'
 
 // Sexta-feira, 2 out 2026, 10:00 (horário local).
@@ -106,5 +106,25 @@ describe('grupos de urgência', () => {
     const grupos = agruparPorUrgencia([a, b, c], NOW)
     expect(grupos.map((g) => g.id)).toEqual(['atrasados', 'semData'])
     expect(grupos[1].itens.map((p) => p.id)).toEqual(['a', 'c'])
+  })
+})
+
+describe('agenda da página inicial', () => {
+  it('lista compromissos com nome e contêiner, inclusive prazos da exportação', () => {
+    const lista = compromissos(exp([{ numero: 'X1', agVazio: em(1), deadlineDraft: em(2), deadlineCarga: em(3) }]))
+    expect(lista.map((c) => c.rotulo)).toEqual(['Retirada do vazio', 'Deadline Draft', 'Deadline Carga'])
+    expect(lista[0]).toMatchObject({ numero: 'X1', feito: false, pendente: true })
+  })
+
+  it('separa atrasados, hoje e amanhã e ignora o que já foi feito e os arquivados', () => {
+    const a = { ...imp([{ ag_carga: em(-1) }]), id: 'a' }
+    const b = { ...imp([{ ag_carga: em(0, 18) }]), id: 'b' }
+    const c = { ...imp([{ ag_carga: em(1, 9) }]), id: 'c' }
+    const feito = { ...imp([{ ag_carga: em(0, 16), ag_carga_check: 'true' }]), id: 'd' }
+    const arquivado = { ...imp([{ ag_carga: em(0, 17) }]), id: 'e', status: 'archived' }
+    const ag = agendaDoDia([c, b, a, feito, arquivado], NOW)
+    expect(ag.atrasados.map((x) => x.proc.id)).toEqual(['a'])
+    expect(ag.hoje.map((x) => x.proc.id)).toEqual(['b'])
+    expect(ag.amanha.map((x) => x.proc.id)).toEqual(['c'])
   })
 })

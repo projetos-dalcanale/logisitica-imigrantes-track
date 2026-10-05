@@ -141,3 +141,47 @@ export const agruparPorUrgencia = (processes, now = Date.now()) => {
   processes.forEach((p) => porGrupo.get(grupoUrgencia(p, now)).push(p))
   return GRUPOS.map((g) => ({ ...g, itens: porGrupo.get(g.id) })).filter((g) => g.itens.length)
 }
+
+// AGENDA (página inicial): compromissos datados de um processo, com nome,
+// contêiner e se já foi feito. Na exportação entram também os prazos do
+// armador (Deadline Draft pendente enquanto o Draft não for cumprido;
+// Deadline Carga só informativo).
+export const compromissos = (proc) => {
+  const lista = []
+  for (const ct of proc.containers || []) {
+    for (const p of passos(proc).filter((x) => x.agendamento)) {
+      const t = dataValida(p.data(ct))
+      if (t !== null) lista.push({ t, rotulo: p.evento, numero: ct.numero || '', feito: p.feita(ct), pendente: !p.feita(ct) })
+    }
+    if (proc.type === 'export') {
+      const draft = dataValida(ct.deadlineDraft)
+      if (draft !== null) lista.push({ t: draft, rotulo: 'Deadline Draft', numero: ct.numero || '', feito: draftJaCumprido(ct), pendente: !draftJaCumprido(ct) })
+      const carga = dataValida(ct.deadlineCarga)
+      if (carga !== null) lista.push({ t: carga, rotulo: 'Deadline Carga', numero: ct.numero || '', feito: false, pendente: false })
+    }
+  }
+  return lista
+}
+
+// Agenda dos processos ativos: atrasados (pendentes cujo horário passou),
+// hoje e amanhã (o que ainda não foi feito), em ordem de horário.
+export const agendaDoDia = (processes, now = Date.now()) => {
+  const hoje = inicioDoDia(now)
+  const amanha = hoje + DIA_MS
+  const depois = amanha + DIA_MS
+  const atrasados = []
+  const deHoje = []
+  const deAmanha = []
+  for (const proc of processes) {
+    if (proc.status !== 'active') continue
+    for (const c of compromissos(proc)) {
+      const item = { ...c, proc }
+      if (c.pendente && c.t < now) atrasados.push(item)
+      else if (c.feito) continue
+      else if (c.t >= hoje && c.t < amanha) deHoje.push(item)
+      else if (c.t >= amanha && c.t < depois) deAmanha.push(item)
+    }
+  }
+  const porHora = (a, b) => a.t - b.t
+  return { atrasados: atrasados.sort(porHora), hoje: deHoje.sort(porHora), amanha: deAmanha.sort(porHora) }
+}

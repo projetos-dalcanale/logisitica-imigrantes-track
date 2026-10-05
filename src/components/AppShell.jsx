@@ -1,6 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Archive, Mail, Plus, ReceiptText, Route, Search } from 'lucide-react'
+import { Archive, House, Mail, Plus, ReceiptText, Route, Search } from 'lucide-react'
 import { ExportIcon, ImportIcon } from './ui/icons'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../hooks/useTheme'
@@ -10,6 +10,8 @@ import { usePedagios } from '../hooks/usePedagios'
 import ProcessList from './ProcessList'
 import FreteList from './FreteList'
 import PedagioList from './PedagioList'
+import Inicio from './Inicio'
+import { saudacao } from '../lib/status'
 import Sidebar from './Sidebar'
 import BottomNav from './BottomNav'
 import AccountMenu, { Avatar } from './AccountMenu'
@@ -32,15 +34,17 @@ export const TABS = [
   { value: 'status', label: 'Status para clientes', short: 'Status', icon: Mail },
   { value: 'fretes', label: 'Fretes para CTE', short: 'Fretes CTE', icon: ReceiptText },
   { value: 'pedagios', label: 'Rotas e Valores de Pedágio', short: 'Pedágios', icon: Route },
+  // Página inicial: abre pela casinha (fora das seções da barra lateral).
+  { value: 'inicio', label: 'Início', short: 'Início', icon: House },
 ]
 const SECTIONS = [
   { title: 'Processos', tabs: TABS.slice(0, 3) },
   { title: 'Status', tabs: TABS.slice(3, 4) },
-  { title: 'Comercial', tabs: TABS.slice(4) }, // Fretes para CTE e pedágios
+  { title: 'Comercial', tabs: TABS.slice(4, 6) }, // Fretes para CTE e pedágios
 ]
 // No celular a barra inferior não comporta todas: "Status" abre pela ficha
 // do processo (botão Status) ou pela busca.
-const TABS_CELULAR = TABS.filter((t) => t.value !== 'status')
+const TABS_CELULAR = TABS.filter((t) => t.value !== 'status' && t.value !== 'inicio')
 const SUBTITULOS = {
   import: 'Processos de importação em andamento',
   export: 'Processos de exportação em andamento',
@@ -57,7 +61,13 @@ const isTyping = (el) => el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'S
 export default function AppShell() {
   const { user, logout } = useAuth()
   const { isDark, toggleTheme } = useTheme()
-  const [activeTab, setActiveTab] = useState('import')
+  const [activeTab, setActiveTab] = useState('inicio')
+  // Saudação e data do Início (atualizam a cada 5 min com o app aberto).
+  const [agora, setAgora] = useState(() => new Date())
+  useEffect(() => {
+    const id = setInterval(() => setAgora(new Date()), 5 * 60_000)
+    return () => clearInterval(id)
+  }, [])
   const [paletteOpen, setPaletteOpen] = useState(false)
   // Arquivados só carregam quando a aba deles ou a busca rápida é aberta.
   const { processes, loading, loadingArquivo } = useProcesses(user.uid, activeTab === 'archive' || paletteOpen)
@@ -113,6 +123,8 @@ export default function AppShell() {
       if (e.key === '/') {
         e.preventDefault()
         searchRef.current?.focus()
+      } else if (e.key.toLowerCase() === 'h') {
+        setActiveTab('inicio')
       } else if (e.key.toLowerCase() === 'n') {
         e.preventDefault()
         novo()
@@ -158,6 +170,7 @@ export default function AppShell() {
         active={activeTab}
         counts={counts}
         onChange={setActiveTab}
+        onHome={() => setActiveTab('inicio')}
         onSearch={() => setPaletteOpen(true)}
         isDark={isDark}
         onToggleTheme={toggleTheme}
@@ -169,7 +182,9 @@ export default function AppShell() {
         <header
           className={`absolute inset-x-0 top-0 z-30 flex h-12 items-center gap-2 px-3 pt-[env(safe-area-inset-top)] transition-[background-color,box-shadow] duration-200 sm:px-5 lg:h-14 lg:px-8 ${scrolled ? 'material-thin hairline-b' : ''}`}
         >
-          <div className="flex flex-1 items-center gap-2" />
+          <div className="flex flex-1 items-center gap-2">
+            <IconButton icon={House} label="Início" shortcut="H" className="lg:hidden" onClick={() => setActiveTab('inicio')} />
+          </div>
           <motion.h2
             initial={false}
             animate={{ opacity: scrolled ? 1 : 0, y: scrolled ? 0 : 6 }}
@@ -192,8 +207,12 @@ export default function AppShell() {
         <div ref={scrollRef} id="conteudo" tabIndex={-1} onScroll={onScroll} className="custom-scrollbar flex-1 overflow-y-auto outline-none">
           <div className="mx-auto w-full max-w-5xl px-4 pb-32 pt-[calc(env(safe-area-inset-top)+3.5rem)] sm:px-6 lg:px-10 lg:pb-12 lg:pt-16">
             <div className="mb-6">
-              <h1 className="font-display text-[32px] font-bold leading-tight tracking-[-0.025em] text-ink lg:text-[34px]">{tab.label}</h1>
-              <p className="mt-0.5 text-[15px] text-slate-400">{SUBTITULOS[activeTab]}</p>
+              <h1 className="font-display text-[32px] font-bold leading-tight tracking-[-0.025em] text-ink lg:text-[34px]">
+                {activeTab === 'inicio' ? saudacao(agora) : tab.label}
+              </h1>
+              <p className="mt-0.5 text-[15px] text-slate-400 first-letter:uppercase">
+                {activeTab === 'inicio' ? new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }).format(agora) : SUBTITULOS[activeTab]}
+              </p>
             </div>
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
@@ -203,7 +222,9 @@ export default function AppShell() {
                 exit={{ opacity: 0, transition: { duration: 0.08 } }}
                 transition={{ duration: 0.2, ease: 'easeOut' }}
               >
-                {activeTab === 'status' ? (
+                {activeTab === 'inicio' ? (
+                  <Inicio processes={processes} loading={loading} onOpen={setOpenId} onIr={setActiveTab} onNovo={novo} />
+                ) : activeTab === 'status' ? (
                   <Suspense fallback={null}>
                     <StatusClientes key={statusPedido} processes={processes} loading={loading} procInicial={statusProc} />
                   </Suspense>
