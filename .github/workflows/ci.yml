@@ -33,12 +33,12 @@ jobs:
         run: npm run build
 
       # ---- Testes de tela ----
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
       - name: Guardar os emuladores do Firebase entre execuções
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/firebase/emulators
           key: emuladores-firebase-v1
