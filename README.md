@@ -156,6 +156,12 @@ O workflow **Backup do Firestore** (`.github/workflows/backup.yml`) exporta toda
 
 **Para restaurar:** baixe o arquivo `.json.enc` da execução desejada na aba Actions e siga as instruções no início de `scripts/restaurar-backup.mjs`.
 
+Os scripts de `scripts/` (backup, restauração, ensaio e alerta) têm `package.json` e lockfile próprios, só com o `firebase-admin`, para instalar rápido e sempre na mesma versão. Antes de rodá-los na sua máquina, instale uma vez:
+
+```bash
+npm ci --prefix scripts
+```
+
 ## Segurança
 
 - A chave de API do Firebase presente no código é, por natureza, pública — a proteção real está nas **regras do Firestore** (`firestore_1.rules`) e na **restrição da chave por domínio** no Google Cloud Console. Ainda assim, recomenda-se manter este repositório **privado**.

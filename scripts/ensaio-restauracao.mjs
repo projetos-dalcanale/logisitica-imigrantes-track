@@ -4,7 +4,7 @@
 // backup e, no fim (dando certo ou não), apaga as cópias temporárias.
 //
 // Uso: FIREBASE_SERVICE_ACCOUNT='{...}' node scripts/ensaio-restauracao.mjs backup.json
-// Requer: npm install --no-save firebase-admin
+// Requer: npm ci --prefix scripts (instala o firebase-admin fixado em scripts/package-lock.json)
 import { readFileSync } from 'node:fs'
 import { isDeepStrictEqual } from 'node:util'
 import { cert, initializeApp } from 'firebase-admin/app'

@@ -29,5 +29,5 @@ jobs:
           node-version-file: .nvmrc
       - name: Conferir erros das últimas 24 h
         run: |
-          npm install --no-save --no-package-lock firebase-admin@13
+          npm ci --prefix scripts
           node scripts/alerta-erros.mjs
