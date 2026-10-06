@@ -49,7 +49,7 @@ jobs:
       - name: Exportar coleções
         if: steps.config.outputs.ok == 'true'
         run: |
-          npm install --no-save --no-package-lock firebase-admin@13
+          npm ci --prefix scripts
           node scripts/backup-firestore.mjs backup.json
 
       - name: Criptografar

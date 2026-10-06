@@ -7,7 +7,7 @@
 //    Para restaurar só uma coleção:  ... --colecao fretes --confirmar
 //
 // Documentos criados depois do backup NÃO são apagados.
-// Requer: npm install --no-save firebase-admin
+// Requer: npm ci --prefix scripts (instala o firebase-admin fixado em scripts/package-lock.json)
 import { readFileSync } from 'node:fs'
 import { cert, initializeApp } from 'firebase-admin/app'
 import { Timestamp, getFirestore } from 'firebase-admin/firestore'

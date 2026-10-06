@@ -4,8 +4,9 @@
 # principais (major), que podem quebrar algo, vêm em PRs separados.
 version: 2
 updates:
+  # / = app e testes; /scripts = backup, restauração e alerta (lockfile próprio).
   - package-ecosystem: npm
-    directory: /
+    directories: ['/', '/scripts']
     schedule:
       interval: weekly
       day: monday

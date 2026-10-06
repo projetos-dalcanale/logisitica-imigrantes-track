@@ -45,7 +45,7 @@ jobs:
 
       - name: Conferir o script de restauração (sem gravar nada)
         run: |
-          npm install --no-save --no-package-lock firebase-admin@13
+          npm ci --prefix scripts
           node scripts/restaurar-backup.mjs backup.json
 
       - name: Restaurar em cópia temporária e comparar

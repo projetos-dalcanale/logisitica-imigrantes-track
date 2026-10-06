@@ -2,7 +2,7 @@
 // arquivo JSON. Usado pelo workflow "Backup do Firestore".
 //
 // Uso: FIREBASE_SERVICE_ACCOUNT='{"type":"service_account",...}' node scripts/backup-firestore.mjs saida.json
-// Requer: npm install --no-save firebase-admin
+// Requer: npm ci --prefix scripts (instala o firebase-admin fixado em scripts/package-lock.json)
 import { writeFileSync } from 'node:fs'
 import { cert, initializeApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
