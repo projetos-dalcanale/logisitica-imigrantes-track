@@ -3,12 +3,16 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
+    "e2e": "firebase emulators:exec --only auth,firestore --project demo-logitrack \"playwright test -c e2e/playwright.config.js\"",
     "check": "npm run lint && npm test && npm run build"
   },
   "dependencies": {

@@ -89,7 +89,7 @@ O LogiTrack Pro organiza cada processo de importação ou exportação em um car
 
 ## Configuração e execução local
 
-Requer [Node.js](https://nodejs.org/) 20 ou superior.
+Requer [Node.js](https://nodejs.org/) 24, a mesma versão do GitHub e da Vercel (definida no `.nvmrc` e em `engines` no `package.json`).
 
 ```bash
 npm install      # instala as dependências (só na primeira vez)
@@ -116,6 +116,23 @@ npm run check    # lint + testes + build, o mesmo que o GitHub roda
 ```
 
 Todo Pull Request e todo push no `main` e no `teste` rodam a verificação **Lint, testes e build** (`.github/workflows/ci.yml`). O `main` está protegido: só aceita merge com a verificação aprovada.
+
+### Testes de tela
+
+Abrem o app num navegador de verdade (Chromium, via Playwright), ligado ao emulador do Firebase com dados fictícios; nada toca a produção. Ficam em `e2e/` e também rodam no GitHub.
+
+Para rodar na sua máquina, precisa do [Java](https://adoptium.net/) 21 ou superior (o emulador usa) e, só na primeira vez, baixar o navegador:
+
+```bash
+npx playwright install chromium
+npm run e2e      # sobe os emuladores, roda os testes e desliga tudo
+```
+
+Se algum falhar, o relatório fica em `playwright-report/`.
+
+### Atualização das dependências
+
+O Dependabot (`.github/dependabot.yml`) abre PRs toda segunda com as versões novas: as pequenas juntas num PR só, as principais (que podem quebrar algo) separadas. O CI testa cada um; o merge é manual.
 
 ## Endereço de teste fixo
 

@@ -8,7 +8,7 @@ import { USUARIO, processos } from './dados.mjs'
 
 export default async function prepararEmulador() {
   if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST) {
-    throw new Error('Rode pelos emuladores: npx firebase emulators:exec --only auth,firestore --project demo-logitrack "npx playwright test -c e2e/playwright.config.js"')
+    throw new Error('Rode pelos emuladores: npm run e2e')
   }
   initializeApp({ projectId: 'demo-logitrack' })
   const usuario = await getAuth().createUser({ email: USUARIO.email, password: USUARIO.senha })

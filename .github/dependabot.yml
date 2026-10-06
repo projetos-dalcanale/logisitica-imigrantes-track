@@ -1,0 +1,28 @@
+# Atualização automática das dependências: toda segunda o GitHub abre PRs
+# com as versões novas. O CI testa cada PR; o merge continua manual.
+# Atualizações pequenas (minor/patch) vêm juntas num PR só; versões
+# principais (major), que podem quebrar algo, vêm em PRs separados.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+    groups:
+      pequenas:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: America/Sao_Paulo
+    groups:
+      actions:
+        patterns: ['*']
