@@ -14,11 +14,26 @@ export const importChecklistSteps = [
   { id: 'ag_vazio', label: 'Devolução concluída', type: 'datetime', so: 'devolucao' },
 ]
 
+// CARGA SOLTA (só importação): em vez de contêiner, uma carga descrita em
+// texto (`proc.carga`, ex.: "104 caixas"). Por dentro continua com uma
+// unidade em `containers`, que guarda o checklist, e segue as etapas da
+// baixa (não há contêiner para devolver).
+export const MODALIDADES = [
+  { value: 'conteiner', label: 'Contêiner' },
+  { value: 'solta', label: 'Carga solta' },
+]
+export const ehCargaSolta = (proc) => proc?.type === 'import' && proc?.modalidade === 'solta'
+
+// Como a unidade aparece nas listas: número do contêiner ou a descrição da
+// carga (sem descrição, só "Carga solta").
+export const identificacaoUnidade = (proc, ct) =>
+  ehCargaSolta(proc) ? (proc.carga || '').trim() || 'Carga solta' : (ct?.numero || '').trim()
+
 // "Baixa de Contêiner" (sem devolução) não tem a etapa de devolução do vazio,
-// mas tem a de carga entregue; a devolução é o contrário. Processos antigos
-// sem finalizacaoVazio contam como "devolucao".
+// mas tem a de carga entregue; a devolução é o contrário. Carga solta segue a
+// baixa. Processos antigos sem finalizacaoVazio contam como "devolucao".
 export const stepsChecklistImport = (proc) => {
-  const finalizacao = proc?.finalizacaoVazio === 'baixa' ? 'baixa' : 'devolucao'
+  const finalizacao = proc?.finalizacaoVazio === 'baixa' || ehCargaSolta(proc) ? 'baixa' : 'devolucao'
   return importChecklistSteps.filter((step) => !step.so || step.so === finalizacao)
 }
 
@@ -202,7 +217,7 @@ export const filtrarProcessos = (processes, tab, searchQuery) => {
         proc.armador, proc.motorista, proc.placas,
         proc.importador, proc.exportador,
         proc.documentoNumero, proc.documento, proc.booking, proc.referencia, proc.navio,
-        proc.observacoes,
+        proc.observacoes, proc.carga,
         ...(proc.containers || []).flatMap((c) => [c.numero, c.motorista, c.placas]),
       ].filter(Boolean).join(' ').toLowerCase()
       return campos.includes(q)

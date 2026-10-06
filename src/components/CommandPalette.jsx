@@ -46,7 +46,7 @@ export default function CommandPalette({ processes, fretes = [], onClose, onOpen
             {ordenados.map((p) => {
               const titulo = (p.type === 'import' ? p.importador : p.exportador) || 'Sem nome'
               const doc = docDe(p)
-              const busca = [titulo, p.armador, doc, p.referencia, p.navio, p.motorista, p.placas, ...(p.containers || []).flatMap((c) => [c.numero, c.motorista, c.placas])]
+              const busca = [titulo, p.armador, doc, p.referencia, p.navio, p.motorista, p.placas, p.carga, ...(p.containers || []).flatMap((c) => [c.numero, c.motorista, c.placas])]
                 .filter(Boolean)
                 .join(' ')
               const Icon = p.status === 'archived' ? Archive : p.type === 'import' ? ImportIcon : ExportIcon

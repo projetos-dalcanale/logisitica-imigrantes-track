@@ -14,6 +14,8 @@ import {
   formatarPlacas,
   vazioDepoisDoDraft,
   etapaFeita,
+  ehCargaSolta,
+  identificacaoUnidade,
   fixarCargaEntregue,
   importChecklistSteps,
 } from './processos'
@@ -84,6 +86,32 @@ describe('checklist de importação', () => {
     const baixa = stepsChecklistImport({ finalizacaoVazio: 'baixa' }).map((s) => s.id)
     expect(baixa.slice(-2)).toEqual(['encerrar_mdfe', 'carga_entregue'])
     expect(stepsChecklistImport({}).map((s) => s.id)).not.toContain('carga_entregue')
+  })
+})
+
+describe('carga solta', () => {
+  const solta = { type: 'import', modalidade: 'solta', carga: ' 104 caixas ', containers: [{ numero: '' }] }
+
+  it('só vale na importação', () => {
+    expect(ehCargaSolta(solta)).toBe(true)
+    expect(ehCargaSolta({ ...solta, type: 'export' })).toBe(false)
+    expect(ehCargaSolta({ type: 'import' })).toBe(false)
+  })
+
+  it('segue as etapas da baixa, mesmo sem finalizacaoVazio', () => {
+    const ids = stepsChecklistImport(solta).map((s) => s.id)
+    expect(ids).toContain('carga_entregue')
+    expect(ids).not.toContain('ag_vazio')
+  })
+
+  it('aparece pela descrição da carga', () => {
+    expect(identificacaoUnidade(solta)).toBe('104 caixas')
+    expect(identificacaoUnidade({ ...solta, carga: '' })).toBe('Carga solta')
+    expect(identificacaoUnidade({ type: 'import' }, { numero: 'MSCU 123' })).toBe('MSCU 123')
+  })
+
+  it('a busca encontra pela descrição', () => {
+    expect(filtrarProcessos([{ ...solta, status: 'active', createdAt: '2026-10-01' }], 'import', 'caixas')).toHaveLength(1)
   })
 })
 

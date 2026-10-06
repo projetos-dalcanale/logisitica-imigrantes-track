@@ -15,7 +15,16 @@ describe('status para clientes', () => {
       cliente: 'Agro Sul Fertilizantes',
       documento: { rotulo: 'DTA', numero: '26/0012345' },
       containers: ['HLXU 222.333-4'],
+      rotuloUnidade: 'Contêiner',
     })
+  })
+
+  it('carga solta mostra a descrição da carga no lugar do contêiner', () => {
+    const solta = { ...imp, modalidade: 'solta', carga: '104 caixas', containers: [{ numero: '' }] }
+    expect(dadosDoProcesso(solta)).toMatchObject({ containers: ['104 caixas'], rotuloUnidade: 'Carga' })
+    const { assunto, texto } = montarStatus(solta, '')
+    expect(assunto).toBe('Status – Agro Sul Fertilizantes – DTA 26/0012345 – 104 caixas')
+    expect(texto).toContain('Carga: 104 caixas')
   })
 
   it('exportação usa o booking', () => {

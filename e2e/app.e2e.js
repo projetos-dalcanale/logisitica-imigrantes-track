@@ -44,6 +44,29 @@ test('cria um processo de importação', async ({ page }) => {
   await expect(page.getByText('Nova Importação E2E')).toBeVisible()
 })
 
+test('cria uma importação de carga solta', async ({ page }) => {
+  await entrar(page)
+  await page.getByRole('button', { name: 'Novo processo' }).click()
+  await page.locator('#np-importador').fill('Carga Solta E2E')
+  await page.getByRole('radio', { name: 'Carga solta' }).click()
+  // Sem contêiner, sem destino do vazio: só a descrição da carga.
+  await expect(page.getByRole('button', { name: 'Adicionar contêiner' })).toHaveCount(0)
+  await expect(page.getByRole('radio', { name: 'Devolução' })).toHaveCount(0)
+  await page.locator('#np-carga').fill('104 caixas')
+  await page.getByRole('button', { name: 'Obrigatório' }).click()
+  await page.getByRole('option', { name: 'MSC', exact: true }).click()
+  await page.getByRole('button', { name: 'Criar' }).click()
+
+  // O card mostra a carga no lugar do número do contêiner.
+  await expect(page.getByText('104 caixas')).toBeVisible()
+  await page.getByText('Carga Solta E2E').click()
+  const ficha = page.getByRole('dialog')
+  await expect(ficha.getByPlaceholder('Ex.: 104 caixas')).toHaveValue('104 caixas')
+  await expect(ficha.getByText('Carga entregue', { exact: true })).toBeVisible()
+  await expect(ficha.getByText('0 de 6 etapas concluídas')).toBeVisible()
+  await expect(ficha.getByRole('button', { name: 'Adicionar contêiner' })).toHaveCount(0)
+})
+
 test('marca uma etapa e arquiva o processo', async ({ page }) => {
   await entrar(page)
   await irPara(page, 'Importações')

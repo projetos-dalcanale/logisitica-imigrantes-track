@@ -9,6 +9,7 @@ import {
   DESTINOS,
   DOC_TIPOS,
   draftAlertConfig,
+  ehCargaSolta,
   exportSteps,
   formatarDataHora,
   getDraftDeadlineInfo,
@@ -49,6 +50,7 @@ const valor = (v) => (v ? <span className="truncate text-slate-400">{v}</span> :
 // Dados principais do processo: leitura em linhas ou edição (Editar/Salvar).
 function DetalhesGroup({ proc, archived }) {
   const isImport = proc.type === 'import'
+  const solta = ehCargaSolta(proc)
   const [editando, setEditando] = useState(false)
   const [saving, setSaving] = useState(false)
   const inicial = () =>
@@ -97,8 +99,14 @@ function DetalhesGroup({ proc, archived }) {
             <Row label={docLabel}>{valor(proc.documentoTipo ? proc.documentoNumero : proc.documento)}</Row>
             <Row label="Armador">{valor(proc.armador)}</Row>
             <Row label="Carregamento">{valor(proc.termCarga)}</Row>
-            <Row label="Destino">{valor(proc.finalizacaoVazio === 'baixa' ? 'Baixa (sem devolução)' : 'Devolução de vazio')}</Row>
-            {proc.finalizacaoVazio !== 'baixa' && <Row label="Vazio">{valor(proc.termVazio)}</Row>}
+            {solta ? (
+              <Row label="Carga">{valor('Carga solta')}</Row>
+            ) : (
+              <>
+                <Row label="Destino">{valor(proc.finalizacaoVazio === 'baixa' ? 'Baixa (sem devolução)' : 'Devolução de vazio')}</Row>
+                {proc.finalizacaoVazio !== 'baixa' && <Row label="Vazio">{valor(proc.termVazio)}</Row>}
+              </>
+            )}
           </>
         ) : (
           <>
@@ -120,8 +128,8 @@ function DetalhesGroup({ proc, archived }) {
           <Row label="Número">{input('documentoNumero', 'Nº do documento')}</Row>
           <Row label="Armador"><RegistrySelect variant="plain" cat="armador" value={form.armador} onChange={set('armador')} /></Row>
           <Row label="Carregamento"><RegistrySelect variant="plain" cat="cheio" value={form.termCarga} onChange={set('termCarga')} placeholder="Terminal" /></Row>
-          <Row label="Destino"><Segmented size="sm" className="w-56" options={DESTINOS} value={form.finalizacaoVazio} onChange={set('finalizacaoVazio')} /></Row>
-          {form.finalizacaoVazio !== 'baixa' && (
+          {!solta && <Row label="Destino"><Segmented size="sm" className="w-56" options={DESTINOS} value={form.finalizacaoVazio} onChange={set('finalizacaoVazio')} /></Row>}
+          {form.finalizacaoVazio !== 'baixa' && !solta && (
             <Row label="Vazio"><RegistrySelect variant="plain" cat="vazio" value={form.termVazio} onChange={set('termVazio')} placeholder="Terminal" /></Row>
           )}
         </>
@@ -218,6 +226,7 @@ function ContainerGroup({ proc, ct, index, processes, disabled, multi, now }) {
   const save = (field) => (v) => atualizarCampoContainer(proc, ct.id, field, v)
   const digitoInvalido = validarNumeroContainer(numeroDigitado) === false
   const isImport = proc.type === 'import'
+  const solta = ehCargaSolta(proc)
   const steps = isImport ? stepsChecklistImport(proc) : []
   const feitos = steps.filter((s) => etapaFeita(ct, s)).length
 
@@ -278,10 +287,17 @@ function ContainerGroup({ proc, ct, index, processes, disabled, multi, now }) {
   return (
     <motion.div layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98 }}>
       <Group
-        title={`Contêiner ${index + 1}${ct.tipo ? ` · ${ct.tipo}` : ''}`}
-        action={!disabled && <button type="button" className="text-[13px] text-red-500 hover:opacity-80" onClick={remover}>Remover</button>}
+        title={solta ? 'Carga solta' : `Contêiner ${index + 1}${ct.tipo ? ` · ${ct.tipo}` : ''}`}
+        action={!disabled && !solta && <button type="button" className="text-[13px] text-red-500 hover:opacity-80" onClick={remover}>Remover</button>}
         footer={isImport ? `${feitos} de ${steps.length} etapas concluídas` : undefined}
       >
+        {solta ? (
+          // Carga solta: a descrição fica no processo (uma carga só), no lugar de número e tipo.
+          <Row label="Descrição">
+            <AutoSaveInput type="text" placeholder="Ex.: 104 caixas" maxLength={150} value={proc.carga} disabled={disabled} onSave={(v) => atualizarProcesso(proc.id, { carga: v })} className={plainRight} />
+          </Row>
+        ) : (
+        <>
         <Row label="Numeração">
           <div className="min-w-0 flex-1">
             <AutoSaveInput
@@ -302,6 +318,8 @@ function ContainerGroup({ proc, ct, index, processes, disabled, multi, now }) {
           </div>
         </Row>
         <Row label="Tipo"><RegistrySelect variant="plain" cat="tipo" value={ct.tipo} disabled={disabled} onChange={save('tipo')} /></Row>
+        </>
+        )}
         {multi && (
           <>
             {/* Sem motorista próprio, o contêiner usa o do processo (aparece como sugestão). */}
@@ -473,7 +491,7 @@ export default function ProcessModal({ proc, processes, onClose, onEnviarStatus 
           ))}
         </AnimatePresence>
 
-        {!archived && (
+        {!archived && !ehCargaSolta(proc) && (
           <Group>
             <button
               type="button"

@@ -1,6 +1,6 @@
 // ETAPAS, PRÓXIMA AÇÃO E URGÊNCIA — o que os cards e a lista mostram para
 // dizer "em que pé está" cada processo sem precisar abrir a ficha.
-import { draftJaCumprido, etapaFeita, exportSteps, getProcessProgress, stepsChecklistImport } from './processos'
+import { draftJaCumprido, etapaFeita, exportSteps, getProcessProgress, identificacaoUnidade, stepsChecklistImport } from './processos'
 
 export { etapaFeita }
 
@@ -149,7 +149,7 @@ export const compromissos = (proc) => {
   for (const ct of proc.containers || []) {
     for (const p of passos(proc).filter((x) => x.agendamento)) {
       const t = dataValida(p.data(ct))
-      if (t !== null) lista.push({ t, rotulo: p.evento, numero: ct.numero || '', feito: p.feita(ct), pendente: !p.feita(ct) })
+      if (t !== null) lista.push({ t, rotulo: p.evento, numero: identificacaoUnidade(proc, ct), feito: p.feita(ct), pendente: !p.feita(ct) })
     }
     if (proc.type === 'export') {
       const draft = dataValida(ct.deadlineDraft)

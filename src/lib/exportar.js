@@ -1,4 +1,4 @@
-import { distintos, formatarDataHora, transportePorContainer } from './processos'
+import { distintos, ehCargaSolta, formatarDataHora, identificacaoUnidade, transportePorContainer } from './processos'
 import { montarHtmlProcesso } from './pdfProcesso'
 
 // EXPORTAR PROCESSO EM PDF: a ficha com a identidade da empresa
@@ -27,6 +27,7 @@ export const exportarProcessosCSV = (lista, tab) => {
 
   const linhas = lista.map((proc) => {
     const isImport = proc.type === 'import'
+    const solta = ehCargaSolta(proc)
     const documento = isImport ? [proc.documentoTipo, proc.documentoNumero].filter(Boolean).join(' ') : proc.booking || ''
     const containersValidos = (proc.containers || []).filter((c) => c.numero)
     const transporte = transportePorContainer(proc)
@@ -42,8 +43,8 @@ export const exportarProcessosCSV = (lista, tab) => {
       proc.navio || '',
       isImport ? proc.termCarga || '' : '',
       isImport && proc.finalizacaoVazio !== 'baixa' ? proc.termVazio || '' : '',
-      isImport ? (proc.finalizacaoVazio === 'baixa' ? 'Baixa de Contêiner' : 'Devolução de Vazio') : '',
-      (proc.containers || [])
+      solta ? 'Carga solta' : isImport ? (proc.finalizacaoVazio === 'baixa' ? 'Baixa de Contêiner' : 'Devolução de Vazio') : '',
+      solta ? identificacaoUnidade(proc) : (proc.containers || [])
         .map((c, i) => {
           if (!c.numero) return null
           const base = c.tipo ? `${c.numero} (${c.tipo})` : c.numero
@@ -53,7 +54,7 @@ export const exportarProcessosCSV = (lista, tab) => {
         })
         .filter(Boolean)
         .join(' | '),
-      containersValidos.length,
+      solta ? 0 : containersValidos.length,
       proc.observacoes || '',
       formatarDataHora(proc.createdAt),
     ].map(csvCell).join(';')
