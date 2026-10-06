@@ -1,7 +1,9 @@
 import { motion } from 'motion/react'
-import { ArrowRight, CalendarCheck, Check, CircleCheck, Clock, GripVertical, StickyNote, TriangleAlert, Truck, User } from 'lucide-react'
+import { ArrowRight, CalendarCheck, Check, CircleCheck, Clock, GripVertical, Package, StickyNote, TriangleAlert, Truck, User } from 'lucide-react'
 import {
   draftAlertConfig,
+  ehCargaSolta,
+  identificacaoUnidade,
   formatarDataHoraCurta,
   getDraftDeadlineInfo,
   distintos,
@@ -157,7 +159,12 @@ export default function ProcessCard({ proc, now, onOpen, dragHandle, style, inne
           </span>
         </Tooltip>
         {agCargaTexto && <Meta icon={CalendarCheck}>Carreg. {agCargaTexto}</Meta>}
-        {numeros.length > 0 ? (
+        {ehCargaSolta(proc) ? (
+          <span className="ml-auto inline-flex min-w-0 items-center gap-1.5 text-slate-400">
+            <Package className="size-3.5 shrink-0 opacity-80" strokeWidth={2} />
+            <span className="truncate">{identificacaoUnidade(proc)}</span>
+          </span>
+        ) : numeros.length > 0 ? (
           <span className="ml-auto font-mono text-[12px] text-slate-400">
             {numeros.slice(0, 2).join('  ')}
             {numeros.length > 2 && <span className="text-slate-500"> +{numeros.length - 2}</span>}

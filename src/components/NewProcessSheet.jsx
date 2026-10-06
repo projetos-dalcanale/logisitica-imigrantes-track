@@ -5,7 +5,7 @@ import { ExportIcon, ImportIcon } from './ui/icons'
 import { useToast } from '../contexts/ToastContext'
 import { useDialog } from '../contexts/DialogContext'
 import { criarProcesso, novoContainer, numeroContainerDuplicado } from '../lib/processActions'
-import { DESTINOS, DOC_TIPOS, mascaraNumeroContainer, validarNumeroContainer } from '../lib/processos'
+import { DESTINOS, DOC_TIPOS, MODALIDADES, mascaraNumeroContainer, validarNumeroContainer } from '../lib/processos'
 import RegistrySelect from './RegistrySelect'
 import Modal, { SheetHeader } from './ui/Modal'
 import Button from './ui/Button'
@@ -15,6 +15,7 @@ import { Group, Row } from './ui/List'
 const EMPTY = {
   armador: '', motorista: '', placas: '', observacoes: '',
   importador: '', documentoTipo: '', documentoNumero: '', termCarga: '', termVazio: '', finalizacaoVazio: 'devolucao',
+  modalidade: 'conteiner', carga: '',
   exportador: '', referencia: '', booking: '', navio: '',
 }
 
@@ -32,7 +33,9 @@ export default function NewProcessSheet({ uid, processes, onClose, onCreated }) 
   const [saving, setSaving] = useState(false)
   const [armadorFaltando, setArmadorFaltando] = useState(false)
   const isImport = type === 'import'
-  const multi = unidades.length > 1 // com 2+ contêineres, motorista e placas vão em cada um
+  // Carga solta só existe na importação: uma carga descrita em texto, sem contêiner.
+  const solta = isImport && form.modalidade === 'solta'
+  const multi = !solta && unidades.length > 1 // com 2+ contêineres, motorista e placas vão em cada um
 
   const set = (field) => (value) => setForm((f) => ({ ...f, [field]: value }))
   const text = (field, placeholder, extra = {}) => (
@@ -70,15 +73,21 @@ export default function NewProcessSheet({ uid, processes, onClose, onCreated }) 
             documentoTipo: form.documentoTipo,
             documentoNumero: form.documentoNumero,
             termCarga: form.termCarga,
-            termVazio: form.finalizacaoVazio === 'baixa' ? '' : form.termVazio,
-            finalizacaoVazio: form.finalizacaoVazio || 'devolucao',
+            // Carga solta segue a baixa: não há contêiner para devolver.
+            termVazio: form.finalizacaoVazio === 'baixa' || solta ? '' : form.termVazio,
+            finalizacaoVazio: solta ? 'baixa' : form.finalizacaoVazio || 'devolucao',
+            modalidade: solta ? 'solta' : 'conteiner',
+            ...(solta && { carga: form.carga.trim() }),
           }
         : { exportador: form.exportador, referencia: form.referencia, booking: form.booking, navio: form.navio }),
       // Salva mesmo vazio: o número/tipo podem ser preenchidos depois no processo.
-      containers: unidades.map((u, i) => ({
-        ...novoContainer(type, `c_${Date.now()}_${i}`, u.numero.trim(), u.tipo.trim()),
-        ...(multi && { motorista: u.motorista.trim(), placas: u.placas.trim() }),
-      })),
+      // Na carga solta fica uma unidade só, sem número, para guardar as etapas.
+      containers: solta
+        ? [novoContainer(type, `c_${Date.now()}_0`, '', '')]
+        : unidades.map((u, i) => ({
+            ...novoContainer(type, `c_${Date.now()}_${i}`, u.numero.trim(), u.tipo.trim()),
+            ...(multi && { motorista: u.motorista.trim(), placas: u.placas.trim() }),
+          })),
     }
 
     // VERIFICAÇÃO DE DUPLICIDADE: avisa (sem bloquear) quando contêiner,
@@ -171,13 +180,18 @@ export default function NewProcessSheet({ uid, processes, onClose, onCreated }) 
                 )}
                 {isImport && (
                   <>
-                    <Row label="Carregamento"><RegistrySelect variant="plain" cat="cheio" value={form.termCarga} onChange={set('termCarga')} placeholder="Terminal" /></Row>
-                    <Row label="Destino">
-                      <Segmented size="sm" className="w-56" options={DESTINOS} value={form.finalizacaoVazio} onChange={set('finalizacaoVazio')} />
+                    <Row label="Carga">
+                      <Segmented size="sm" className="w-56" options={MODALIDADES} value={form.modalidade} onChange={set('modalidade')} />
                     </Row>
-                    {/* Na baixa o contêiner não volta, então não há terminal de vazio. */}
+                    <Row label="Carregamento"><RegistrySelect variant="plain" cat="cheio" value={form.termCarga} onChange={set('termCarga')} placeholder="Terminal" /></Row>
+                    {!solta && (
+                      <Row label="Destino">
+                        <Segmented size="sm" className="w-56" options={DESTINOS} value={form.finalizacaoVazio} onChange={set('finalizacaoVazio')} />
+                      </Row>
+                    )}
+                    {/* Na baixa (e na carga solta) não há contêiner voltando, então não há terminal de vazio. */}
                     <AnimatePresence initial={false}>
-                      {form.finalizacaoVazio !== 'baixa' && (
+                      {form.finalizacaoVazio !== 'baixa' && !solta && (
                         <motion.div key="vazio" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
                           <Row label="Vazio"><RegistrySelect variant="plain" cat="vazio" value={form.termVazio} onChange={set('termVazio')} placeholder="Terminal" /></Row>
                         </motion.div>
@@ -189,6 +203,11 @@ export default function NewProcessSheet({ uid, processes, onClose, onCreated }) 
             </motion.div>
           </AnimatePresence>
 
+          {solta ? (
+            <Group title="Carga solta" footer="O que vai ser transportado. Dá para editar depois, abrindo o processo.">
+              <Row label="Descrição" htmlFor="np-carga">{text('carga', 'Ex.: 104 caixas')}</Row>
+            </Group>
+          ) : (
           <Group title="Contêineres" footer="Opcional. Dá para adicionar ou editar depois, abrindo o processo.">
             <AnimatePresence initial={false}>
               {unidades.map((u, i) => {
@@ -255,6 +274,7 @@ export default function NewProcessSheet({ uid, processes, onClose, onCreated }) 
               Adicionar contêiner
             </button>
           </Group>
+          )}
 
           <Group title="Observações">
             <div className="px-4 py-3">

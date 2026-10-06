@@ -2,7 +2,7 @@
 // o logo, dados em caixas e as etapas de cada contêiner em linha do tempo
 // (com o horário em que cada uma foi marcada). Montada como HTML e impressa
 // pelo navegador ("Salvar como PDF"). Todo texto digitado é escapado.
-import { chaveEtapa, distintos, etapaFeita, exportSteps, formatarDataHora, stepsChecklistImport, transportePorContainer } from './processos'
+import { chaveEtapa, distintos, ehCargaSolta, etapaFeita, exportSteps, identificacaoUnidade, formatarDataHora, stepsChecklistImport, transportePorContainer } from './processos'
 
 export const escapeHtml = (valor) =>
   valor === null || valor === undefined
@@ -77,6 +77,7 @@ const CHECK = '<svg viewBox="0 0 16 16" width="11" height="11" fill="none" strok
 
 export const montarHtmlProcesso = (proc, agora = new Date()) => {
   const isImport = proc.type === 'import'
+  const solta = ehCargaSolta(proc)
   const transporte = transportePorContainer(proc)
   const cts = proc.containers || []
   const multi = cts.length > 1
@@ -92,7 +93,9 @@ export const montarHtmlProcesso = (proc, agora = new Date()) => {
         documento,
         ['Armador', proc.armador],
         ['Terminal de carregamento', proc.termCarga],
-        ['Destino do contêiner', proc.finalizacaoVazio === 'baixa' ? 'Baixa (sem devolução)' : `Devolução${proc.termVazio ? ` · ${proc.termVazio}` : ''}`],
+        solta
+          ? ['Carga solta', identificacaoUnidade(proc)]
+          : ['Destino do contêiner', proc.finalizacaoVazio === 'baixa' ? 'Baixa (sem devolução)' : `Devolução${proc.termVazio ? ` · ${proc.termVazio}` : ''}`],
       ]
     : [documento, ['Armador', proc.armador], ['Referência', proc.referencia], ['Navio', proc.navio]]
   if (!multi) {
@@ -107,7 +110,7 @@ export const montarHtmlProcesso = (proc, agora = new Date()) => {
     if (multi) info.push(['Motorista', transporte[i].motorista], ['Placas', transporte[i].placas])
     if (isImport) {
       info.push(['Agend. carregamento', dataOuVazio(ct.checklist?.ag_carga)])
-      if (proc.finalizacaoVazio !== 'baixa') info.push(['Agend. vazio', dataOuVazio(ct.checklist?.ag_vazio)])
+      if (proc.finalizacaoVazio !== 'baixa' && !solta) info.push(['Agend. vazio', dataOuVazio(ct.checklist?.ag_vazio)])
     } else {
       info.push(['Tara', ct.tara], ['Lacre', ct.lacre], ['Deadline Draft', dataOuVazio(ct.deadlineDraft)], ['Deadline Carga', dataOuVazio(ct.deadlineCarga)])
     }
@@ -121,8 +124,11 @@ export const montarHtmlProcesso = (proc, agora = new Date()) => {
         return `<div class="pf-etapa${e.feito ? ' feito' : ''}"><span class="pf-bola">${e.feito ? CHECK : ''}</span><span class="pf-nome">${escapeHtml(e.label)}</span><span class="pf-quando">${quando}</span></div>`
       })
       .join('')
+    const topo = solta
+      ? `<b>Carga solta</b><span>${escapeHtml(identificacaoUnidade(proc))}</span>`
+      : `<b>Contêiner ${i + 1}</b><span>${escapeHtml(ct.numero) || 'Sem número'}${ct.tipo ? ` · ${escapeHtml(ct.tipo)}` : ''}</span>`
     return `<div class="pf-ct">
-      <div class="pf-ct-topo"><b>Contêiner ${i + 1}</b><span>${escapeHtml(ct.numero) || 'Sem número'}${ct.tipo ? ` · ${escapeHtml(ct.tipo)}` : ''}</span><span class="pf-prog">${feitas} de ${etapas.length} etapas</span></div>
+      <div class="pf-ct-topo">${topo}<span class="pf-prog">${feitas} de ${etapas.length} etapas</span></div>
       <div class="pf-grade">${info.map(([r, v]) => caixa(r, v)).join('')}</div>
       ${linhas}
     </div>`
@@ -136,7 +142,7 @@ export const montarHtmlProcesso = (proc, agora = new Date()) => {
       <div class="pf-topo-dir"><b>${isImport ? 'Importação' : 'Exportação'}</b>Gerado em ${formatarDataHora(agora)}</div>
     </div>
     <h1 class="pf-titulo">${escapeHtml(titulo)}</h1>
-    <p class="pf-sub">${cts.length} ${cts.length === 1 ? 'contêiner' : 'contêineres'}${proc.status === 'archived' ? ' · Arquivado' : ''}</p>
+    <p class="pf-sub">${solta ? 'Carga solta' : `${cts.length} ${cts.length === 1 ? 'contêiner' : 'contêineres'}`}${proc.status === 'archived' ? ' · Arquivado' : ''}</p>
     <div class="pf-grade">${dados.map(([r, v]) => caixa(r, v)).join('')}</div>
     ${proc.observacoes?.trim() ? `<span class="pf-rot">Observações</span><div class="pf-obs">${escapeHtml(proc.observacoes.trim())}</div>` : ''}
     ${blocos.join('') || '<p class="pf-sub">Nenhum contêiner neste processo.</p>'}

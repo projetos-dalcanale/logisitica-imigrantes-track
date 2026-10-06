@@ -10,7 +10,10 @@ export const saudacao = (data = new Date()) => {
   return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'
 }
 
-// Só o que o cliente precisa: nome, documento e contêineres.
+import { ehCargaSolta, identificacaoUnidade } from './processos'
+
+// Só o que o cliente precisa: nome, documento e contêineres (ou a carga
+// solta). `rotuloUnidade` é o nome da linha: Contêiner, Contêineres ou Carga.
 export const dadosDoProcesso = (proc) => {
   const isImport = proc.type === 'import'
   const cliente = (isImport ? proc.importador : proc.exportador) || ''
@@ -21,15 +24,16 @@ export const dadosDoProcesso = (proc) => {
   } else if (proc.booking) {
     documento = { rotulo: 'Booking', numero: proc.booking }
   }
+  if (ehCargaSolta(proc)) return { cliente, documento, containers: [identificacaoUnidade(proc)], rotuloUnidade: 'Carga' }
   const containers = (proc.containers || []).map((c) => (c.numero || '').trim()).filter(Boolean)
-  return { cliente, documento, containers }
+  return { cliente, documento, containers, rotuloUnidade: containers.length > 1 ? 'Contêineres' : 'Contêiner' }
 }
 
-const linhasInfo = ({ cliente, documento, containers }) =>
+const linhasInfo = ({ cliente, documento, containers, rotuloUnidade }) =>
   [
     cliente && ['Cliente', cliente],
     documento && [documento.rotulo, documento.numero],
-    containers.length > 0 && [containers.length > 1 ? 'Contêineres' : 'Contêiner', containers.join(', ')],
+    containers.length > 0 && [rotuloUnidade, containers.join(', ')],
   ].filter(Boolean)
 
 export const montarStatus = (proc, mensagem) => {

@@ -1,12 +1,13 @@
 // IMAGEM DE STATUS: cartão nas cores da empresa, desenhado num <canvas>,
 // para copiar e colar no e-mail do cliente (ou baixar como PNG).
 import { dadosDoProcesso } from './status'
+import { ehCargaSolta } from './processos'
 
 // Etapas da barra de progresso por tipo de processo.
 export const etapasDaImagem = (proc) => {
   if (proc.type === 'export') return ['Vazio retirado', 'Estufado', 'Em rota', 'Entregue no terminal']
   const etapas = ['Liberado', 'Em rota', 'Entregue', 'Vazio devolvido']
-  return proc.finalizacaoVazio === 'baixa' ? etapas.slice(0, 3) : etapas
+  return proc.finalizacaoVazio === 'baixa' || ehCargaSolta(proc) ? etapas.slice(0, 3) : etapas
 }
 
 // Situações que o responsável escolhe. `etapa` = até onde chegou na barra
@@ -33,7 +34,7 @@ export const opcoesDeStatus = (proc) => {
     { id: 'devolvido', titulo: 'Contêiner devolvido', etapa: 3 },
     { id: 'outro', titulo: 'Atualização do processo', etapa: null },
   ]
-  return proc.finalizacaoVazio === 'baixa' ? opcoes.filter((o) => o.id !== 'devolvido') : opcoes
+  return proc.finalizacaoVazio === 'baixa' || ehCargaSolta(proc) ? opcoes.filter((o) => o.id !== 'devolvido') : opcoes
 }
 
 // Numeração, tara e lacre de cada contêiner (tara só com números ganha "kg").
@@ -139,7 +140,7 @@ const retanguloArredondado = (ctx, x, y, w, h, r) => {
 // Calcula a altura e desenha o cartão. `canvas` é redimensionado.
 export const desenharStatus = (canvas, { proc, titulo, detalhes, etapa, tabela = false, data = new Date() }) => {
   const ctx = canvas.getContext('2d')
-  const { cliente, documento, containers } = dadosDoProcesso(proc)
+  const { cliente, documento, containers, rotuloUnidade } = dadosDoProcesso(proc)
   const M = 36 // margem interna
   const W = LARGURA
   const etapas = etapa === null ? null : etapasDaImagem(proc)
@@ -156,7 +157,7 @@ export const desenharStatus = (canvas, { proc, titulo, detalhes, etapa, tabela =
     [documento?.rotulo || 'Documento', documento?.numero || '—'],
     // Um contêiner por linha, para o número não quebrar no meio. Com a
     // tabela de dados, os contêineres aparecem nela.
-    !tabela && [containers.length > 1 ? 'Contêineres' : 'Contêiner', containers.join('\n') || '—'],
+    !tabela && [rotuloUnidade, containers.join('\n') || '—'],
   ].filter(Boolean)
   const linhasTabela = tabela ? dadosDosContainers(proc) : []
   const alturaTabela = tabela ? 38 + Math.max(linhasTabela.length, 1) * 40 + 6 : 0

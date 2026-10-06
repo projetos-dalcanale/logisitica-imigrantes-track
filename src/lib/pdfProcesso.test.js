@@ -34,6 +34,15 @@ describe('PDF do processo', () => {
     expect(etapas.at(-1)).toBe('Carga entregue')
   })
 
+  it('carga solta: mostra a descrição no lugar do contêiner e segue as etapas da baixa', () => {
+    const solta = { ...imp, modalidade: 'solta', carga: '104 caixas', finalizacaoVazio: undefined }
+    const html = montarHtmlProcesso(solta)
+    expect(html).toContain('Carga solta')
+    expect(html).toContain('104 caixas')
+    expect(html).not.toContain('Destino do contêiner')
+    expect(etapasDoContainer(solta, imp.containers[0]).map((e) => e.label).at(-1)).toBe('Carga entregue')
+  })
+
   it('exportação usa as três etapas, com terminal no nome', () => {
     const ct = { agVazio: '2026-10-01T09:00', agVazioCheck: 'true', termVazioExp: 'Depot Cubatão' }
     const etapas = etapasDoContainer({ type: 'export' }, ct)
