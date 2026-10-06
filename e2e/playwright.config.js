@@ -1,6 +1,6 @@
 // Testes de tela: o Playwright abre o app num Chromium de verdade, ligado ao
 // emulador do Firebase. Rodam no GitHub dentro de "Lint, testes e build".
-// Localmente (precisa de Java 21): veja o comando em global-setup.mjs.
+// Localmente (precisa de Java 21+): npm run e2e (veja "Testes de tela" no README).
 import { defineConfig } from '@playwright/test'
 
 export default defineConfig({
