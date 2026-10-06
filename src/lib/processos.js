@@ -10,15 +10,36 @@ export const importChecklistSteps = [
   { id: 'gerar_ciot', label: 'Gerar CIOT', type: 'checkbox' },
   { id: 'gerar_mdfe', label: 'Gerar MDFE', type: 'checkbox' },
   { id: 'encerrar_mdfe', label: 'Encerrar MDFE', type: 'checkbox' },
-  { id: 'ag_vazio', label: 'Devolução concluída', type: 'datetime' },
+  { id: 'carga_entregue', label: 'Carga entregue', type: 'checkbox', so: 'baixa' },
+  { id: 'ag_vazio', label: 'Devolução concluída', type: 'datetime', so: 'devolucao' },
 ]
 
-// "Baixa de Contêiner" (sem devolução) não tem a etapa de devolução do vazio.
-// Processos antigos sem finalizacaoVazio contam como "devolucao".
-export const stepsChecklistImport = (proc) =>
-  proc?.finalizacaoVazio === 'baixa'
-    ? importChecklistSteps.filter((step) => step.id !== 'ag_vazio')
-    : importChecklistSteps
+// "Baixa de Contêiner" (sem devolução) não tem a etapa de devolução do vazio,
+// mas tem a de carga entregue; a devolução é o contrário. Processos antigos
+// sem finalizacaoVazio contam como "devolucao".
+export const stepsChecklistImport = (proc) => {
+  const finalizacao = proc?.finalizacaoVazio === 'baixa' ? 'baixa' : 'devolucao'
+  return importChecklistSteps.filter((step) => !step.so || step.so === finalizacao)
+}
+
+// Campo do checklist que marca a etapa como feita.
+export const chaveEtapa = (step) => (step.type === 'checkbox' ? step.id : `${step.id}_check`)
+
+// Contêineres de baixa de antes da etapa "Carga entregue" não têm o campo:
+// para eles, MDFE encerrado conta como carga entregue.
+const cargaEntregueAntiga = (checklist) => !('carga_entregue' in checklist) && checklist.encerrar_mdfe === 'true'
+
+// Uma etapa do checklist de importação está feita neste contêiner?
+export const etapaFeita = (ct, step) => {
+  const checklist = ct.checklist || {}
+  if (step.id === 'carga_entregue' && cargaEntregueAntiga(checklist)) return true
+  return checklist[chaveEtapa(step)] === 'true'
+}
+
+// Na primeira gravação de um contêiner antigo, fixa o "Carga entregue" com o
+// valor que ele já mostrava, para a regra acima não valer mais dali em diante.
+export const fixarCargaEntregue = (checklist) =>
+  'carga_entregue' in checklist ? checklist : { ...checklist, carga_entregue: cargaEntregueAntiga(checklist) ? 'true' : '' }
 
 // Checklist "zerado" para um novo contêiner de importação. Etapas datetime
 // ganham um campo extra "<id>_check" que marca a etapa como concluída.
@@ -152,8 +173,7 @@ export const getProcessProgress = (proc) => {
     proc.containers.forEach((ct) => {
       steps.forEach((step) => {
         total++
-        const key = step.type === 'checkbox' ? step.id : `${step.id}_check`
-        if (ct.checklist?.[key] === 'true') done++
+        if (etapaFeita(ct, step)) done++
       })
     })
   } else {

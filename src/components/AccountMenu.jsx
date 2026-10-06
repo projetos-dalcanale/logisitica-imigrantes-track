@@ -1,9 +1,10 @@
 import * as Popover from '@radix-ui/react-popover'
 import { useState } from 'react'
-import { ListChecks, LogOut, Moon, Pencil, Sun } from 'lucide-react'
+import { KeyRound, ListChecks, LogOut, Moon, Pencil, Sun } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useDialog } from '../contexts/DialogContext'
 import { useToast } from '../contexts/ToastContext'
+import { mensagemDeLogin } from '../lib/loginErros'
 
 export function Avatar({ nome, size = 'md' }) {
   const dim = size === 'sm' ? 'size-7 text-xs' : 'size-8 text-[13px]'
@@ -30,8 +31,8 @@ function Item({ icon: Icon, children, onClick, danger }) {
 // Menu da conta (estilo menu do macOS): cadastros, tema e sair.
 // `trigger` é o elemento que abre o menu.
 export default function AccountMenu({ trigger, isDark, onToggleTheme, onOpenRegistries, side = 'top', align = 'start' }) {
-  const { user, logout, nome, nomeExibido, salvarNome } = useAuth()
-  const { prompt } = useDialog()
+  const { user, logout, nome, nomeExibido, salvarNome, resetarSenha } = useAuth()
+  const { confirm, prompt } = useDialog()
   const showToast = useToast()
   const [open, setOpen] = useState(false)
   const run = (fn) => () => {
@@ -54,6 +55,22 @@ export default function AccountMenu({ trigger, isDark, onToggleTheme, onOpenRegi
       showToast('Não foi possível salvar o nome', 'error')
     }
   }
+  // Mesmo caminho do "Esqueci minha senha": o Firebase manda um link para o
+  // e-mail da conta, e a senha nova é criada por ele.
+  const alterarSenha = async () => {
+    const ok = await confirm({
+      title: 'Alterar senha',
+      message: `Vamos enviar um link para ${user.email}. Abra o e-mail e crie a senha nova por ele.`,
+      confirmLabel: 'Enviar link',
+    })
+    if (!ok) return
+    try {
+      await resetarSenha(user.email)
+      showToast('Link enviado. Confira seu e-mail')
+    } catch (err) {
+      showToast(mensagemDeLogin(err.code), 'error')
+    }
+  }
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>{trigger}</Popover.Trigger>
@@ -74,6 +91,7 @@ export default function AccountMenu({ trigger, isDark, onToggleTheme, onOpenRegi
           </div>
           <div className="my-1 h-px bg-slate-700" />
           <Item icon={Pencil} onClick={run(editarNome)}>Alterar nome…</Item>
+          <Item icon={KeyRound} onClick={run(alterarSenha)}>Alterar senha…</Item>
           <Item icon={ListChecks} onClick={run(onOpenRegistries)}>Cadastros…</Item>
           <Item icon={isDark ? Sun : Moon} onClick={run(onToggleTheme)}>{isDark ? 'Modo claro' : 'Modo escuro'}</Item>
           <div className="my-1 h-px bg-slate-700" />

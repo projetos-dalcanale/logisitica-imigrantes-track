@@ -36,6 +36,11 @@ export const novaFicha = () => ({
 
 export const formatarValor = (valor, tipo = 'moeda') => formatarNumero(valor, TIPOS_CAMPO[tipo]?.casas ?? 2)
 
+// Soma dos campos em reais da ficha (as taxas ficam de fora: não são valor
+// em dinheiro). Arredonda nos centavos para não acumular erro de vírgula.
+export const totalFrete = (campos = []) =>
+  Math.round(campos.filter((c) => (c.tipo || 'moeda') === 'moeda').reduce((soma, c) => soma + (Number(c.valor) || 0), 0) * 100) / 100
+
 const fretesRef = collection(db, 'fretes')
 
 export const criarFrete = (data, email) => {

@@ -1,6 +1,8 @@
 // ETAPAS, PRÓXIMA AÇÃO E URGÊNCIA — o que os cards e a lista mostram para
 // dizer "em que pé está" cada processo sem precisar abrir a ficha.
-import { draftJaCumprido, exportSteps, getProcessProgress, stepsChecklistImport } from './processos'
+import { draftJaCumprido, etapaFeita, exportSteps, getProcessProgress, stepsChecklistImport } from './processos'
+
+export { etapaFeita }
 
 const pad = (n) => String(n).padStart(2, '0')
 const DIAS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
@@ -33,10 +35,6 @@ export const quandoRelativo = (valor, now = Date.now()) => {
   if (dias > 1 && dias < 7) return `${DIAS[d.getDay()]} ${dia} ${hora}`
   return `${dia} ${hora}`
 }
-
-// Uma etapa do checklist de importação está feita neste contêiner?
-export const etapaFeita = (ct, step) =>
-  ct.checklist?.[step.type === 'checkbox' ? step.id : `${step.id}_check`] === 'true'
 
 // Nomes curtos dos agendamentos de importação para a próxima ação.
 const AGENDAMENTOS_IMPORT = {

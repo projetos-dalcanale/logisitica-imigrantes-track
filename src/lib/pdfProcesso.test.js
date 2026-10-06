@@ -27,8 +27,11 @@ describe('PDF do processo', () => {
     expect(etapas).toHaveLength(6)
   })
 
-  it('baixa de contêiner não tem a devolução do vazio', () => {
-    expect(etapasDoContainer({ ...imp, finalizacaoVazio: 'baixa' }, imp.containers[0])).toHaveLength(5)
+  it('baixa de contêiner troca a devolução do vazio por carga entregue', () => {
+    const etapas = etapasDoContainer({ ...imp, finalizacaoVazio: 'baixa' }, imp.containers[0]).map((e) => e.label)
+    expect(etapas).toHaveLength(6)
+    expect(etapas).not.toContain('Devolução concluída')
+    expect(etapas.at(-1)).toBe('Carga entregue')
   })
 
   it('exportação usa as três etapas, com terminal no nome', () => {
