@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion } from 'motion/react'
 import { ChevronRight, CircleAlert, Plus, X } from 'lucide-react'
-import { formatarValor } from '../lib/fretes'
+import { formatarValor, totalFrete } from '../lib/fretes'
 import EmptyState from './ui/EmptyState'
 import Button from './ui/Button'
 import SearchField from './ui/SearchField'
@@ -30,7 +30,7 @@ const inicial = (nome) => {
 
 function FreteRow({ frete, onOpen }) {
   const campos = frete.campos || []
-  const principal = campos.find((c) => c.valor) || campos[0]
+  const temValorEmReais = campos.some((c) => (c.tipo || 'moeda') === 'moeda')
   return (
     <button
       type="button"
@@ -46,12 +46,12 @@ function FreteRow({ frete, onOpen }) {
           {[`${campos.length} ${campos.length === 1 ? 'campo' : 'campos'}`, frete.observacoes && 'Com observações'].filter(Boolean).join(' · ')}
         </div>
       </div>
-      {principal && (
+      {temValorEmReais && (
         <div className="max-w-[45%] shrink-0 text-right">
-          <div className="truncate text-[11px] text-slate-500">{principal.label}</div>
+          <div className="truncate text-[11px] text-slate-500">Total</div>
           <div className="font-display text-[17px] font-semibold tracking-[-0.01em] tabular-nums text-ink">
-            {(principal.tipo || 'moeda') === 'moeda' && <span className="mr-0.5 text-[12px] font-medium text-slate-400">R$</span>}
-            {formatarValor(principal.valor, principal.tipo)}
+            <span className="mr-0.5 text-[12px] font-medium text-slate-400">R$</span>
+            {formatarValor(totalFrete(campos))}
           </div>
         </div>
       )}

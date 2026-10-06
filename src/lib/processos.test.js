@@ -13,6 +13,9 @@ import {
   validarNumeroContainer,
   formatarPlacas,
   vazioDepoisDoDraft,
+  etapaFeita,
+  fixarCargaEntregue,
+  importChecklistSteps,
 } from './processos'
 
 const DIA = 86400000
@@ -76,6 +79,32 @@ describe('checklist de importação', () => {
   it('esconde o Agendamento de Vazio quando é baixa de contêiner', () => {
     expect(stepsChecklistImport({ finalizacaoVazio: 'baixa' }).map((s) => s.id)).not.toContain('ag_vazio')
     expect(stepsChecklistImport({}).map((s) => s.id)).toContain('ag_vazio')
+  })
+  it('na baixa, "Carga entregue" vem depois de Encerrar MDFE; na devolução não aparece', () => {
+    const baixa = stepsChecklistImport({ finalizacaoVazio: 'baixa' }).map((s) => s.id)
+    expect(baixa.slice(-2)).toEqual(['encerrar_mdfe', 'carga_entregue'])
+    expect(stepsChecklistImport({}).map((s) => s.id)).not.toContain('carga_entregue')
+  })
+})
+
+describe('carga entregue em contêineres antigos', () => {
+  const passo = importChecklistSteps.find((s) => s.id === 'carga_entregue')
+
+  it('sem o campo, MDFE encerrado conta como carga entregue', () => {
+    expect(etapaFeita({ checklist: { encerrar_mdfe: 'true' } }, passo)).toBe(true)
+    expect(etapaFeita({ checklist: { encerrar_mdfe: '' } }, passo)).toBe(false)
+  })
+
+  it('com o campo gravado, vale só o que foi marcado', () => {
+    expect(etapaFeita({ checklist: { encerrar_mdfe: 'true', carga_entregue: '' } }, passo)).toBe(false)
+    expect(etapaFeita({ checklist: { carga_entregue: 'true' } }, passo)).toBe(true)
+    expect(etapaFeita({ checklist: novoChecklistImport() }, passo)).toBe(false)
+  })
+
+  it('a primeira gravação fixa o valor que o contêiner já mostrava', () => {
+    expect(fixarCargaEntregue({ encerrar_mdfe: 'true' }).carga_entregue).toBe('true')
+    expect(fixarCargaEntregue({ encerrar_mdfe: '' }).carga_entregue).toBe('')
+    expect(fixarCargaEntregue({ carga_entregue: '' })).toEqual({ carga_entregue: '' })
   })
 })
 

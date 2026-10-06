@@ -2,7 +2,7 @@
 // o logo, dados em caixas e as etapas de cada contêiner em linha do tempo
 // (com o horário em que cada uma foi marcada). Montada como HTML e impressa
 // pelo navegador ("Salvar como PDF"). Todo texto digitado é escapado.
-import { distintos, exportSteps, formatarDataHora, stepsChecklistImport, transportePorContainer } from './processos'
+import { chaveEtapa, distintos, etapaFeita, exportSteps, formatarDataHora, stepsChecklistImport, transportePorContainer } from './processos'
 
 export const escapeHtml = (valor) =>
   valor === null || valor === undefined
@@ -15,10 +15,10 @@ const dataOuVazio = (valor) => (valor ? formatarDataHora(valor) : '')
 export const etapasDoContainer = (proc, ct) => {
   if (proc.type === 'import') {
     return stepsChecklistImport(proc).map((step) => {
-      const chave = step.type === 'checkbox' ? step.id : `${step.id}_check`
+      const chave = chaveEtapa(step)
       return {
         label: step.label,
-        feito: ct.checklist?.[chave] === 'true',
+        feito: etapaFeita(ct, step),
         concluidoEm: dataOuVazio(ct.checklist?.[`${chave}_em`]),
         agendado: step.type === 'datetime' ? dataOuVazio(ct.checklist?.[step.id]) : '',
       }

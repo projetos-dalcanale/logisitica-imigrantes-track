@@ -5,6 +5,7 @@ import { ExportIcon, ImportIcon } from './ui/icons'
 import { useToast } from '../contexts/ToastContext'
 import { useDialog } from '../contexts/DialogContext'
 import {
+  chaveEtapa,
   DESTINOS,
   DOC_TIPOS,
   draftAlertConfig,
@@ -218,7 +219,7 @@ function ContainerGroup({ proc, ct, index, processes, disabled, multi, now }) {
   const digitoInvalido = validarNumeroContainer(numeroDigitado) === false
   const isImport = proc.type === 'import'
   const steps = isImport ? stepsChecklistImport(proc) : []
-  const feitos = steps.filter((s) => ct.checklist?.[s.type === 'checkbox' ? s.id : `${s.id}_check`] === 'true').length
+  const feitos = steps.filter((s) => etapaFeita(ct, s)).length
 
   // Avisa (sem bloquear) se outro processo ativo já usa o número.
   const saveNumero = async (value) => {
@@ -319,7 +320,7 @@ function ContainerGroup({ proc, ct, index, processes, disabled, multi, now }) {
           <Timeline>
             {steps.map((step, i) => {
               // Só o check: as datas de agendamento ficam em "Agendamentos".
-              const chave = step.type === 'checkbox' ? step.id : `${step.id}_check`
+              const chave = chaveEtapa(step)
               const feito = etapaFeita(ct, step)
               const atual = !feito && i === steps.findIndex((s) => !etapaFeita(ct, s))
               const quando = quandoRelativo(ct.checklist?.[`${chave}_em`])
