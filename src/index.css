@@ -100,6 +100,74 @@
   --shadow-soft: 0 0 0 0.5px rgb(255 255 255 / .06);
 }
 
+/* COR DE DESTAQUE — data-accent="..." na tag <html> (escolhida no menu da conta).
+   Sem o atributo vale o vermelho acima. Contraste conferido nos dois modos: o 500
+   como texto passa de 4,5:1; branco sobre o 500 no escuro fica como no vermelho. */
+:root[data-accent="azul"] {
+  --blue-300: 21 56 156;
+  --blue-400: 26 69 190;
+  --blue-500: 29 78 216;
+  --blue-600: 26 69 190;
+  --blue-800: 59 93 190;
+  --blue-900: 17 45 125;
+}
+:root[data-theme="dark"][data-accent="azul"] {
+  --blue-300: 120 187 255;
+  --blue-400: 71 163 255;
+  --blue-500: 10 132 255;
+  --blue-600: 9 119 230;
+  --blue-800: 6 79 153;
+  --blue-900: 5 66 128;
+}
+:root[data-accent="petroleo"] {
+  --blue-300: 11 85 79;
+  --blue-400: 13 104 97;
+  --blue-500: 15 118 110;
+  --blue-600: 13 104 97;
+  --blue-800: 49 121 115;
+  --blue-900: 9 68 64;
+}
+:root[data-theme="dark"][data-accent="petroleo"] {
+  --blue-300: 131 202 193;
+  --blue-400: 86 182 171;
+  --blue-500: 30 158 143;
+  --blue-600: 27 142 129;
+  --blue-800: 18 95 86;
+  --blue-900: 15 79 72;
+}
+:root[data-accent="laranja"] {
+  --blue-300: 140 47 9;
+  --blue-400: 171 57 11;
+  --blue-500: 194 65 12;
+  --blue-600: 171 57 11;
+  --blue-800: 174 84 47;
+  --blue-900: 113 38 7;
+}
+:root[data-theme="dark"][data-accent="laranja"] {
+  --blue-300: 242 172 130;
+  --blue-400: 238 142 85;
+  --blue-500: 232 104 28;
+  --blue-600: 209 94 25;
+  --blue-800: 139 62 17;
+  --blue-900: 116 52 14;
+}
+:root[data-accent="grafite"] {
+  --blue-300: 40 47 58;
+  --blue-400: 48 57 71;
+  --blue-500: 55 65 81;
+  --blue-600: 48 57 71;
+  --blue-800: 77 84 95;
+  --blue-900: 32 38 47;
+}
+:root[data-theme="dark"][data-accent="grafite"] {
+  --blue-300: 191 195 202;
+  --blue-400: 167 173 182;
+  --blue-500: 138 145 158;
+  --blue-600: 124 131 142;
+  --blue-800: 83 87 95;
+  --blue-900: 69 73 79;
+}
+
 @layer base {
   *, ::after, ::before { border-color: rgb(var(--slate-700)); }
   html { -webkit-tap-highlight-color: transparent; }

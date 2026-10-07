@@ -62,7 +62,7 @@ export default function AppShell() {
   const { user, logout, nome, nomeExibido } = useAuth()
   // Na saudação, só o primeiro nome, e só se a pessoa escolheu um (não o e-mail).
   const primeiroNome = nome.split(' ')[0]
-  const { isDark, toggleTheme } = useTheme()
+  const { isDark, toggleTheme, accent, setAccent } = useTheme()
   const [activeTab, setActiveTab] = useState('inicio')
   // Saudação e data do Início (atualizam a cada 5 min com o app aberto).
   const [agora, setAgora] = useState(() => new Date())
@@ -149,6 +149,8 @@ export default function AppShell() {
       align="end"
       isDark={isDark}
       onToggleTheme={toggleTheme}
+      accent={accent}
+      onAccentChange={setAccent}
       onOpenRegistries={() => setRegistriesOpen(true)}
       trigger={
         <button type="button" aria-label="Conta" className="rounded-full p-0.5 transition-opacity hover:opacity-80">
@@ -176,6 +178,8 @@ export default function AppShell() {
         onSearch={() => setPaletteOpen(true)}
         isDark={isDark}
         onToggleTheme={toggleTheme}
+        accent={accent}
+        onAccentChange={setAccent}
         onOpenRegistries={() => setRegistriesOpen(true)}
       />
 
