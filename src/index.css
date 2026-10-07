@@ -348,6 +348,24 @@ button:focus-visible, a:focus-visible, [role="checkbox"]:focus-visible, [role="t
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+/* Fundo da tela de login (LoginArt): tracejado das rotas andando e
+   paradas pulsando. Com "reduzir movimento" a regra abaixo para tudo. */
+@keyframes rota-anda {
+  to { stroke-dashoffset: -9; }
+}
+@keyframes parada-pulsa {
+  from { transform: scale(.4); opacity: .55; }
+  to { transform: scale(2.6); opacity: 0; }
+}
+.login-rota { animation: rota-anda 1.6s linear infinite; }
+.login-rota-lenta { animation-duration: 2.4s; }
+.login-pulso {
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0; /* parado (reduzir movimento), o anel some */
+  animation: parada-pulsa 3s ease-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .01ms !important;

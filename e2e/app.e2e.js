@@ -24,6 +24,16 @@ test('abre no Início com os indicadores e os atalhos', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1, name: /Bom dia|Boa tarde|Boa noite/ })).toBeVisible()
 })
 
+test('o login vale só para a aba: recarregar mantém, aba nova pede de novo', async ({ page, context }) => {
+  await entrar(page)
+  await page.reload()
+  await expect(page.getByRole('heading', { level: 1, name: /Bom dia|Boa tarde|Boa noite/ })).toBeVisible()
+
+  const novaAba = await context.newPage()
+  await novaAba.goto('/')
+  await expect(novaAba.locator('#auth-email')).toBeVisible()
+})
+
 test('entra e vê os ativos; os arquivados carregam ao abrir a aba', async ({ page }) => {
   await entrar(page)
   await irPara(page, 'Importações')
