@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app'
-import { connectAuthEmulator, getAuth } from 'firebase/auth'
+import { browserSessionPersistence, connectAuthEmulator, initializeAuth } from 'firebase/auth'
 import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore'
 
 // Testes de tela (e2e/): o app conversa com o emulador local do Firebase,
@@ -18,7 +18,10 @@ const firebaseConfig = {
 }
 
 export const app = initializeApp(firebaseConfig)
-export const auth = getAuth(app)
+// Login só vale enquanto a aba estiver aberta: abrir o site de novo (ou
+// fechar sem querer e reabrir) sempre passa pela tela de login. Recarregar
+// a página mantém o login. Decisão do dono do sistema, em 2026-10-07.
+export const auth = initializeAuth(app, { persistence: browserSessionPersistence })
 export const db = getFirestore(app)
 
 if (EMULADOR) {
