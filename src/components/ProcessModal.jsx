@@ -56,6 +56,7 @@ function DetalhesGroup({ proc, archived }) {
   const inicial = () =>
     isImport
       ? {
+          importador: proc.importador || '',
           documentoTipo: proc.documentoTipo || '',
           documentoNumero: proc.documentoNumero || '',
           armador: proc.armador || '',
@@ -63,7 +64,7 @@ function DetalhesGroup({ proc, archived }) {
           termVazio: proc.termVazio || '',
           finalizacaoVazio: proc.finalizacaoVazio === 'baixa' ? 'baixa' : 'devolucao',
         }
-      : { booking: proc.booking || '', referencia: proc.referencia || '', navio: proc.navio || '', armador: proc.armador || '' }
+      : { exportador: proc.exportador || '', booking: proc.booking || '', referencia: proc.referencia || '', navio: proc.navio || '', armador: proc.armador || '' }
   const [form, setForm] = useState(inicial)
   const set = (field) => (value) => setForm((f) => ({ ...f, [field]: value }))
   const input = (field, placeholder) => (
@@ -73,8 +74,10 @@ function DetalhesGroup({ proc, archived }) {
   const salvar = async () => {
     setSaving(true)
     try {
+      const nome = isImport ? 'importador' : 'exportador'
+      const dados = { ...form, [nome]: form[nome].trim() }
       // Na baixa não há devolução, então o terminal de vazio é apagado.
-      await atualizarProcesso(proc.id, form.finalizacaoVazio === 'baixa' ? { ...form, termVazio: '' } : form)
+      await atualizarProcesso(proc.id, dados.finalizacaoVazio === 'baixa' ? { ...dados, termVazio: '' } : dados)
       setEditando(false)
     } finally {
       setSaving(false)
@@ -124,6 +127,7 @@ function DetalhesGroup({ proc, archived }) {
     <Group title="Detalhes" action={action}>
       {isImport ? (
         <>
+          <Row label="Importador">{input('importador', 'Nome')}</Row>
           <Row label="Documento"><Segmented size="sm" className="w-48" options={DOC_TIPOS} value={form.documentoTipo} onChange={set('documentoTipo')} /></Row>
           <Row label="Número">{input('documentoNumero', 'Nº do documento')}</Row>
           <Row label="Armador"><RegistrySelect variant="plain" cat="armador" value={form.armador} onChange={set('armador')} /></Row>
@@ -135,6 +139,7 @@ function DetalhesGroup({ proc, archived }) {
         </>
       ) : (
         <>
+          <Row label="Exportador">{input('exportador', 'Nome')}</Row>
           <Row label="Booking">{input('booking', 'Número')}</Row>
           <Row label="Referência">{input('referencia', 'Opcional')}</Row>
           <Row label="Navio">{input('navio', 'Nome do navio')}</Row>
