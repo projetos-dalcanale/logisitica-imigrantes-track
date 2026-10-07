@@ -357,6 +357,7 @@ button:focus-visible, a:focus-visible, [role="checkbox"]:focus-visible, [role="t
   from { transform: scale(.4); opacity: .55; }
   to { transform: scale(2.6); opacity: 0; }
 }
+.logo-intro [data-logo-alvo] { visibility: hidden; } /* LoginIntro: até o logo pousar */
 .login-rota { animation: rota-anda 1.6s linear infinite; }
 .login-rota-lenta { animation-duration: 2.4s; }
 .login-pulso {
