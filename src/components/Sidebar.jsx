@@ -31,7 +31,7 @@ function NavItem({ tab, active, count, onClick, shortcut }) {
 
 // Barra lateral no estilo do macOS: material translúcido, navegação por
 // seções, busca e conta no rodapé. Só aparece no desktop.
-export default function Sidebar({ sections, active, counts, onChange, onHome, onSearch, isDark, onToggleTheme, onOpenRegistries }) {
+export default function Sidebar({ sections, active, counts, onChange, onHome, onSearch, isDark, onToggleTheme, accent, onAccentChange, onOpenRegistries }) {
   const { nomeExibido } = useAuth()
   const [fechadas, setFechadas] = useState({})
   const alternar = (titulo) => setFechadas((f) => ({ ...f, [titulo]: !f[titulo] }))
@@ -106,6 +106,8 @@ export default function Sidebar({ sections, active, counts, onChange, onHome, on
         <AccountMenu
           isDark={isDark}
           onToggleTheme={onToggleTheme}
+          accent={accent}
+          onAccentChange={onAccentChange}
           onOpenRegistries={onOpenRegistries}
           trigger={
             <button type="button" className="flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left transition-colors hover:bg-slate-500/10">

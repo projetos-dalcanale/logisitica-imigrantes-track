@@ -5,13 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LogiTrack Pro - Gestão Logística</title>
 
-    <!-- Aplica o tema salvo (claro/escuro) ANTES de qualquer estilo carregar,
-         pra tela não "piscar" no tema errado ao abrir o app. -->
+    <!-- Aplica o tema salvo (claro/escuro e cor de destaque) ANTES de qualquer
+         estilo carregar, pra tela não "piscar" no tema errado ao abrir o app.
+         A lista de cores é a de src/lib/temas.js (sem o vermelho, que é o padrão).
+         Mudou este script? Atualize o hash da CSP no vercel.json (há um teste). -->
     <script>
       (function () {
         try {
+          var root = document.documentElement;
           if (localStorage.getItem('logitrack-theme') === 'dark') {
-            document.documentElement.setAttribute('data-theme', 'dark');
+            root.setAttribute('data-theme', 'dark');
+          }
+          var cor = localStorage.getItem('logitrack-accent');
+          if (/^(azul|petroleo|laranja|grafite)$/.test(cor)) {
+            root.setAttribute('data-accent', cor);
           }
         } catch (e) {}
       })();

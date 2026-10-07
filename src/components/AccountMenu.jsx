@@ -1,10 +1,12 @@
 import * as Popover from '@radix-ui/react-popover'
-import { useState } from 'react'
-import { KeyRound, ListChecks, LogOut, Moon, Pencil, Sun } from 'lucide-react'
+import { useId, useState } from 'react'
+import { Check, KeyRound, ListChecks, LogOut, Moon, Pencil, Sun } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useDialog } from '../contexts/DialogContext'
 import { useToast } from '../contexts/ToastContext'
 import { mensagemDeLogin } from '../lib/loginErros'
+import { CORES } from '../lib/temas'
+import Segmented from './ui/Segmented'
 
 export function Avatar({ nome, size = 'md' }) {
   const dim = size === 'sm' ? 'size-7 text-xs' : 'size-8 text-[13px]'
@@ -28,9 +30,50 @@ function Item({ icon: Icon, children, onClick, danger }) {
   )
 }
 
-// Menu da conta (estilo menu do macOS): cadastros, tema e sair.
+// Aparência: claro/escuro e cor de destaque. Trocar aqui não fecha o menu,
+// pra pessoa ver o resultado na hora.
+function Aparencia({ isDark, onToggleTheme, accent, onAccentChange }) {
+  const rotulo = useId()
+  return (
+    <div className="px-2.5 pb-2 pt-1">
+      <div className="pb-1.5 text-[11px] font-medium text-slate-500">Aparência</div>
+      <Segmented
+        size="sm"
+        value={isDark ? 'escuro' : 'claro'}
+        onChange={(v) => { if ((v === 'escuro') !== isDark) onToggleTheme() }}
+        options={[
+          { value: 'claro', label: 'Claro', icon: Sun },
+          { value: 'escuro', label: 'Escuro', icon: Moon },
+        ]}
+      />
+      <div className="pb-1.5 pt-2.5 text-[11px] font-medium text-slate-500" id={rotulo}>Cor de destaque</div>
+      <div role="radiogroup" aria-labelledby={rotulo} className="flex gap-2.5 px-0.5">
+        {CORES.map((c) => {
+          const ativa = c.id === accent
+          return (
+            <button
+              key={c.id}
+              type="button"
+              role="radio"
+              aria-checked={ativa}
+              aria-label={c.nome}
+              title={c.nome}
+              onClick={() => onAccentChange(c.id)}
+              className={`flex size-6 items-center justify-center rounded-full text-white transition-transform hover:scale-110 ${ativa ? 'ring-2 ring-offset-2 ring-offset-navy-800' : ''}`}
+              style={{ backgroundColor: isDark ? c.escuro : c.claro, '--tw-ring-color': isDark ? c.escuro : c.claro }}
+            >
+              {ativa && <Check className="size-3.5" strokeWidth={3} />}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// Menu da conta (estilo menu do macOS): cadastros, aparência e sair.
 // `trigger` é o elemento que abre o menu.
-export default function AccountMenu({ trigger, isDark, onToggleTheme, onOpenRegistries, side = 'top', align = 'start' }) {
+export default function AccountMenu({ trigger, isDark, onToggleTheme, accent, onAccentChange, onOpenRegistries, side = 'top', align = 'start' }) {
   const { user, logout, nome, nomeExibido, salvarNome, resetarSenha } = useAuth()
   const { confirm, prompt } = useDialog()
   const showToast = useToast()
@@ -93,7 +136,8 @@ export default function AccountMenu({ trigger, isDark, onToggleTheme, onOpenRegi
           <Item icon={Pencil} onClick={run(editarNome)}>Alterar nome…</Item>
           <Item icon={KeyRound} onClick={run(alterarSenha)}>Alterar senha…</Item>
           <Item icon={ListChecks} onClick={run(onOpenRegistries)}>Cadastros…</Item>
-          <Item icon={isDark ? Sun : Moon} onClick={run(onToggleTheme)}>{isDark ? 'Modo claro' : 'Modo escuro'}</Item>
+          <div className="my-1 h-px bg-slate-700" />
+          <Aparencia isDark={isDark} onToggleTheme={onToggleTheme} accent={accent} onAccentChange={onAccentChange} />
           <div className="my-1 h-px bg-slate-700" />
           <Item icon={LogOut} danger onClick={run(logout)}>Sair</Item>
         </Popover.Content>
