@@ -39,7 +39,9 @@ export default function Sidebar({ sections, active, counts, onChange, onHome, on
   return (
     <aside className="material hairline-r hidden w-[248px] shrink-0 flex-col lg:flex">
       <div className="flex h-14 items-center gap-2.5 px-4">
-        <Logo />
+        <div data-logo-alvo>
+          <Logo />
+        </div>
         <div className="leading-tight">
           <div className="text-[14px] font-semibold tracking-tight text-ink">LogiTrack</div>
           <div className="text-[11px] text-slate-500">Transportes Imigrantes</div>
