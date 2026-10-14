@@ -63,7 +63,7 @@ export default function LoginScreen() {
         <div className="mb-8 flex flex-col items-center text-center">
           <Logo size="lg" />
           <h1 className="mt-5 font-display text-[28px] font-bold tracking-[-0.025em] text-ink">LogiTrack</h1>
-          <p className="mt-1 text-[15px] text-slate-400">Entre com sua conta da {EMPRESA}</p>
+          <p className="mt-1 text-[15px] text-slate-400">Entre com sua conta · {EMPRESA}</p>
         </div>
         <form onSubmit={handleSubmit} className="card space-y-4 p-5 shadow-lift sm:p-6">
           <div>
