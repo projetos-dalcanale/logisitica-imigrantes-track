@@ -1,21 +1,15 @@
 import { initializeApp } from 'firebase/app'
 import { browserSessionPersistence, connectAuthEmulator, initializeAuth } from 'firebase/auth'
 import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore'
+import { montarConfigFirebase } from './firebaseConfig'
 
 // Testes de tela (e2e/): o app conversa com o emulador local do Firebase,
 // sem tocar nos dados reais. Só liga com VITE_EMULADOR=1.
 const EMULADOR = import.meta.env.VITE_EMULADOR === '1'
 
-// Mesmo projeto Firebase do app original. A chave é pública por natureza;
-// a proteção real está nas regras do Firestore e na restrição por domínio.
-const firebaseConfig = {
-  apiKey: 'AIzaSyAKGjOftcyDZ-5yPA-5NK55GohtGlrfbeQ',
-  authDomain: 'track-logistica.firebaseapp.com',
-  projectId: EMULADOR ? 'demo-logitrack' : 'track-logistica',
-  storageBucket: 'track-logistica.firebasestorage.app',
-  messagingSenderId: '986198520521',
-  appId: '1:986198520521:web:a4c088bc7c4e773156d318',
-}
+// Projeto Firebase da instância: ver src/lib/firebaseConfig.js (sem variáveis
+// de ambiente, o de produção atual).
+const firebaseConfig = montarConfigFirebase(import.meta.env, EMULADOR)
 
 export const app = initializeApp(firebaseConfig)
 // Login só vale enquanto a aba estiver aberta: abrir o site de novo (ou

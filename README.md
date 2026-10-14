@@ -170,13 +170,16 @@ Cada empresa roda numa instância própria (projeto Firebase e projeto Vercel se
 
 **Passo a passo:**
 
-1. Crie um projeto no Firebase (Authentication por e-mail/senha e Firestore) e publique `firestore_1.rules` nele. Deixe a criação de contas desativada: as regras dependem disso.
-2. Crie um projeto na Vercel apontando para este repositório e defina a variável de ambiente `VITE_EMPRESA_NOME` com o nome da empresa.
-3. Troque os dados do Firebase em `src/lib/firebase.js` (`apiKey`, `authDomain`, `projectId`, `storageBucket`...) e o `frame-src` da CSP em `vercel.json` (o domínio `*.firebaseapp.com` do projeto novo). Restrinja a chave do Firebase ao domínio da Vercel do cliente.
-4. Troque os ícones do app (`public/icons/`) e, se for o caso, a cor de destaque padrão.
-5. Crie as contas dos usuários à mão no Firebase Console.
+1. Crie um projeto no Firebase (Authentication por e-mail/senha e Firestore) e publique `firestore_1.rules` nele (`npx firebase deploy --only firestore:rules --project <id>`). Deixe a criação de contas desativada: as regras dependem disso.
+2. Registre um app web no projeto e copie a configuração (`npx firebase apps:sdkconfig WEB <appId> --project <id>`).
+3. Na Vercel do cliente, defina as variáveis de ambiente do build: `VITE_EMPRESA_NOME` e `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`. Sem elas vale o projeto de produção atual. O arquivo `.env.modelo` é o exemplo preenchido do projeto modelo.
+4. Acrescente o domínio `<id>.firebaseapp.com` ao `frame-src` da CSP em `vercel.json` e restrinja a chave do Firebase ao domínio da Vercel do cliente.
+5. Troque os ícones do app (`public/icons/`) se o cliente quiser a marca própria.
+6. Crie as contas dos usuários à mão no Firebase Console.
 
-**Ainda manual (não vem do `VITE_EMPRESA_NOME`):** o passo 3 e os ícones do passo 4; a configuração do Firebase continua escrita em `src/lib/firebase.js`.
+**Testar a instância modelo na sua máquina:** `npm run dev -- --mode modelo` (lê o `.env.modelo`).
+
+**Ainda manual:** o passo 4 (a CSP é um arquivo estático) e a ativação do Authentication no Console, que o Firebase CLI não faz.
 
 ## Segurança
 
