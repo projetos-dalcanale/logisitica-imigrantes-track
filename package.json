@@ -13,6 +13,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "e2e": "firebase emulators:exec --only auth,firestore --project demo-logitrack \"playwright test -c e2e/playwright.config.js\"",
+    "demo:emulador": "node scripts/demo/carregar-emulador.mjs",
+    "demo:nuvem": "node scripts/demo/carregar-nuvem.mjs",
     "check": "npm run lint && npm test && npm run build"
   },
   "dependencies": {

@@ -162,6 +162,37 @@ Os scripts de `scripts/` (backup, restauração, ensaio e alerta) têm `package.
 npm ci --prefix scripts
 ```
 
+## Instância para outra empresa
+
+Cada empresa roda numa instância própria (projeto Firebase e projeto Vercel separados), a partir do mesmo código. O nome da empresa fica em um lugar só, `src/marca.js`, e o teste `src/marca.test.js` barra o nome escrito direto nos componentes.
+
+**O que o nome configurável já cobre:** tela de login, menu lateral, tela de abertura (inclusive a estática do `index.html`), ficha do processo em PDF, imagem de status para clientes e a descrição do app instalado.
+
+**Passo a passo:**
+
+1. Crie um projeto no Firebase (Authentication por e-mail/senha e Firestore) e publique `firestore_1.rules` nele (`npx firebase deploy --only firestore:rules --project <id>`). Deixe a criação de contas desativada: as regras dependem disso.
+2. Registre um app web no projeto e copie a configuração (`npx firebase apps:sdkconfig WEB <appId> --project <id>`).
+3. Na Vercel do cliente, defina as variáveis de ambiente do build: `VITE_EMPRESA_NOME` e `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`. Sem elas vale o projeto de produção atual. O arquivo `.env.modelo` é o exemplo preenchido do projeto modelo.
+4. Acrescente o domínio `<id>.firebaseapp.com` ao `frame-src` da CSP em `vercel.json` e restrinja a chave do Firebase ao domínio da Vercel do cliente.
+5. Troque os ícones do app (`public/icons/`) se o cliente quiser a marca própria.
+6. Crie as contas dos usuários à mão no Firebase Console.
+
+**Testar a instância modelo na sua máquina:** `npm run dev -- --mode modelo` (lê o `.env.modelo`).
+
+**Ainda manual:** o passo 4 (a CSP é um arquivo estático) e a ativação do Authentication no Console, que o Firebase CLI não faz.
+
+### Demonstração com dados fictícios
+
+Dados inventados (empresas, documentos, placas, valores), com datas relativas a hoje para a tela Início sempre ter atrasados e compromissos. Ficam em `scripts/demo/dados-demo.mjs`.
+
+**No seu computador, sem nuvem** (para gravar vídeo ou demonstrar):
+
+1. `npx firebase emulators:start --only auth,firestore --project demo-logitrack`
+2. Em outro terminal: `npm run demo:emulador` (imprime o e-mail e a senha do usuário de demonstração)
+3. `npm run dev -- --mode demo`
+
+**No projeto modelo na nuvem** (demonstração online): defina `DEMO_EMAIL` e `DEMO_SENHA` na sessão do terminal e rode `npm run demo:nuvem`. O script recusa projetos que não tenham "modelo" ou "demo" no id, então não grava na produção.
+
 ## Segurança
 
 - A chave de API do Firebase presente no código é, por natureza, pública — a proteção real está nas **regras do Firestore** (`firestore_1.rules`) e na **restrição da chave por domínio** no Google Cloud Console. Ainda assim, recomenda-se manter este repositório **privado**.

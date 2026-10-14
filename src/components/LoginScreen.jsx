@@ -3,6 +3,7 @@ import { motion } from 'motion/react'
 import { CircleAlert, Lock, Mail, MailCheck, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { mensagemDeLogin } from '../lib/loginErros'
+import { EMPRESA, PRODUTO } from '../marca'
 import Button from './ui/Button'
 import Logo from './Logo'
 import LoginArt from './LoginArt'
@@ -62,7 +63,7 @@ export default function LoginScreen() {
         <div className="mb-8 flex flex-col items-center text-center">
           <Logo size="lg" />
           <h1 className="mt-5 font-display text-[28px] font-bold tracking-[-0.025em] text-ink">LogiTrack</h1>
-          <p className="mt-1 text-[15px] text-slate-400">Entre com sua conta da Transportes Imigrantes</p>
+          <p className="mt-1 text-[15px] text-slate-400">Entre com sua conta da {EMPRESA}</p>
         </div>
         <form onSubmit={handleSubmit} className="card space-y-4 p-5 shadow-lift sm:p-6">
           <div>
@@ -120,7 +121,7 @@ export default function LoginScreen() {
         </p>
       </motion.div>
       <p className="absolute inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom))] text-center text-[11px] text-slate-500">
-        LogiTrack Pro · Transportes Imigrantes
+        {PRODUTO} · {EMPRESA}
       </p>
     </div>
   )

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { ChevronDown, ChevronsUpDown, House, Search } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { EMPRESA } from '../marca'
 import AccountMenu, { Avatar } from './AccountMenu'
 import Logo from './Logo'
 
@@ -44,7 +45,7 @@ export default function Sidebar({ sections, active, counts, onChange, onHome, on
         </div>
         <div className="leading-tight">
           <div className="text-[14px] font-semibold tracking-tight text-ink">LogiTrack</div>
-          <div className="text-[11px] text-slate-500">Transportes Imigrantes</div>
+          <div className="text-[11px] text-slate-500">{EMPRESA}</div>
         </div>
         <button
           type="button"

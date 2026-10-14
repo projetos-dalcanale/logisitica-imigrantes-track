@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { EMPRESA } from '../marca'
 import { etapasDoContainer, montarHtmlProcesso } from './pdfProcesso'
 
 const imp = {
@@ -52,7 +53,7 @@ describe('PDF do processo', () => {
 
   it('monta a ficha com a marca, os dados e escapa o que foi digitado', () => {
     const html = montarHtmlProcesso(imp, new Date(2026, 9, 5, 9, 30))
-    expect(html).toContain('Transportes Imigrantes')
+    expect(html).toContain(EMPRESA)
     expect(html).toContain('Agro &lt;Sul&gt;')
     expect(html).not.toContain('Agro <Sul>')
     expect(html).toContain('Gerado em 05/10/2026 09:30')
