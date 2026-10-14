@@ -181,6 +181,18 @@ Cada empresa roda numa instância própria (projeto Firebase e projeto Vercel se
 
 **Ainda manual:** o passo 4 (a CSP é um arquivo estático) e a ativação do Authentication no Console, que o Firebase CLI não faz.
 
+### Demonstração com dados fictícios
+
+Dados inventados (empresas, documentos, placas, valores), com datas relativas a hoje para a tela Início sempre ter atrasados e compromissos. Ficam em `scripts/demo/dados-demo.mjs`.
+
+**No seu computador, sem nuvem** (para gravar vídeo ou demonstrar):
+
+1. `npx firebase emulators:start --only auth,firestore --project demo-logitrack`
+2. Em outro terminal: `npm run demo:emulador` (imprime o e-mail e a senha do usuário de demonstração)
+3. `npm run dev -- --mode demo`
+
+**No projeto modelo na nuvem** (demonstração online): defina `DEMO_EMAIL` e `DEMO_SENHA` na sessão do terminal e rode `npm run demo:nuvem`. O script recusa projetos que não tenham "modelo" ou "demo" no id, então não grava na produção.
+
 ## Segurança
 
 - A chave de API do Firebase presente no código é, por natureza, pública — a proteção real está nas **regras do Firestore** (`firestore_1.rules`) e na **restrição da chave por domínio** no Google Cloud Console. Ainda assim, recomenda-se manter este repositório **privado**.
