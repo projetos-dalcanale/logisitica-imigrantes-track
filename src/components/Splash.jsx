@@ -1,3 +1,4 @@
+import { EMPRESA } from '../marca'
 import Logo from './Logo'
 
 // Tela de abertura enquanto o Firebase confere a sessão. O index.html tem
@@ -8,7 +9,7 @@ export default function Splash() {
       <Logo size="lg" />
       <div className="text-center">
         <div className="font-display text-[22px] font-bold tracking-[-0.02em] text-ink">LogiTrack</div>
-        <div className="mt-0.5 text-[13px] text-slate-500">Transportes Imigrantes</div>
+        <div className="mt-0.5 text-[13px] text-slate-500">{EMPRESA}</div>
       </div>
       <div className="splash-bar" role="progressbar" aria-label="Carregando" />
     </div>

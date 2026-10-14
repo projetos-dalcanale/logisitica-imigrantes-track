@@ -1,5 +1,6 @@
 // IMAGEM DE STATUS: cartão nas cores da empresa, desenhado num <canvas>,
 // para copiar e colar no e-mail do cliente (ou baixar como PNG).
+import { EMPRESA } from '../marca'
 import { dadosDoProcesso } from './status'
 import { ehCargaSolta } from './processos'
 
@@ -213,7 +214,7 @@ export const desenharStatus = (canvas, { proc, titulo, detalhes, etapa, tabela =
 
   ctx.fillStyle = '#ffffff'
   ctx.font = fonte(700, 20)
-  ctx.fillText('Transportes Imigrantes', M + 64, 44)
+  ctx.fillText(EMPRESA, M + 64, 44)
   ctx.font = fonte(500, 13)
   ctx.fillStyle = 'rgba(255,255,255,0.82)'
   ctx.fillText('Atualização de status', M + 64, 64)
@@ -368,7 +369,7 @@ export const desenharStatus = (canvas, { proc, titulo, detalhes, etapa, tabela =
   ctx.fillRect(M, y, W - 2 * M, 1)
   ctx.font = fonte(500, 12)
   ctx.fillStyle = COR.cinzaClaro
-  ctx.fillText('Transportes Imigrantes', M, y + 28)
+  ctx.fillText(EMPRESA, M, y + 28)
   ctx.textAlign = 'right'
   ctx.fillText('Em caso de dúvidas, responda este e-mail.', W - M, y + 28)
   ctx.textAlign = 'left'

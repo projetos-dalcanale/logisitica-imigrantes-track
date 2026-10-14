@@ -2,6 +2,7 @@
 // o logo, dados em caixas e as etapas de cada contêiner em linha do tempo
 // (com o horário em que cada uma foi marcada). Montada como HTML e impressa
 // pelo navegador ("Salvar como PDF"). Todo texto digitado é escapado.
+import { EMPRESA, PRODUTO } from '../marca'
 import { chaveEtapa, distintos, ehCargaSolta, etapaFeita, exportSteps, identificacaoUnidade, formatarDataHora, stepsChecklistImport, transportePorContainer } from './processos'
 
 export const escapeHtml = (valor) =>
@@ -138,7 +139,7 @@ export const montarHtmlProcesso = (proc, agora = new Date()) => {
   <div class="pf">
     <div class="pf-topo">
       <div class="pf-logo">${CAMINHAO}</div>
-      <div class="pf-marca"><b>Transportes Imigrantes</b><span>Ficha do processo</span></div>
+      <div class="pf-marca"><b>${escapeHtml(EMPRESA)}</b><span>Ficha do processo</span></div>
       <div class="pf-topo-dir"><b>${isImport ? 'Importação' : 'Exportação'}</b>Gerado em ${formatarDataHora(agora)}</div>
     </div>
     <h1 class="pf-titulo">${escapeHtml(titulo)}</h1>
@@ -146,6 +147,6 @@ export const montarHtmlProcesso = (proc, agora = new Date()) => {
     <div class="pf-grade">${dados.map(([r, v]) => caixa(r, v)).join('')}</div>
     ${proc.observacoes?.trim() ? `<span class="pf-rot">Observações</span><div class="pf-obs">${escapeHtml(proc.observacoes.trim())}</div>` : ''}
     ${blocos.join('') || '<p class="pf-sub">Nenhum contêiner neste processo.</p>'}
-    <div class="pf-rodape"><span>Transportes Imigrantes · LogiTrack Pro</span><span>${escapeHtml(titulo)}</span></div>
+    <div class="pf-rodape"><span>${escapeHtml(EMPRESA)} · ${PRODUTO}</span><span>${escapeHtml(titulo)}</span></div>
   </div>`
 }

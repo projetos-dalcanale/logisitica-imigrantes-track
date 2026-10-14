@@ -162,6 +162,22 @@ Os scripts de `scripts/` (backup, restauração, ensaio e alerta) têm `package.
 npm ci --prefix scripts
 ```
 
+## Instância para outra empresa
+
+Cada empresa roda numa instância própria (projeto Firebase e projeto Vercel separados), a partir do mesmo código. O nome da empresa fica em um lugar só, `src/marca.js`, e o teste `src/marca.test.js` barra o nome escrito direto nos componentes.
+
+**O que o nome configurável já cobre:** tela de login, menu lateral, tela de abertura (inclusive a estática do `index.html`), ficha do processo em PDF, imagem de status para clientes e a descrição do app instalado.
+
+**Passo a passo:**
+
+1. Crie um projeto no Firebase (Authentication por e-mail/senha e Firestore) e publique `firestore_1.rules` nele. Deixe a criação de contas desativada: as regras dependem disso.
+2. Crie um projeto na Vercel apontando para este repositório e defina a variável de ambiente `VITE_EMPRESA_NOME` com o nome da empresa.
+3. Troque os dados do Firebase em `src/lib/firebase.js` (`apiKey`, `authDomain`, `projectId`, `storageBucket`...) e o `frame-src` da CSP em `vercel.json` (o domínio `*.firebaseapp.com` do projeto novo). Restrinja a chave do Firebase ao domínio da Vercel do cliente.
+4. Troque os ícones do app (`public/icons/`) e, se for o caso, a cor de destaque padrão.
+5. Crie as contas dos usuários à mão no Firebase Console.
+
+**Ainda manual (não vem do `VITE_EMPRESA_NOME`):** o passo 3 e os ícones do passo 4; a configuração do Firebase continua escrita em `src/lib/firebase.js`.
+
 ## Segurança
 
 - A chave de API do Firebase presente no código é, por natureza, pública — a proteção real está nas **regras do Firestore** (`firestore_1.rules`) e na **restrição da chave por domínio** no Google Cloud Console. Ainda assim, recomenda-se manter este repositório **privado**.
