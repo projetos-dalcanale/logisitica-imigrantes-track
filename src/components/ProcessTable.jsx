@@ -1,5 +1,8 @@
 import { Fragment, useMemo, useState } from 'react'
+import * as HoverCard from '@radix-ui/react-hover-card'
 import { ArrowDown, ArrowUp } from 'lucide-react'
+import { useMediaQuery } from '../hooks/useMediaQuery'
+import ProcessoPrevia from './ProcessoPrevia'
 import { ExportIcon, ImportIcon } from './ui/icons'
 import Checkbox from './ui/Checkbox'
 import { TOM_TEXTO } from './ProcessCard'
@@ -55,7 +58,7 @@ function Etapas({ feitas, total }) {
   )
 }
 
-function Linha({ linha, now, selecionado, marcado, foco, onOpen, onMarcar, onFoco }) {
+function Linha({ proc, linha, now, selecionado, marcado, foco, previa, onOpen, onMarcar, onFoco }) {
   const Icon = linha.tipo === 'import' ? ImportIcon : ExportIcon
   const atrasado = linha.prazo !== null && linha.prazo < now
   const vazio = <span className="text-slate-500">—</span>
@@ -80,6 +83,8 @@ function Linha({ linha, now, selecionado, marcado, foco, onOpen, onMarcar, onFoc
     else if (e.key === 'End') mover(e, 'fim')
   }
   return (
+    <HoverCard.Root openDelay={500} closeDelay={100} open={previa && !selecionado ? undefined : false}>
+    <HoverCard.Trigger asChild>
     <tr
       data-linha={linha.id}
       tabIndex={foco ? 0 : -1}
@@ -109,6 +114,20 @@ function Linha({ linha, now, selecionado, marcado, foco, onOpen, onMarcar, onFoc
         {linha.prazo !== null ? quandoRelativo(linha.prazo, now) : vazio}
       </td>
     </tr>
+    </HoverCard.Trigger>
+    <HoverCard.Portal>
+      <HoverCard.Content
+        side="bottom"
+        align="start"
+        alignOffset={48}
+        sideOffset={4}
+        collisionPadding={12}
+        className="previa-card z-[70] w-80 rounded-2xl bg-navy-800 p-4 shadow-float ring-[0.5px] ring-black/10 dark:ring-white/15"
+      >
+        <ProcessoPrevia proc={proc} now={now} />
+      </HoverCard.Content>
+    </HoverCard.Portal>
+    </HoverCard.Root>
   )
 }
 
@@ -117,8 +136,11 @@ function Linha({ linha, now, selecionado, marcado, foco, onOpen, onMarcar, onFoc
 export default function ProcessTable({ processes, now, onOpen, selecionadoId, selecionados, onAlternarSelecao, onSelecionarTodos, semGrupos }) {
   const [ordem, setOrdem] = useState(null) // { coluna, direcao } | null
   const [focoId, setFocoId] = useState(null)
+  // Prévia só onde há mouse de verdade (não em tela de toque).
+  const comMouse = useMediaQuery('(hover: hover)')
 
   const porId = useMemo(() => new Map(processes.map((p) => [p.id, linhaDaTabela(p, now)])), [processes, now])
+  const procPorId = useMemo(() => new Map(processes.map((p) => [p.id, p])), [processes])
   const todas = processes.map((p) => porId.get(p.id))
 
   const ordenar = (coluna) =>
@@ -159,11 +181,13 @@ export default function ProcessTable({ processes, now, onOpen, selecionadoId, se
               {bloco.itens.map((linha) => (
                 <Linha
                   key={linha.id}
+                  proc={procPorId.get(linha.id)}
                   linha={linha}
                   now={now}
                   selecionado={linha.id === selecionadoId}
                   marcado={selecionados.has(linha.id)}
                   foco={(focoId && porId.has(focoId) ? focoId : primeiro) === linha.id}
+                  previa={comMouse}
                   onOpen={onOpen}
                   onMarcar={onAlternarSelecao}
                   onFoco={setFocoId}

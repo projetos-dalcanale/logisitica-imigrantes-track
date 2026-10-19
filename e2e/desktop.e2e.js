@@ -115,6 +115,21 @@ test('em tela menor (1280) o processo continua abrindo em janela', async ({ page
 test.describe('lista em tabela', () => {
   test.use({ viewport: { width: 1600, height: 900 } })
 
+  test('tabela: passar o mouse mostra a prévia do processo e tirar o mouse a esconde', async ({ page }) => {
+    const nome = `Prévia Tabela ${Date.now()}`
+    await entrar(page)
+    await criarImportacao(page, nome)
+    await page.getByRole('radio', { name: 'Tabela' }).click()
+
+    await page.locator('tr[data-linha]').filter({ hasText: nome }).hover()
+    const previa = page.locator('.previa-card')
+    await expect(previa).toContainText(nome)
+    await expect(previa).toContainText('Agendar carregamento')
+
+    await page.mouse.move(5, 5)
+    await expect(previa).toHaveCount(0)
+  })
+
   test('tabela: alterna o modo, ordena por cliente, abre com Enter e lembra a escolha', async ({ page }) => {
     const alfa = `Alfa Tabela ${Date.now()}`
     const zeta = `Zeta Tabela ${Date.now()}`

@@ -400,3 +400,13 @@ button:focus-visible, a:focus-visible, [role="checkbox"]:focus-visible, [role="t
 @media (prefers-reduced-motion: reduce) {
   .splash-bar::after { animation: none; width: 100%; opacity: 0.5; }
 }
+
+/* Prévia do processo (cartão que aparece ao passar o mouse na tabela). */
+.previa-card { animation: previa-in .14s ease-out; }
+@keyframes previa-in {
+  from { opacity: 0; transform: translateY(3px) scale(.985); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .previa-card { animation: none; }
+}
