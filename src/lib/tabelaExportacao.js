@@ -1,5 +1,5 @@
 // TABELA DE EXPORTAÇÃO: uma única montagem dos dados (cabeçalho + linhas) que
-// alimenta o CSV, a planilha .xlsx e a cópia para o e-mail.
+// alimenta o CSV e a cópia para o e-mail.
 import { distintos, ehCargaSolta, formatarDataHora, identificacaoUnidade, transportePorContainer } from './processos'
 import { proximaAcao, proximoPrazo } from './etapas'
 

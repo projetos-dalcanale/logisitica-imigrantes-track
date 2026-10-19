@@ -33,11 +33,10 @@ describe('cabeçalhos de segurança (vercel.json)', () => {
     expect(cabecalhos['Referrer-Policy']).toBe('strict-origin-when-cross-origin')
   })
 
-  it('a CSP deixa criar workers por blob: (o fflate do Excel usa um em listas grandes)', () => {
-    // O .xlsx de uma lista com mais de ~230 processos tem um arquivo interno acima de
-    // 160 KB, e o fflate comprime isso num Worker criado a partir de um blob. Sem
-    // blob: em worker-src o navegador bloqueia e o Excel nunca é gerado.
-    expect(csp).toMatch(/worker-src 'self' blob:/)
-    expect(csp).not.toMatch(/worker-src[^;]*'unsafe/)
+  it('workers só do próprio site: nada de blob: nem unsafe em worker-src', () => {
+    // O blob: só foi liberado para o Excel (.xlsx) de listas grandes, que saiu do app.
+    // Se voltar uma biblioteca que crie Workers por blob, ela precisa ser reavaliada.
+    expect(csp).toMatch(/worker-src 'self';/)
+    expect(csp).not.toMatch(/worker-src[^;]*(blob:|'unsafe)/)
   })
 })

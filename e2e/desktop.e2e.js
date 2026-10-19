@@ -181,15 +181,13 @@ test.describe('Início em tela grande', () => {
 })
 
 test.describe('exportar a lista', () => {
-  test('Excel: baixa um .xlsx de verdade (arquivo zip) com o nome da lista', async ({ page }) => {
+  test('o menu Exportar tem só CSV e Copiar para e-mail (sem Excel .xlsx)', async ({ page }) => {
     await entrar(page)
     await irPara(page, 'Importações')
     await page.getByRole('button', { name: 'Exportar' }).click()
-    const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /Excel \(\.xlsx\)/ }).click()])
-    expect(download.suggestedFilename()).toMatch(/^logitrack-importacoes-\d{4}-\d{2}-\d{2}\.xlsx$/)
-    const bytes = await (await import('node:fs/promises')).readFile(await download.path())
-    expect(bytes.subarray(0, 2).toString()).toBe('PK') // .xlsx é um arquivo zip
-    await expect(page.getByText(/processo\(s\) exportado\(s\)/)).toBeVisible()
+    await expect(page.getByRole('button', { name: /^CSV/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Copiar para e-mail/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /xlsx/i })).toHaveCount(0)
   })
 
   test('CSV: continua baixando, agora com a próxima ação e o prazo no fim', async ({ page }) => {

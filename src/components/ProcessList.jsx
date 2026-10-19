@@ -22,7 +22,7 @@ import { filtrarProcessos } from '../lib/processos'
 import { agruparPorUrgencia } from '../lib/etapas'
 import { useCardOrder } from '../hooks/useCardOrder'
 import { useToast } from '../contexts/ToastContext'
-import { copiarProcessos, exportarProcessosCSV, exportarProcessosXlsx } from '../lib/exportar'
+import { copiarProcessos, exportarProcessosCSV } from '../lib/exportar'
 import ProcessCard, { ProcessCardSkeleton } from './ProcessCard'
 import ProcessTable from './ProcessTable'
 import ResumoBar from './ResumoBar'
@@ -119,8 +119,7 @@ export default function ProcessList({ processes, loading, tab, onOpen, searchRef
       return
     }
     try {
-      if (tipo === 'xlsx') await exportarProcessosXlsx(paraExportar, tab)
-      else if (tipo === 'csv') exportarProcessosCSV(paraExportar, tab)
+      if (tipo === 'csv') exportarProcessosCSV(paraExportar, tab)
       else await copiarProcessos(paraExportar)
       showToast(tipo === 'copiar' ? `${paraExportar.length} processo(s) copiado(s): é só colar no e-mail.` : `${paraExportar.length} processo(s) exportado(s).`)
     } catch (erro) {
@@ -227,7 +226,6 @@ export default function ProcessList({ processes, loading, tab, onOpen, searchRef
         <ExportarMenu
           total={filtered.length}
           selecionados={tabela ? selecionados.size : 0}
-          onExcel={() => exportar('xlsx')}
           onCsv={() => exportar('csv')}
           onCopiar={() => exportar('copiar')}
         />
