@@ -1,7 +1,6 @@
 import { montarHtmlProcesso } from './pdfProcesso'
 import { copiarTabela } from './copiarTabela'
 import { csvCell, tabelaProcessos } from './tabelaExportacao'
-import { gerarXlsx } from './xlsx'
 
 // EXPORTAR PROCESSO EM PDF: a ficha com a identidade da empresa
 // (pdfProcesso.js) vai para a área #print-area; o navegador abre a impressão
@@ -27,18 +26,13 @@ const baixar = (blob, nome) => {
   URL.revokeObjectURL(url)
 }
 
-// EXPORTAÇÃO EM LOTE da lista (ou da seleção): as três saídas usam a mesma
+// EXPORTAÇÃO EM LOTE da lista (ou da seleção): as duas saídas (CSV e cópia) usam a mesma
 // tabela (lib/tabelaExportacao.js).
 export const exportarProcessosCSV = (lista, tab) => {
   const { cabecalho, linhas } = tabelaProcessos(lista)
   // BOM no início faz o Excel em português reconhecer UTF-8 (acentos).
   const conteudo = '﻿' + [cabecalho.map(csvCell).join(';'), ...linhas.map((l) => l.map(csvCell).join(';'))].join('\r\n')
   baixar(new Blob([conteudo], { type: 'text/csv;charset=utf-8;' }), `logitrack-${nomeAba(tab)}-${dataDeHoje()}.csv`)
-}
-
-export const exportarProcessosXlsx = async (lista, tab) => {
-  const blob = await gerarXlsx(tabelaProcessos(lista), { nomePlanilha: nomeAba(tab) })
-  baixar(blob, `logitrack-${nomeAba(tab)}-${dataDeHoje()}.xlsx`)
 }
 
 // Tabela na área de transferência, para colar no e-mail (Outlook) ou no Excel.

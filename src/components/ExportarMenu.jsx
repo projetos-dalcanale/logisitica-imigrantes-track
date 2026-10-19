@@ -1,6 +1,6 @@
 import * as Popover from '@radix-ui/react-popover'
 import { useState } from 'react'
-import { ClipboardCopy, Download, FileSpreadsheet, FileText } from 'lucide-react'
+import { ClipboardCopy, Download, FileText } from 'lucide-react'
 import Button from './ui/Button'
 
 function Item({ icon: Icon, titulo, descricao, onClick }) {
@@ -21,9 +21,9 @@ function Item({ icon: Icon, titulo, descricao, onClick }) {
   )
 }
 
-// Menu "Exportar": Excel (.xlsx), CSV ou copiar a tabela para o e-mail. Atua
+// Menu "Exportar": CSV (abre no Excel) ou copiar a tabela para o e-mail. Atua
 // sobre as linhas selecionadas (modo tabela) ou, sem seleção, sobre a lista toda.
-export default function ExportarMenu({ total, selecionados, onExcel, onCsv, onCopiar }) {
+export default function ExportarMenu({ total, selecionados, onCsv, onCopiar }) {
   const [aberto, setAberto] = useState(false)
   const alvo = selecionados > 0 ? `${selecionados} ${selecionados === 1 ? 'selecionado' : 'selecionados'}` : `toda a lista (${total})`
   const rodar = (acao) => () => {
@@ -45,8 +45,7 @@ export default function ExportarMenu({ total, selecionados, onExcel, onCsv, onCo
           className="z-[70] w-72 rounded-xl bg-navy-800/95 p-1.5 shadow-lift ring-[0.5px] ring-black/10 backdrop-blur-xl data-[state=open]:animate-[pop-in_.14s_ease-out] dark:ring-white/10"
         >
           <p className="px-2.5 pb-1 pt-1.5 text-[12px] font-medium text-slate-500">Exportar {alvo}</p>
-          <Item icon={FileSpreadsheet} titulo="Excel (.xlsx)" descricao="Planilha com cabeçalho fixo" onClick={rodar(onExcel)} />
-          <Item icon={FileText} titulo="CSV" descricao="Texto separado por ponto e vírgula" onClick={rodar(onCsv)} />
+          <Item icon={FileText} titulo="CSV" descricao="Arquivo que abre no Excel" onClick={rodar(onCsv)} />
           <Item icon={ClipboardCopy} titulo="Copiar para e-mail" descricao="Cola como tabela no Outlook ou Excel" onClick={rodar(onCopiar)} />
         </Popover.Content>
       </Popover.Portal>
