@@ -72,7 +72,7 @@ const EMPTY_TEXT = {
 }
 
 // Busca + resumo + lista de cards da aba atual.
-export default function ProcessList({ processes, loading, tab, onOpen, searchRef, onNew }) {
+export default function ProcessList({ processes, loading, tab, onOpen, searchRef, onNew, selecionadoId }) {
   const [search, setSearch] = useState('')
   const { applyOrder, saveOrder } = useCardOrder()
   const showToast = useToast()
@@ -137,7 +137,7 @@ export default function ProcessList({ processes, loading, tab, onOpen, searchRef
             <SortableContext items={grupo.itens.map((p) => p.id)} strategy={verticalListSortingStrategy}>
               {grupo.itens.map((proc, i) => (
                 <motion.div key={proc.id} {...fadeIn} transition={{ delay: Math.min(i * 0.03, 0.3) }}>
-                  <SortableCard proc={proc} now={now} onOpen={onOpen} />
+                  <SortableCard proc={proc} now={now} onOpen={onOpen} selecionado={proc.id === selecionadoId} />
                 </motion.div>
               ))}
             </SortableContext>
@@ -148,7 +148,7 @@ export default function ProcessList({ processes, loading, tab, onOpen, searchRef
           <AnimatePresence mode="popLayout" initial={false}>
             {grupo.itens.map((proc) => (
               <motion.div key={proc.id} layout {...fadeIn}>
-                <ProcessCard proc={proc} now={now} onOpen={onOpen} />
+                <ProcessCard proc={proc} now={now} onOpen={onOpen} selecionado={proc.id === selecionadoId} />
               </motion.div>
             ))}
           </AnimatePresence>

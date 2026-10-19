@@ -72,7 +72,7 @@ function Meta({ icon: Icon, children, muted }) {
 
 // Cartão de um processo. `dragHandle` (opcional) recebe as props do dnd-kit
 // para o ícone de arrastar; sem ele o card não é reordenável.
-export default function ProcessCard({ proc, now, onOpen, dragHandle, style, innerRef, dragging }) {
+export default function ProcessCard({ proc, now, onOpen, dragHandle, style, innerRef, dragging, selecionado }) {
   const containers = proc.containers || []
   const isImport = proc.type === 'import'
   const title = isImport ? proc.importador : proc.exportador
@@ -118,9 +118,10 @@ export default function ProcessCard({ proc, now, onOpen, dragHandle, style, inne
       style={style}
       role="button"
       tabIndex={0}
+      aria-current={selecionado ? 'true' : undefined}
       onClick={() => onOpen(proc.id)}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpen(proc.id))}
-      className={`card group relative cursor-pointer px-5 py-4 outline-none transition-[box-shadow,transform] duration-200 hover:shadow-lift focus-visible:shadow-[0_0_0_3px_rgb(var(--blue-500)/0.35)] active:scale-[0.995] ${dragging ? 'shadow-float' : ''}`}
+      className={`card group relative cursor-pointer px-5 py-4 outline-none transition-[box-shadow,transform] duration-200 hover:shadow-lift focus-visible:shadow-[0_0_0_3px_rgb(var(--blue-500)/0.35)] active:scale-[0.995] ${dragging ? 'shadow-float' : ''} ${selecionado ? 'ring-2 ring-blue-500/60' : ''}`}
     >
       {dragHandle && (
         <Tooltip label="Arrastar para reordenar">

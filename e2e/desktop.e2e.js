@@ -49,3 +49,65 @@ test('ficha: recolhe uma seção, lembra a escolha e o índice leva até o cont�
   await page.getByText(nome).click()
   await expect(page.getByRole('dialog').locator('#ficha-observacoes h3 button')).toHaveAttribute('aria-expanded', 'false')
 })
+
+test.describe('painel lateral (tela larga)', () => {
+  test.use({ viewport: { width: 1600, height: 900 } })
+
+  test('abre o processo num painel ao lado da lista e troca de processo sem fechar', async ({ page }) => {
+    const a = `Painel A ${Date.now()}`
+    const b = `Painel B ${Date.now()}`
+    await entrar(page)
+    await criarImportacao(page, a)
+    await criarImportacao(page, b)
+
+    await page.getByText(a).click()
+    const painel = page.getByRole('complementary', { name: 'Detalhes do processo' })
+    await expect(painel.getByRole('heading', { name: a })).toBeVisible()
+    // A lista continua visível e clicável; nada de janela por cima.
+    await expect(page.getByText(b)).toBeVisible()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+
+    await page.getByText(b).click()
+    await expect(painel.getByRole('heading', { name: b })).toBeVisible()
+    await expect(painel.getByRole('heading', { name: a })).toHaveCount(0)
+  })
+
+  test('o painel fecha sozinho quando o processo é arquivado, sem erro', async ({ page }) => {
+    const erros = []
+    page.on('pageerror', (e) => erros.push(e.message))
+    const nome = `Painel arquivar ${Date.now()}`
+    await entrar(page)
+    await criarImportacao(page, nome)
+    await page.getByText(nome).click()
+    const painel = page.getByRole('complementary', { name: 'Detalhes do processo' })
+    await painel.getByRole('button', { name: 'Arquivar', exact: true }).click()
+    await page.getByRole('dialog', { name: 'Arquivar processo?' }).getByRole('button', { name: 'Arquivar' }).click()
+    await expect(painel).toHaveCount(0)
+    expect(erros).toEqual([])
+  })
+
+  test('atravessar 1400 px com um processo aberto troca painel e janela, nunca os dois', async ({ page }) => {
+    const nome = `Painel largura ${Date.now()}`
+    await entrar(page)
+    await criarImportacao(page, nome)
+    await page.getByText(nome).click()
+    await expect(page.getByRole('complementary', { name: 'Detalhes do processo' })).toBeVisible()
+
+    await page.setViewportSize({ width: 1200, height: 800 })
+    await expect(page.getByRole('dialog')).toBeVisible()
+    await expect(page.getByRole('complementary', { name: 'Detalhes do processo' })).toHaveCount(0)
+
+    await page.setViewportSize({ width: 1600, height: 900 })
+    await expect(page.getByRole('complementary', { name: 'Detalhes do processo' })).toBeVisible()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+  })
+})
+
+test('em tela menor (1280) o processo continua abrindo em janela', async ({ page }) => {
+  const nome = `Janela E2E ${Date.now()}`
+  await entrar(page)
+  await criarImportacao(page, nome)
+  await page.getByText(nome).click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.getByRole('complementary', { name: 'Detalhes do processo' })).toHaveCount(0)
+})

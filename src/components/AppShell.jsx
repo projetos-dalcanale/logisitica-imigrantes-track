@@ -4,6 +4,7 @@ import { Archive, House, Mail, Plus, ReceiptText, Route, Search } from 'lucide-r
 import { ExportIcon, ImportIcon } from './ui/icons'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../hooks/useTheme'
+import { usePainelLateral } from '../hooks/useMediaQuery'
 import { useProcesses } from '../hooks/useProcesses'
 import { useFretes } from '../hooks/useFretes'
 import { usePedagios } from '../hooks/usePedagios'
@@ -20,6 +21,7 @@ import { IconButton } from './ui/Tooltip'
 
 // Janelas carregadas só quando abertas (deixa a abertura do app mais rápida).
 const ProcessModal = lazy(() => import('./ProcessModal'))
+const ProcessPanel = lazy(() => import('./ProcessPanel'))
 const FreteModal = lazy(() => import('./FreteModal'))
 const PedagioModal = lazy(() => import('./PedagioModal'))
 const NewProcessSheet = lazy(() => import('./NewProcessSheet'))
@@ -53,6 +55,9 @@ const SUBTITULOS = {
   fretes: 'Valores e peculiaridades de cada cliente',
   pedagios: 'Rotas e valores de pedágio por número de eixos',
 }
+
+// Abas de lista: nelas, em tela larga, o detalhe do processo abre num painel.
+const ABAS_DE_LISTA = ['import', 'export', 'archive']
 
 const isTyping = (el) => el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))
 
@@ -89,6 +94,15 @@ export default function AppShell() {
   const isPedagios = activeTab === 'pedagios'
   const tab = TABS.find((t) => t.value === activeTab)
 
+  const painelLateral = usePainelLateral()
+  const painel = painelLateral && ABAS_DE_LISTA.includes(activeTab)
+  // Do botão "Status" da ficha: abre a aba Status já com este processo.
+  const enviarStatus = (id) => {
+    setStatusProc(id)
+    setStatusPedido((n) => n + 1)
+    setOpenId(null)
+    setActiveTab('status')
+  }
   const closeProcess = useCallback(() => setOpenId(null), [])
   // Sempre a versão mais recente do Firestore; some sozinho se for excluído.
   const openProc = processes.find((p) => p.id === openId)
@@ -183,6 +197,7 @@ export default function AppShell() {
         onOpenRegistries={() => setRegistriesOpen(true)}
       />
 
+      <div className="flex min-w-0 flex-1">
       <main className="relative flex min-w-0 flex-1 flex-col">
         {/* Barra de ferramentas: ganha material e título compacto ao rolar */}
         <header
@@ -239,7 +254,7 @@ export default function AppShell() {
                 ) : isPedagios ? (
                   <PedagioList pedagios={pedagios} loading={loadingPedagios} erro={erroPedagios} onOpen={setPedagioOpen} onNew={() => setPedagioOpen('new')} searchRef={searchRef} />
                 ) : (
-                  <ProcessList processes={processes} loading={activeTab === 'archive' ? loadingArquivo : loading} tab={activeTab} onOpen={setOpenId} searchRef={searchRef} onNew={novo} />
+                  <ProcessList processes={processes} loading={activeTab === 'archive' ? loadingArquivo : loading} tab={activeTab} onOpen={setOpenId} searchRef={searchRef} onNew={novo} selecionadoId={painel ? openId : null} />
                 )}
               </motion.div>
             </AnimatePresence>
@@ -247,23 +262,20 @@ export default function AppShell() {
         </div>
       </main>
 
+      {/* Tela larga: o detalhe do processo abre num painel ao lado da lista. */}
+      <Suspense fallback={null}>
+        <AnimatePresence>
+          {painel && openProc && <ProcessPanel key="painel" proc={openProc} processes={processes} onClose={closeProcess} onEnviarStatus={enviarStatus} />}
+        </AnimatePresence>
+      </Suspense>
+      </div>
+
       <BottomNav tabs={TABS_CELULAR} counts={counts} active={activeTab} onChange={setActiveTab} onNew={novo} />
 
       <Suspense fallback={null}>
         <AnimatePresence>
-          {openProc && (
-            <ProcessModal
-              key={openProc.id}
-              proc={openProc}
-              processes={processes}
-              onClose={closeProcess}
-              onEnviarStatus={(id) => {
-                setStatusProc(id)
-                setStatusPedido((n) => n + 1)
-                setOpenId(null)
-                setActiveTab('status')
-              }}
-            />
+          {openProc && !painel && (
+            <ProcessModal key={openProc.id} proc={openProc} processes={processes} onClose={closeProcess} onEnviarStatus={enviarStatus} />
           )}
         </AnimatePresence>
         <AnimatePresence>
