@@ -14,3 +14,7 @@ export function useMediaQuery(query) {
 }
 
 export const useIsPhone = () => useMediaQuery('(max-width: 639px)')
+
+// Tela larga o bastante para mostrar o detalhe do processo num painel ao lado
+// da lista (abaixo disso, continua abrindo em janela).
+export const usePainelLateral = () => useMediaQuery('(min-width: 1400px)')

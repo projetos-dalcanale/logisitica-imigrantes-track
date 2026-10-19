@@ -20,15 +20,14 @@ export default defineConfig(({ mode }) => {
     define: { 'import.meta.env.VITE_VERSAO': JSON.stringify((process.env.VERCEL_GIT_COMMIT_SHA || 'local').slice(0, 7)) },
     preview: { headers: cabecalhosProducao },
     build: {
-      // O Firebase sozinho passa de 500 kB; fica num arquivo próprio, em cache.
+      // O Firestore passa de 500 kB, mas só é baixado depois do login (AreaLogada).
       chunkSizeWarningLimit: 600,
       rolldownOptions: {
         output: {
-          // Bibliotecas grandes em arquivos separados: mudam pouco, então o
+          // React em arquivo separado: muda pouco, então o
           // navegador reaproveita do cache entre uma versão e outra do app.
           codeSplitting: {
             groups: [
-              { name: 'firebase', test: /node_modules[\\/](@firebase|firebase)[\\/]/ },
               { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
             ],
           },

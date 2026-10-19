@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { doc, onSnapshot, setDoc } from 'firebase/firestore'
-import { db } from '../lib/firebase'
+import { db } from '../lib/banco'
 import { useDialog } from './DialogContext'
 
 // CADASTROS COMPARTILHADOS com toda a equipe: cada categoria é um campo

@@ -2,16 +2,10 @@ import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
 import { CalendarClock, ChevronRight, Mail, Plus, ReceiptText, Route, TriangleAlert } from 'lucide-react'
 import { ExportIcon, ImportIcon } from './ui/icons'
-import { agendaDoDia, quandoRelativo } from '../lib/etapas'
-import { dadosDoProcesso } from '../lib/status'
-
-const pad = (n) => String(n).padStart(2, '0')
-const hora = (t) => {
-  const d = new Date(t)
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
-const MAX_POR_SECAO = 6
+import { agendaDoDia } from '../lib/etapas'
+import { useMediaQuery } from '../hooks/useMediaQuery'
+import Compromisso from './Compromisso'
+import SemanaChart from './SemanaChart'
 
 // Indicador clicável no topo (mesmo visual do resumo das listas).
 function Indicador({ icon: Icon, valor, rotulo, cor, onClick }) {
@@ -32,34 +26,7 @@ function Indicador({ icon: Icon, valor, rotulo, cor, onClick }) {
   )
 }
 
-// Uma linha da agenda: horário, o que acontece, cliente e contêiner.
-function Compromisso({ item, atrasado, onOpen, now }) {
-  const { cliente } = dadosDoProcesso(item.proc)
-  const Icon = item.proc.type === 'import' ? ImportIcon : ExportIcon
-  return (
-    <button
-      type="button"
-      onClick={() => onOpen(item.proc.id)}
-      className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-navy-700/40 active:bg-navy-700/70"
-    >
-      <span className={`w-[74px] shrink-0 text-[13px] font-semibold tabular-nums ${atrasado ? 'text-red-500' : 'text-ink'}`}>
-        {atrasado ? quandoRelativo(item.t, now) : hora(item.t)}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-[14.5px] font-medium text-ink">
-          {item.rotulo} <span className="font-normal text-slate-400">· {cliente || 'Sem nome'}</span>
-        </span>
-        <span className="flex items-center gap-1.5 truncate text-[12.5px] text-slate-500">
-          <Icon className="size-3.5 shrink-0" strokeWidth={2.2} aria-hidden="true" />
-          <span className="truncate font-mono">{item.numero || 'Sem contêiner'}</span>
-        </span>
-      </span>
-      <ChevronRight className="size-4 shrink-0 text-slate-500/70" strokeWidth={2.4} aria-hidden="true" />
-    </button>
-  )
-}
-
-function SecaoAgenda({ id, titulo, tom, itens, vazio, atrasado, onOpen, now }) {
+function SecaoAgenda({ id, titulo, tom, itens, vazio, atrasado, onOpen, now, max }) {
   if (!itens.length && !vazio) return null
   return (
     <section id={id} className="scroll-mt-20">
@@ -69,11 +36,11 @@ function SecaoAgenda({ id, titulo, tom, itens, vazio, atrasado, onOpen, now }) {
       </div>
       {itens.length ? (
         <div className="card divide-y divide-slate-700/80 overflow-hidden">
-          {itens.slice(0, MAX_POR_SECAO).map((item, i) => (
+          {itens.slice(0, max).map((item, i) => (
             <Compromisso key={`${item.proc.id}-${item.rotulo}-${item.numero}-${i}`} item={item} atrasado={atrasado} onOpen={onOpen} now={now} />
           ))}
-          {itens.length > MAX_POR_SECAO && (
-            <p className="px-4 py-2 text-[12.5px] text-slate-500">e mais {itens.length - MAX_POR_SECAO} — veja nas listas de Importações e Exportações</p>
+          {itens.length > max && (
+            <p className="px-4 py-2 text-[12.5px] text-slate-500">e mais {itens.length - max} — veja nas listas de Importações e Exportações</p>
           )}
         </div>
       ) : (
@@ -103,7 +70,8 @@ function Atalho({ icon: Icon, rotulo, descricao, onClick }) {
 }
 
 // PÁGINA INICIAL: visão do dia — quanto está em andamento, o que atrasou,
-// o que acontece hoje e amanhã, e atalhos para o que mais se usa.
+// o que acontece hoje e amanhã, a semana e atalhos para o que mais se usa.
+// Em tela larga (xl) são três colunas e tudo cabe sem rolar a página.
 export default function Inicio({ processes, loading, onOpen, onIr, onNovo }) {
   // Relógio da agenda: atualiza a cada minuto com a página aberta.
   const [now, setNow] = useState(() => Date.now())
@@ -111,6 +79,10 @@ export default function Inicio({ processes, loading, onOpen, onIr, onNovo }) {
     const id = setInterval(() => setNow(Date.now()), 60_000)
     return () => clearInterval(id)
   }, [])
+  // Em tela larga a agenda mostra menos linhas por seção (a semana completa o resto).
+  const telaLarga = useMediaQuery('(min-width: 1280px)')
+  const telaAlta = useMediaQuery('(min-height: 1000px)')
+  const maxPorSecao = telaLarga ? (telaAlta ? 3 : 2) : 6
 
   const ativos = processes.filter((p) => p.status === 'active')
   const agenda = agendaDoDia(ativos, now)
@@ -127,7 +99,7 @@ export default function Inicio({ processes, loading, onOpen, onIr, onNovo }) {
   }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-7">
+    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-7 xl:space-y-6">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Indicador icon={ImportIcon} valor={ativos.filter((p) => p.type === 'import').length} rotulo="Importações em andamento" cor="bg-blue-500" onClick={() => onIr('import')} />
         <Indicador icon={ExportIcon} valor={ativos.filter((p) => p.type === 'export').length} rotulo="Exportações em andamento" cor="bg-blue-500" onClick={() => onIr('export')} />
@@ -135,14 +107,18 @@ export default function Inicio({ processes, loading, onOpen, onIr, onNovo }) {
         <Indicador icon={CalendarClock} valor={agenda.hoje.length} rotulo="Compromissos hoje" cor="bg-yellow-500" onClick={() => rolarPara('agenda-hoje')} />
       </div>
 
-      <div className="grid grid-cols-1 gap-7 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <div className="min-w-0 space-y-6">
-          <SecaoAgenda id="agenda-atrasados" titulo="Atrasados" tom="text-red-500" itens={agenda.atrasados} atrasado onOpen={onOpen} now={now} />
-          <SecaoAgenda id="agenda-hoje" titulo="Hoje" tom="text-ink" itens={agenda.hoje} vazio="Nada agendado para hoje." onOpen={onOpen} now={now} />
-          <SecaoAgenda id="agenda-amanha" titulo="Amanhã" tom="text-ink" itens={agenda.amanha} vazio="Nada agendado para amanhã." onOpen={onOpen} now={now} />
+      <div className="grid grid-cols-1 gap-7 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] xl:grid-cols-[minmax(0,5fr)_minmax(0,4fr)_minmax(0,3fr)] xl:gap-6">
+        <div className="min-w-0 space-y-6 xl:space-y-4 lg:row-span-2 xl:row-span-1">
+          <SecaoAgenda id="agenda-atrasados" titulo="Atrasados" tom="text-red-500" itens={agenda.atrasados} atrasado onOpen={onOpen} now={now} max={maxPorSecao} />
+          <SecaoAgenda id="agenda-hoje" titulo="Hoje" tom="text-ink" itens={agenda.hoje} vazio="Nada agendado para hoje." onOpen={onOpen} now={now} max={maxPorSecao} />
+          <SecaoAgenda id="agenda-amanha" titulo="Amanhã" tom="text-ink" itens={agenda.amanha} vazio="Nada agendado para amanhã." onOpen={onOpen} now={now} max={maxPorSecao} />
         </div>
 
-        <section className="min-w-0">
+        <div className="min-w-0 xl:col-start-2 xl:row-start-1">
+          <SemanaChart processes={processes} now={now} onOpen={onOpen} />
+        </div>
+
+        <section className="min-w-0 xl:col-start-3 xl:row-start-1">
           <div className="mb-1.5 px-1">
             <h2 className="font-display text-[17px] font-semibold tracking-[-0.015em] text-ink">Atalhos</h2>
           </div>

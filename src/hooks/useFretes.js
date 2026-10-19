@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { collection, onSnapshot } from 'firebase/firestore'
-import { db } from '../lib/firebase'
+import { db } from '../lib/banco'
 
 // Tabela de fretes de todos os clientes, em tempo real e em ordem alfabética.
 export function useFretes() {

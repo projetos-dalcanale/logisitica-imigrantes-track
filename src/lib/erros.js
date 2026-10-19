@@ -2,8 +2,7 @@
 // "erros" do Firestore (Console do Firebase -> Firestore -> erros). Ninguém
 // lê pelo app; a regra só permite criar. Limitado por sessão para um erro
 // em loop não lotar o banco.
-import { addDoc, collection } from 'firebase/firestore'
-import { auth, db } from './firebase'
+import { auth } from './firebase'
 
 const MAX_POR_SESSAO = 10
 const corta = (texto, max) => String(texto ?? '').slice(0, max)
@@ -38,7 +37,10 @@ export const registrarErro = (erro, origem, extra) => {
     const chave = `${origem}|${registro.message}`
     if (deveIgnorar(registro.message) || enviados.has(chave)) return
     enviados.add(chave)
-    addDoc(collection(db, 'erros'), { ...registro, userId: usuario.uid, email: corta(usuario.email, 200) }).catch(() => {})
+    // O Firestore é carregado só agora: erros são raros e não valem peso na abertura.
+    Promise.all([import('firebase/firestore'), import('./banco')])
+      .then(([{ addDoc, collection }, { db }]) => addDoc(collection(db, 'erros'), { ...registro, userId: usuario.uid, email: corta(usuario.email, 200) }))
+      .catch(() => {})
   } catch {
     /* o registro de erros nunca pode causar outro erro */
   }

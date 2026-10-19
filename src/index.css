@@ -56,8 +56,8 @@
   --navy-700: 233 233 238;
   --slate-200: 29 29 31;
   --slate-300: 44 44 46;
-  --slate-400: 110 110 115;
-  --slate-500: 117 117 122; /* texto terciário: contraste de 4,5:1 no branco (acessibilidade) */
+  --slate-400: 99 99 104;
+  --slate-500: 110 110 115; /* texto terciário: 4,5:1 também sobre o fundo cinza da janela (contraste.test.js) */
   --slate-600: 210 210 215;
   --slate-700: 229 229 234;
   --blue-300: 150 0 10;
@@ -68,7 +68,7 @@
   --blue-900: 120 0 8;
   --red-400: 215 0 21;
   --red-500: 215 0 21;
-  --green: 36 138 61;
+  --green: 33 130 57; /* 4,5:1 sobre cartões brancos */
   --orange: 178 80 0;
   --ink: 29 29 31;
   --material: 246 246 248;
@@ -95,9 +95,13 @@
   --red-500: 255 69 58;
   --green: 48 209 88;
   --orange: 255 159 10;
-  --ink: 245 245 247;
+  --ink: 238 238 242; /* um pouco abaixo do branco: menos brilho em monitor grande */
   --material: 30 30 32;
+  /* No escuro sombra preta some no fundo preto: o anel claro marca a borda e a
+     sombra só aparece sobre outros cartões (janelas, painel, prévia). */
   --shadow-soft: 0 0 0 0.5px rgb(255 255 255 / .06);
+  --shadow-lift: 0 0 0 0.5px rgb(255 255 255 / .12), 0 6px 18px rgb(0 0 0 / .55);
+  --shadow-float: 0 0 0 0.5px rgb(255 255 255 / .14), 0 16px 40px rgb(0 0 0 / .6), 0 40px 100px rgb(0 0 0 / .7);
 }
 
 /* COR DE DESTAQUE — data-accent="..." na tag <html> (escolhida no menu da conta).
@@ -399,4 +403,14 @@ button:focus-visible, a:focus-visible, [role="checkbox"]:focus-visible, [role="t
 }
 @media (prefers-reduced-motion: reduce) {
   .splash-bar::after { animation: none; width: 100%; opacity: 0.5; }
+}
+
+/* Prévia do processo (cartão que aparece ao passar o mouse na tabela). */
+.previa-card { animation: previa-in .14s ease-out; }
+@keyframes previa-in {
+  from { opacity: 0; transform: translateY(3px) scale(.985); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .previa-card { animation: none; }
 }

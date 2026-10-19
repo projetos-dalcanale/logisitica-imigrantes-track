@@ -1,5 +1,7 @@
-import { distintos, ehCargaSolta, formatarDataHora, identificacaoUnidade, transportePorContainer } from './processos'
 import { montarHtmlProcesso } from './pdfProcesso'
+import { copiarTabela } from './copiarTabela'
+import { csvCell, tabelaProcessos } from './tabelaExportacao'
+import { gerarXlsx } from './xlsx'
 
 // EXPORTAR PROCESSO EM PDF: a ficha com a identidade da empresa
 // (pdfProcesso.js) vai para a área #print-area; o navegador abre a impressão
@@ -9,66 +11,35 @@ export const exportarProcessoPDF = (proc) => {
   window.print()
 }
 
-// Célula de CSV: ";" como separador (padrão do Excel em português), com
-// aspas quando o texto tiver ponto e vírgula, aspas ou quebra de linha.
-const csvCell = (valor) => {
-  const texto = valor === null || valor === undefined ? '' : String(valor)
-  return /[;"\n]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto
-}
+const NOMES_ABA = { archive: 'arquivados', import: 'importacoes', export: 'exportacoes' }
+const nomeAba = (tab) => NOMES_ABA[tab] || 'exportacoes'
+const dataDeHoje = () => new Date().toISOString().slice(0, 10)
 
-// EXPORTAÇÃO EM LOTE (CSV) da lista visível (aba + busca atuais).
-export const exportarProcessosCSV = (lista, tab) => {
-  const cabecalho = [
-    'Tipo', 'Status', 'Armador', 'Motorista', 'Placas',
-    'Importador/Exportador', 'Documento/Booking', 'Referência', 'Navio',
-    'Terminal de Carregamento', 'Terminal de Vazio', 'Destino do Contêiner',
-    'Contêineres', 'Qtd. Contêineres', 'Observações', 'Criado em',
-  ]
-
-  const linhas = lista.map((proc) => {
-    const isImport = proc.type === 'import'
-    const solta = ehCargaSolta(proc)
-    const documento = isImport ? [proc.documentoTipo, proc.documentoNumero].filter(Boolean).join(' ') : proc.booking || ''
-    const containersValidos = (proc.containers || []).filter((c) => c.numero)
-    const transporte = transportePorContainer(proc)
-    return [
-      isImport ? 'Importação' : 'Exportação',
-      proc.status === 'archived' ? 'Arquivado' : 'Ativo',
-      proc.armador || '',
-      distintos(transporte.map((t) => t.motorista)).join(' | '),
-      distintos(transporte.map((t) => t.placas)).join(' | '),
-      isImport ? proc.importador || '' : proc.exportador || '',
-      documento,
-      proc.referencia || '',
-      proc.navio || '',
-      isImport ? proc.termCarga || '' : '',
-      isImport && proc.finalizacaoVazio !== 'baixa' ? proc.termVazio || '' : '',
-      solta ? 'Carga solta' : isImport ? (proc.finalizacaoVazio === 'baixa' ? 'Baixa de Contêiner' : 'Devolução de Vazio') : '',
-      solta ? identificacaoUnidade(proc) : (proc.containers || [])
-        .map((c, i) => {
-          if (!c.numero) return null
-          const base = c.tipo ? `${c.numero} (${c.tipo})` : c.numero
-          // Com vários contêineres, mostra o motorista de cada um.
-          const m = transporte.length > 1 && transporte[i].motorista
-          return m ? `${base} - ${m}` : base
-        })
-        .filter(Boolean)
-        .join(' | '),
-      solta ? 0 : containersValidos.length,
-      proc.observacoes || '',
-      formatarDataHora(proc.createdAt),
-    ].map(csvCell).join(';')
-  })
-
-  // BOM no início faz o Excel em português reconhecer UTF-8 (acentos).
-  const conteudo = '﻿' + [cabecalho.join(';'), ...linhas].join('\r\n')
-  const url = URL.createObjectURL(new Blob([conteudo], { type: 'text/csv;charset=utf-8;' }))
-  const nomeAba = tab === 'archive' ? 'arquivados' : tab === 'import' ? 'importacoes' : 'exportacoes'
+// Baixa um arquivo gerado no navegador.
+const baixar = (blob, nome) => {
+  const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `logitrack-${nomeAba}-${new Date().toISOString().slice(0, 10)}.csv`
+  a.download = nome
   document.body.appendChild(a)
   a.click()
   a.remove()
   URL.revokeObjectURL(url)
 }
+
+// EXPORTAÇÃO EM LOTE da lista (ou da seleção): as três saídas usam a mesma
+// tabela (lib/tabelaExportacao.js).
+export const exportarProcessosCSV = (lista, tab) => {
+  const { cabecalho, linhas } = tabelaProcessos(lista)
+  // BOM no início faz o Excel em português reconhecer UTF-8 (acentos).
+  const conteudo = '﻿' + [cabecalho.map(csvCell).join(';'), ...linhas.map((l) => l.map(csvCell).join(';'))].join('\r\n')
+  baixar(new Blob([conteudo], { type: 'text/csv;charset=utf-8;' }), `logitrack-${nomeAba(tab)}-${dataDeHoje()}.csv`)
+}
+
+export const exportarProcessosXlsx = async (lista, tab) => {
+  const blob = await gerarXlsx(tabelaProcessos(lista), { nomePlanilha: nomeAba(tab) })
+  baixar(blob, `logitrack-${nomeAba(tab)}-${dataDeHoje()}.xlsx`)
+}
+
+// Tabela na área de transferência, para colar no e-mail (Outlook) ou no Excel.
+export const copiarProcessos = (lista) => copiarTabela(tabelaProcessos(lista))

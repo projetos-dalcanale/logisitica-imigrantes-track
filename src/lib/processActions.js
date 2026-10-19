@@ -1,5 +1,5 @@
 import { addDoc, collection, deleteDoc, doc, updateDoc } from 'firebase/firestore'
-import { db } from './firebase'
+import { db } from './banco'
 import { fixarCargaEntregue, novoChecklistImport } from './processos'
 import { trackSave } from './saveStatus'
 

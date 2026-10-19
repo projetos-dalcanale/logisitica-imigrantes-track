@@ -72,6 +72,12 @@ export const etapasProcesso = (proc) => {
   return passos(proc).map((p) => ({ id: p.id, label: p.label, feitos: cts.filter(p.feita).length, total: cts.length }))
 }
 
+// Etapas de UM contêiner: quantas já foram feitas e quantas existem.
+export const etapasDoContainer = (proc, ct) => {
+  const lista = passos(proc)
+  return { feitas: lista.filter((p) => p.feita(ct)).length, total: lista.length }
+}
+
 const sufixoContainers = (pendentes, total) => (total > 1 && pendentes < total ? ` · falta ${pendentes} de ${total}` : '')
 
 // Pronto para arquivar: todas as etapas marcadas em todos os contêineres.
@@ -182,4 +188,11 @@ export const agendaDoDia = (processes, now = Date.now()) => {
   }
   const porHora = (a, b) => a.t - b.t
   return { atrasados: atrasados.sort(porHora), hoje: deHoje.sort(porHora), amanha: deAmanha.sort(porHora) }
+}
+
+// Próximo prazo do processo: o horário do compromisso pendente mais cedo
+// (um atrasado também conta). null se não há nenhum compromisso pendente.
+export const proximoPrazo = (proc) => {
+  const pendentes = compromissos(proc).filter((c) => c.pendente).map((c) => c.t)
+  return pendentes.length ? Math.min(...pendentes) : null
 }

@@ -4,6 +4,8 @@ import { Archive, House, Mail, Plus, ReceiptText, Route, Search } from 'lucide-r
 import { ExportIcon, ImportIcon } from './ui/icons'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../hooks/useTheme'
+import { useMediaQuery, usePainelLateral } from '../hooks/useMediaQuery'
+import { usePreferencia } from '../hooks/usePreferencia'
 import { useProcesses } from '../hooks/useProcesses'
 import { useFretes } from '../hooks/useFretes'
 import { usePedagios } from '../hooks/usePedagios'
@@ -20,6 +22,7 @@ import { IconButton } from './ui/Tooltip'
 
 // Janelas carregadas só quando abertas (deixa a abertura do app mais rápida).
 const ProcessModal = lazy(() => import('./ProcessModal'))
+const ProcessPanel = lazy(() => import('./ProcessPanel'))
 const FreteModal = lazy(() => import('./FreteModal'))
 const PedagioModal = lazy(() => import('./PedagioModal'))
 const NewProcessSheet = lazy(() => import('./NewProcessSheet'))
@@ -54,6 +57,9 @@ const SUBTITULOS = {
   pedagios: 'Rotas e valores de pedágio por número de eixos',
 }
 
+// Abas de lista: nelas, em tela larga, o detalhe do processo abre num painel.
+const ABAS_DE_LISTA = ['import', 'export', 'archive']
+
 const isTyping = (el) => el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))
 
 // Tela logada. Desktop: barra lateral (navegação) + área principal com
@@ -63,7 +69,7 @@ export default function AppShell() {
   // Na saudação, só o primeiro nome, e só se a pessoa escolheu um (não o e-mail).
   const primeiroNome = nome.split(' ')[0]
   const { isDark, toggleTheme, accent, setAccent } = useTheme()
-  const [activeTab, setActiveTab] = useState('inicio')
+  const [activeTab, definirAba] = useState('inicio')
   // Saudação e data do Início (atualizam a cada 5 min com o app aberto).
   const [agora, setAgora] = useState(() => new Date())
   useEffect(() => {
@@ -76,6 +82,13 @@ export default function AppShell() {
   const { fretes, loading: loadingFretes, erro: erroFretes } = useFretes()
   const { pedagios, loading: loadingPedagios, erro: erroPedagios } = usePedagios()
   const [openId, setOpenId] = useState(null)
+  // Trocar de aba com o painel aberto fecha o painel; senão o mesmo processo
+  // reapareceria em janela na aba nova (Início, por exemplo).
+  const painelAbertoRef = useRef(false)
+  const setActiveTab = useCallback((aba) => {
+    if (painelAbertoRef.current) setOpenId(null)
+    definirAba(aba)
+  }, [])
   const [statusProc, setStatusProc] = useState(null) // processo vindo do botão "Status" da ficha
   const [statusPedido, setStatusPedido] = useState(0)
   const [freteOpen, setFreteOpen] = useState(null) // null | 'new' | id do frete
@@ -89,6 +102,22 @@ export default function AppShell() {
   const isPedagios = activeTab === 'pedagios'
   const tab = TABS.find((t) => t.value === activeTab)
 
+  // Lista em tabela: só no PC (abaixo de lg sempre cartões); a escolha fica guardada.
+  const [modoLista, setModoLista] = usePreferencia('logitrack-lista-modo', 'cartoes')
+  const telaLarga = useMediaQuery('(min-width: 1024px)')
+  const tabela = modoLista === 'tabela' && telaLarga && ABAS_DE_LISTA.includes(activeTab)
+  const painelLateral = usePainelLateral()
+  const painel = painelLateral && ABAS_DE_LISTA.includes(activeTab)
+  // Do botão "Status" da ficha: abre a aba Status já com este processo.
+  const enviarStatus = (id) => {
+    setStatusProc(id)
+    setStatusPedido((n) => n + 1)
+    setOpenId(null)
+    setActiveTab('status')
+  }
+  useEffect(() => {
+    painelAbertoRef.current = painel && !!openId
+  }, [painel, openId])
   const closeProcess = useCallback(() => setOpenId(null), [])
   // Sempre a versão mais recente do Firestore; some sozinho se for excluído.
   const openProc = processes.find((p) => p.id === openId)
@@ -136,7 +165,7 @@ export default function AppShell() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [novo])
+  }, [novo, setActiveTab])
 
   const onScroll = (e) => {
     const s = e.currentTarget.scrollTop > 44
@@ -183,6 +212,7 @@ export default function AppShell() {
         onOpenRegistries={() => setRegistriesOpen(true)}
       />
 
+      <div className="flex min-w-0 flex-1">
       <main className="relative flex min-w-0 flex-1 flex-col">
         {/* Barra de ferramentas: ganha material e título compacto ao rolar */}
         <header
@@ -211,7 +241,7 @@ export default function AppShell() {
         </header>
 
         <div ref={scrollRef} id="conteudo" tabIndex={-1} onScroll={onScroll} className="custom-scrollbar flex-1 overflow-y-auto outline-none">
-          <div className="mx-auto w-full max-w-5xl px-4 pb-32 pt-[calc(env(safe-area-inset-top)+3.5rem)] sm:px-6 lg:px-10 lg:pb-12 lg:pt-16">
+          <div className={`mx-auto w-full ${tabela || activeTab === 'inicio' ? 'max-w-[1600px]' : 'max-w-5xl'} px-4 pb-32 pt-[calc(env(safe-area-inset-top)+3.5rem)] sm:px-6 lg:px-10 lg:pb-12 lg:pt-16`}>
             <div className="mb-6">
               <h1 className="font-display text-[32px] font-bold leading-tight tracking-[-0.025em] text-ink lg:text-[34px]">
                 {activeTab === 'inicio' ? (primeiroNome ? `${saudacao(agora)}, ${primeiroNome}` : saudacao(agora)) : tab.label}
@@ -239,7 +269,7 @@ export default function AppShell() {
                 ) : isPedagios ? (
                   <PedagioList pedagios={pedagios} loading={loadingPedagios} erro={erroPedagios} onOpen={setPedagioOpen} onNew={() => setPedagioOpen('new')} searchRef={searchRef} />
                 ) : (
-                  <ProcessList processes={processes} loading={activeTab === 'archive' ? loadingArquivo : loading} tab={activeTab} onOpen={setOpenId} searchRef={searchRef} onNew={novo} />
+                  <ProcessList processes={processes} loading={activeTab === 'archive' ? loadingArquivo : loading} tab={activeTab} onOpen={setOpenId} searchRef={searchRef} onNew={novo} selecionadoId={painel ? openId : null} tabela={tabela} modo={modoLista} onModo={setModoLista} />
                 )}
               </motion.div>
             </AnimatePresence>
@@ -247,23 +277,20 @@ export default function AppShell() {
         </div>
       </main>
 
+      {/* Tela larga: o detalhe do processo abre num painel ao lado da lista. */}
+      <Suspense fallback={null}>
+        <AnimatePresence>
+          {painel && openProc && <ProcessPanel key="painel" proc={openProc} processes={processes} onClose={closeProcess} onEnviarStatus={enviarStatus} />}
+        </AnimatePresence>
+      </Suspense>
+      </div>
+
       <BottomNav tabs={TABS_CELULAR} counts={counts} active={activeTab} onChange={setActiveTab} onNew={novo} />
 
       <Suspense fallback={null}>
         <AnimatePresence>
-          {openProc && (
-            <ProcessModal
-              key={openProc.id}
-              proc={openProc}
-              processes={processes}
-              onClose={closeProcess}
-              onEnviarStatus={(id) => {
-                setStatusProc(id)
-                setStatusPedido((n) => n + 1)
-                setOpenId(null)
-                setActiveTab('status')
-              }}
-            />
+          {openProc && !painel && (
+            <ProcessModal key={openProc.id} proc={openProc} processes={processes} onClose={closeProcess} onEnviarStatus={enviarStatus} />
           )}
         </AnimatePresence>
         <AnimatePresence>
