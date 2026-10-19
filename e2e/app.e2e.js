@@ -46,7 +46,7 @@ test('entra e vê os ativos; os arquivados carregam ao abrir a aba', async ({ pa
 
 test('cria um processo de importação', async ({ page }) => {
   await entrar(page)
-  await page.getByRole('button', { name: 'Novo processo' }).click()
+  await page.getByRole('button', { name: 'Novo processo', exact: true }).click()
   await page.locator('#np-importador').fill('Nova Importação E2E')
   await page.getByRole('button', { name: 'Obrigatório' }).click()
   await page.getByRole('option', { name: 'MSC', exact: true }).click()
@@ -56,7 +56,7 @@ test('cria um processo de importação', async ({ page }) => {
 
 test('cria uma importação de carga solta', async ({ page }) => {
   await entrar(page)
-  await page.getByRole('button', { name: 'Novo processo' }).click()
+  await page.getByRole('button', { name: 'Novo processo', exact: true }).click()
   await page.locator('#np-importador').fill('Carga Solta E2E')
   await page.getByRole('radio', { name: 'Carga solta' }).click()
   // Sem contêiner, sem destino do vazio: só a descrição da carga.
