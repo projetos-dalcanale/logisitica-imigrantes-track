@@ -28,6 +28,19 @@ describe('preferências de tela', () => {
     expect(lerPreferencia('x', 'padrao', armazem({ x: '{quebrado' }))).toBe('padrao')
   })
 
+  it('JSON válido mas de outro tipo (null, texto, lista) volta ao padrão em vez de derrubar a tela', () => {
+    expect(lerPreferencia('x', {}, armazem({ x: 'null' }))).toEqual({})
+    expect(lerPreferencia('x', {}, armazem({ x: '"texto"' }))).toEqual({})
+    expect(lerPreferencia('x', {}, armazem({ x: '[]' }))).toEqual({})
+    expect(lerPreferencia('x', 'cartoes', armazem({ x: '5' }))).toBe('cartoes')
+    expect(lerPreferencia('x', 'cartoes', armazem({ x: 'null' }))).toBe('cartoes')
+  })
+
+  it('valor do mesmo tipo do padrão continua valendo', () => {
+    expect(lerPreferencia('x', {}, armazem({ x: '{"a":false}' }))).toEqual({ a: false })
+    expect(lerPreferencia('x', 'cartoes', armazem({ x: '"tabela"' }))).toBe('tabela')
+  })
+
   it('storage ausente ou que lança não derruba a tela', () => {
     const quebrado = { getItem: () => { throw new Error('bloqueado') }, setItem: () => { throw new Error('bloqueado') } }
     expect(lerPreferencia('x', 'padrao', quebrado)).toBe('padrao')

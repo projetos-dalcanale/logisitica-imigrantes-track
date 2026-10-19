@@ -9,10 +9,20 @@ const armazemPadrao = () => {
   }
 }
 
+// Valor guardado só vale se for do mesmo tipo do padrão (objeto, texto...): um
+// JSON válido mas de outro tipo ("null", uma lista) derrubaria quem lê.
+const mesmoTipo = (valor, padrao) => {
+  if (valor === null || padrao === null) return valor === padrao
+  if (Array.isArray(valor) !== Array.isArray(padrao)) return false
+  return typeof valor === typeof padrao
+}
+
 export const lerPreferencia = (chave, padrao, storage = armazemPadrao()) => {
   try {
     const bruto = storage?.getItem(chave)
-    return bruto === null || bruto === undefined ? padrao : JSON.parse(bruto)
+    if (bruto === null || bruto === undefined) return padrao
+    const valor = JSON.parse(bruto)
+    return mesmoTipo(valor, padrao) ? valor : padrao
   } catch {
     return padrao
   }

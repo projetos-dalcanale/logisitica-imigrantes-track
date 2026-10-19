@@ -69,7 +69,7 @@ export default function AppShell() {
   // Na saudação, só o primeiro nome, e só se a pessoa escolheu um (não o e-mail).
   const primeiroNome = nome.split(' ')[0]
   const { isDark, toggleTheme, accent, setAccent } = useTheme()
-  const [activeTab, setActiveTab] = useState('inicio')
+  const [activeTab, definirAba] = useState('inicio')
   // Saudação e data do Início (atualizam a cada 5 min com o app aberto).
   const [agora, setAgora] = useState(() => new Date())
   useEffect(() => {
@@ -82,6 +82,13 @@ export default function AppShell() {
   const { fretes, loading: loadingFretes, erro: erroFretes } = useFretes()
   const { pedagios, loading: loadingPedagios, erro: erroPedagios } = usePedagios()
   const [openId, setOpenId] = useState(null)
+  // Trocar de aba com o painel aberto fecha o painel; senão o mesmo processo
+  // reapareceria em janela na aba nova (Início, por exemplo).
+  const painelAbertoRef = useRef(false)
+  const setActiveTab = useCallback((aba) => {
+    if (painelAbertoRef.current) setOpenId(null)
+    definirAba(aba)
+  }, [])
   const [statusProc, setStatusProc] = useState(null) // processo vindo do botão "Status" da ficha
   const [statusPedido, setStatusPedido] = useState(0)
   const [freteOpen, setFreteOpen] = useState(null) // null | 'new' | id do frete
@@ -108,6 +115,9 @@ export default function AppShell() {
     setOpenId(null)
     setActiveTab('status')
   }
+  useEffect(() => {
+    painelAbertoRef.current = painel && !!openId
+  }, [painel, openId])
   const closeProcess = useCallback(() => setOpenId(null), [])
   // Sempre a versão mais recente do Firestore; some sozinho se for excluído.
   const openProc = processes.find((p) => p.id === openId)
@@ -155,7 +165,7 @@ export default function AppShell() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [novo])
+  }, [novo, setActiveTab])
 
   const onScroll = (e) => {
     const s = e.currentTarget.scrollTop > 44

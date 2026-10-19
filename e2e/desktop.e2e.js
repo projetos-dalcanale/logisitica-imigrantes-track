@@ -213,3 +213,27 @@ test.describe('exportar a lista', () => {
     expect(texto.split('\n')[0]).toMatch(/^Tipo\tStatus\tArmador/)
   })
 })
+
+test.describe('painel e troca de aba', () => {
+  test.use({ viewport: { width: 1600, height: 900 } })
+
+  test('trocar de aba com o painel aberto fecha o painel (não faz a janela aparecer)', async ({ page }) => {
+    const nome = `Painel aba ${Date.now()}`
+    await entrar(page)
+    await criarImportacao(page, nome)
+    await page.getByText(nome).click()
+    await expect(page.getByRole('complementary', { name: 'Detalhes do processo' })).toBeVisible()
+
+    await irPara(page, 'Exportações')
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(page.getByRole('complementary', { name: 'Detalhes do processo' })).toHaveCount(0)
+
+    // Pelo teclado também (tecla H = Início).
+    await irPara(page, 'Importações')
+    await page.getByText(nome).click()
+    await expect(page.getByRole('complementary', { name: 'Detalhes do processo' })).toBeVisible()
+    await page.keyboard.press('h')
+    await expect(page.getByRole('heading', { level: 1, name: /Bom dia|Boa tarde|Boa noite/ })).toBeVisible()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+  })
+})

@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { montarPlanilha, nomeDaPlanilha } from './xlsx'
+import { comTempoLimite, montarPlanilha, nomeDaPlanilha } from './xlsx'
+
+describe('tempo limite', () => {
+  it('rejeita se a geração nunca termina (Worker bloqueado não pode deixar o app esperando)', async () => {
+    await expect(comTempoLimite(new Promise(() => {}), 20)).rejects.toThrow(/demorou/i)
+  })
+
+  it('devolve o resultado quando termina a tempo', async () => {
+    await expect(comTempoLimite(Promise.resolve(42), 1000)).resolves.toBe(42)
+  })
+
+  it('repassa o erro da própria geração', async () => {
+    await expect(comTempoLimite(Promise.reject(new Error('falhou')), 1000)).rejects.toThrow('falhou')
+  })
+})
 
 const tabela = {
   cabecalho: ['Cliente', 'Qtd.'],
