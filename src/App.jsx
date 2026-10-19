@@ -1,11 +1,12 @@
-import { useCallback, useState } from 'react'
+import { Suspense, lazy, useCallback, useState } from 'react'
 import { useReducedMotion } from 'motion/react'
 import { useAuth } from './contexts/AuthContext'
 import LoginScreen from './components/LoginScreen'
 import LoginIntro from './components/LoginIntro'
-import AppShell from './components/AppShell'
 import Splash from './components/Splash'
-import { RegistriesProvider } from './contexts/RegistriesContext'
+
+// A área logada (e o Firestore com ela) só é baixada depois do login.
+const AreaLogada = lazy(() => import('./AreaLogada'))
 
 export default function App() {
   const { user, loading } = useAuth()
@@ -25,10 +26,12 @@ export default function App() {
 
   // Os cadastros compartilhados só podem ser lidos por quem está logado.
   return user ? (
-    <RegistriesProvider>
-      <AppShell />
+    <>
+      <Suspense fallback={<Splash />}>
+        <AreaLogada />
+      </Suspense>
       {intro && <LoginIntro onFim={fimIntro} />}
-    </RegistriesProvider>
+    </>
   ) : (
     <LoginScreen />
   )

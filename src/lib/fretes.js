@@ -1,5 +1,5 @@
 import { addDoc, collection, deleteDoc, doc, updateDoc } from 'firebase/firestore'
-import { db } from './firebase'
+import { db } from './banco'
 import { trackSave } from './saveStatus'
 import { formatarNumero } from './numeros'
 

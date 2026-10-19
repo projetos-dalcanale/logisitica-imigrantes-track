@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { collection, onSnapshot, query, where } from 'firebase/firestore'
-import { db } from '../lib/firebase'
+import { db } from '../lib/banco'
 
 // Escuta os processos do usuário com um status, em tempo real.
 function useStatus(uid, status, ativo) {
