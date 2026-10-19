@@ -163,3 +163,19 @@ test.describe('lista em tabela', () => {
     await expect(page.getByRole('radio', { name: 'Tabela' })).toHaveAttribute('aria-checked', 'true')
   })
 })
+
+test.describe('Início em tela grande', () => {
+  test.use({ viewport: { width: 1920, height: 1080 } })
+
+  test('início: mostra a semana, cada dia é um botão e a página cabe sem rolar', async ({ page }) => {
+    await entrar(page)
+    await expect(page.getByRole('heading', { name: 'Próximos 7 dias' })).toBeVisible()
+    // 7 dias, cada um com o total de compromissos no nome.
+    const dias = page.getByRole('button', { name: /^\S{3} \d{2}\/\d{2}: \d+ compromissos?$/ })
+    await expect(dias).toHaveCount(7)
+    await expect(dias.first()).toHaveAttribute('aria-pressed', 'true')
+
+    const rola = await page.locator('#conteudo').evaluate((el) => el.scrollHeight > el.clientHeight)
+    expect(rola).toBe(false)
+  })
+})

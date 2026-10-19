@@ -231,7 +231,7 @@ export default function AppShell() {
         </header>
 
         <div ref={scrollRef} id="conteudo" tabIndex={-1} onScroll={onScroll} className="custom-scrollbar flex-1 overflow-y-auto outline-none">
-          <div className={`mx-auto w-full ${tabela ? 'max-w-[1600px]' : 'max-w-5xl'} px-4 pb-32 pt-[calc(env(safe-area-inset-top)+3.5rem)] sm:px-6 lg:px-10 lg:pb-12 lg:pt-16`}>
+          <div className={`mx-auto w-full ${tabela || activeTab === 'inicio' ? 'max-w-[1600px]' : 'max-w-5xl'} px-4 pb-32 pt-[calc(env(safe-area-inset-top)+3.5rem)] sm:px-6 lg:px-10 lg:pb-12 lg:pt-16`}>
             <div className="mb-6">
               <h1 className="font-display text-[32px] font-bold leading-tight tracking-[-0.025em] text-ink lg:text-[34px]">
                 {activeTab === 'inicio' ? (primeiroNome ? `${saudacao(agora)}, ${primeiroNome}` : saudacao(agora)) : tab.label}
