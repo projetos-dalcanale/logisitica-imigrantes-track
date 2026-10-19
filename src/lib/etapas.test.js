@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { agendaDoDia, agruparPorUrgencia, compromissos, etapasDoContainer, etapasProcesso, grupoUrgencia, proximaAcao, quandoRelativo } from './etapas'
+import { agendaDoDia, agruparPorUrgencia, compromissos, etapasDoContainer, etapasProcesso, grupoUrgencia, proximaAcao, proximoPrazo, quandoRelativo } from './etapas'
 import { novoChecklistImport } from './processos'
 
 // Sexta-feira, 2 out 2026, 10:00 (horário local).
@@ -144,5 +144,29 @@ describe('etapas de um contêiner', () => {
   it('exportação: 3 etapas', () => {
     const p = exp([{ agVazioCheck: 'true', estufagemCheck: 'true' }])
     expect(etapasDoContainer(p, p.containers[0])).toEqual({ feitas: 2, total: 3 })
+  })
+})
+
+describe('próximo prazo', () => {
+  const t = (valor) => new Date(valor).getTime()
+
+  it('sem nenhuma data, não há prazo', () => {
+    expect(proximoPrazo(imp([{}]), NOW)).toBeNull()
+    expect(proximoPrazo({ id: 'x', type: 'import', containers: [] }, NOW)).toBeNull()
+  })
+
+  it('pega o compromisso pendente mais cedo, inclusive o atrasado', () => {
+    const p = imp([{ ag_carga: em(2), ag_vazio: em(-1) }])
+    expect(proximoPrazo(p, NOW)).toBe(t(em(-1)))
+  })
+
+  it('ignora o que já foi feito', () => {
+    const p = imp([{ ag_carga: em(-2), ag_carga_check: 'true', ag_vazio: em(3) }])
+    expect(proximoPrazo(p, NOW)).toBe(t(em(3)))
+  })
+
+  it('exportação: o Deadline Draft pendente conta; o Deadline Carga (informativo) não', () => {
+    expect(proximoPrazo(exp([{ deadlineDraft: em(1) }]), NOW)).toBe(t(em(1)))
+    expect(proximoPrazo(exp([{ deadlineCarga: em(1) }]), NOW)).toBeNull()
   })
 })

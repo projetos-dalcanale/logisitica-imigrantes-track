@@ -111,3 +111,40 @@ test('em tela menor (1280) o processo continua abrindo em janela', async ({ page
   await expect(page.getByRole('dialog')).toBeVisible()
   await expect(page.getByRole('complementary', { name: 'Detalhes do processo' })).toHaveCount(0)
 })
+
+test.describe('lista em tabela', () => {
+  test.use({ viewport: { width: 1600, height: 900 } })
+
+  test('tabela: alterna o modo, ordena por cliente, abre com Enter e lembra a escolha', async ({ page }) => {
+    const alfa = `Alfa Tabela ${Date.now()}`
+    const zeta = `Zeta Tabela ${Date.now()}`
+    await entrar(page)
+    await criarImportacao(page, zeta)
+    await criarImportacao(page, alfa)
+
+    await page.getByRole('radio', { name: 'Tabela' }).click()
+    const linhas = page.locator('tr[data-linha]')
+    await expect(linhas.filter({ hasText: alfa })).toBeVisible()
+    const posicao = async (nome) => (await linhas.allInnerTexts()).findIndex((t) => t.includes(nome))
+
+    // Um clique no título ordena de A a Z; outro, de Z a A.
+    const cabecalho = page.getByRole('columnheader', { name: 'Cliente' })
+    await cabecalho.getByRole('button').click()
+    await expect(cabecalho).toHaveAttribute('aria-sort', 'ascending')
+    expect(await posicao(alfa)).toBeLessThan(await posicao(zeta))
+    await cabecalho.getByRole('button').click()
+    await expect(cabecalho).toHaveAttribute('aria-sort', 'descending')
+    expect(await posicao(zeta)).toBeLessThan(await posicao(alfa))
+
+    // Teclado: foca a linha e abre com Enter (painel lateral nesta largura).
+    await linhas.filter({ hasText: alfa }).focus()
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('complementary', { name: 'Detalhes do processo' }).getByRole('heading', { name: alfa })).toBeVisible()
+
+    // A escolha do modo fica guardada.
+    await page.reload()
+    await expect(page.getByRole('heading', { level: 1, name: /Bom dia|Boa tarde|Boa noite/ })).toBeVisible()
+    await irPara(page, 'Importações')
+    await expect(page.getByRole('radio', { name: 'Tabela' })).toHaveAttribute('aria-checked', 'true')
+  })
+})

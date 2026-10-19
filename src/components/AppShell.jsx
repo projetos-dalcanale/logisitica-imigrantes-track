@@ -4,7 +4,8 @@ import { Archive, House, Mail, Plus, ReceiptText, Route, Search } from 'lucide-r
 import { ExportIcon, ImportIcon } from './ui/icons'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../hooks/useTheme'
-import { usePainelLateral } from '../hooks/useMediaQuery'
+import { useMediaQuery, usePainelLateral } from '../hooks/useMediaQuery'
+import { usePreferencia } from '../hooks/usePreferencia'
 import { useProcesses } from '../hooks/useProcesses'
 import { useFretes } from '../hooks/useFretes'
 import { usePedagios } from '../hooks/usePedagios'
@@ -94,6 +95,10 @@ export default function AppShell() {
   const isPedagios = activeTab === 'pedagios'
   const tab = TABS.find((t) => t.value === activeTab)
 
+  // Lista em tabela: só no PC (abaixo de lg sempre cartões); a escolha fica guardada.
+  const [modoLista, setModoLista] = usePreferencia('logitrack-lista-modo', 'cartoes')
+  const telaLarga = useMediaQuery('(min-width: 1024px)')
+  const tabela = modoLista === 'tabela' && telaLarga && ABAS_DE_LISTA.includes(activeTab)
   const painelLateral = usePainelLateral()
   const painel = painelLateral && ABAS_DE_LISTA.includes(activeTab)
   // Do botão "Status" da ficha: abre a aba Status já com este processo.
@@ -226,7 +231,7 @@ export default function AppShell() {
         </header>
 
         <div ref={scrollRef} id="conteudo" tabIndex={-1} onScroll={onScroll} className="custom-scrollbar flex-1 overflow-y-auto outline-none">
-          <div className="mx-auto w-full max-w-5xl px-4 pb-32 pt-[calc(env(safe-area-inset-top)+3.5rem)] sm:px-6 lg:px-10 lg:pb-12 lg:pt-16">
+          <div className={`mx-auto w-full ${tabela ? 'max-w-[1600px]' : 'max-w-5xl'} px-4 pb-32 pt-[calc(env(safe-area-inset-top)+3.5rem)] sm:px-6 lg:px-10 lg:pb-12 lg:pt-16`}>
             <div className="mb-6">
               <h1 className="font-display text-[32px] font-bold leading-tight tracking-[-0.025em] text-ink lg:text-[34px]">
                 {activeTab === 'inicio' ? (primeiroNome ? `${saudacao(agora)}, ${primeiroNome}` : saudacao(agora)) : tab.label}
@@ -254,7 +259,7 @@ export default function AppShell() {
                 ) : isPedagios ? (
                   <PedagioList pedagios={pedagios} loading={loadingPedagios} erro={erroPedagios} onOpen={setPedagioOpen} onNew={() => setPedagioOpen('new')} searchRef={searchRef} />
                 ) : (
-                  <ProcessList processes={processes} loading={activeTab === 'archive' ? loadingArquivo : loading} tab={activeTab} onOpen={setOpenId} searchRef={searchRef} onNew={novo} selecionadoId={painel ? openId : null} />
+                  <ProcessList processes={processes} loading={activeTab === 'archive' ? loadingArquivo : loading} tab={activeTab} onOpen={setOpenId} searchRef={searchRef} onNew={novo} selecionadoId={painel ? openId : null} tabela={tabela} modo={modoLista} onModo={setModoLista} />
                 )}
               </motion.div>
             </AnimatePresence>

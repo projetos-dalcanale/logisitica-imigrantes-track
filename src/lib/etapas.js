@@ -189,3 +189,10 @@ export const agendaDoDia = (processes, now = Date.now()) => {
   const porHora = (a, b) => a.t - b.t
   return { atrasados: atrasados.sort(porHora), hoje: deHoje.sort(porHora), amanha: deAmanha.sort(porHora) }
 }
+
+// Próximo prazo do processo: o horário do compromisso pendente mais cedo
+// (um atrasado também conta). null se não há nenhum compromisso pendente.
+export const proximoPrazo = (proc) => {
+  const pendentes = compromissos(proc).filter((c) => c.pendente).map((c) => c.t)
+  return pendentes.length ? Math.min(...pendentes) : null
+}

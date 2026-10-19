@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import {
   DndContext,
@@ -17,18 +17,20 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Download, Plus, X } from 'lucide-react'
+import { Download, LayoutGrid, Plus, Table2, X } from 'lucide-react'
 import { filtrarProcessos } from '../lib/processos'
 import { agruparPorUrgencia } from '../lib/etapas'
 import { useCardOrder } from '../hooks/useCardOrder'
 import { useToast } from '../contexts/ToastContext'
 import { exportarProcessosCSV } from '../lib/exportar'
 import ProcessCard, { ProcessCardSkeleton } from './ProcessCard'
+import ProcessTable from './ProcessTable'
 import ResumoBar from './ResumoBar'
 import EmptyState from './ui/EmptyState'
 import Button from './ui/Button'
 import Tooltip from './ui/Tooltip'
 import SearchField from './ui/SearchField'
+import Segmented from './ui/Segmented'
 
 function SortableCard(props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.proc.id })
@@ -72,10 +74,12 @@ const EMPTY_TEXT = {
 }
 
 // Busca + resumo + lista de cards da aba atual.
-export default function ProcessList({ processes, loading, tab, onOpen, searchRef, onNew, selecionadoId }) {
+export default function ProcessList({ processes, loading, tab, onOpen, searchRef, onNew, selecionadoId, tabela, modo, onModo }) {
   const [search, setSearch] = useState('')
   const { applyOrder, saveOrder } = useCardOrder()
   const showToast = useToast()
+  // Seleção do modo tabela: vale só para a aba e a busca em que foi feita.
+  const [selecao, setSelecao] = useState({ chave: '', ids: new Set() })
 
   // Os avisos de Deadline Draft dependem só do relógio: atualiza a cada
   // 30 min pra "virar de dia" sozinho com o app aberto.
@@ -95,6 +99,17 @@ export default function ProcessList({ processes, loading, tab, onOpen, searchRef
   const sortable = !search.trim() && tab !== 'archive'
   const filtered = filtrarProcessos(processes, tab, search)
   const visible = sortable ? applyOrder(filtered) : filtered
+
+  const chaveSelecao = `${tab}|${search}`
+  const marcados = selecao.chave === chaveSelecao ? selecao.ids : null
+  const selecionados = useMemo(() => new Set(filtered.filter((p) => marcados?.has(p.id)).map((p) => p.id)), [filtered, marcados])
+  const limparSelecao = () => setSelecao({ chave: chaveSelecao, ids: new Set() })
+  const alternarSelecao = (id) => {
+    const ids = new Set(selecionados)
+    if (!ids.delete(id)) ids.add(id)
+    setSelecao({ chave: chaveSelecao, ids })
+  }
+  const selecionarTodos = (todos, ids) => setSelecao({ chave: chaveSelecao, ids: new Set(todos ? ids : []) })
 
   const exportarCSV = () => {
     if (!filtered.length) {
@@ -123,6 +138,19 @@ export default function ProcessList({ processes, loading, tab, onOpen, searchRef
         title={EMPTY_TEXT[tab][0]}
         description={EMPTY_TEXT[tab][1]}
         action={tab !== 'archive' && <Button size="sm" icon={Plus} onClick={onNew}>Novo processo</Button>}
+      />
+    )
+  } else if (tabela) {
+    content = (
+      <ProcessTable
+        processes={visible}
+        now={now}
+        onOpen={onOpen}
+        selecionadoId={selecionadoId}
+        selecionados={selecionados}
+        onAlternarSelecao={alternarSelecao}
+        onSelecionarTodos={selecionarTodos}
+        semGrupos={tab === 'archive'}
       />
     )
   } else {
@@ -177,6 +205,16 @@ export default function ProcessList({ processes, loading, tab, onOpen, searchRef
           title="Filtra por nome, armador, motorista, placa, documento/booking ou contêiner"
           className="flex-1"
         />
+        <Segmented
+          size="md"
+          className="hidden w-52 shrink-0 lg:flex"
+          value={modo}
+          onChange={onModo}
+          options={[
+            { value: 'cartoes', label: 'Cartões', icon: LayoutGrid },
+            { value: 'tabela', label: 'Tabela', icon: Table2 },
+          ]}
+        />
         <Tooltip label="Exportar esta lista para Excel (CSV)">
           <Button variant="gray" icon={Download} onClick={exportarCSV} aria-label="Exportar para Excel">
             <span className="hidden sm:inline">Exportar</span>
@@ -184,7 +222,14 @@ export default function ProcessList({ processes, loading, tab, onOpen, searchRef
         </Tooltip>
       </div>
 
-      <div className={loading || !visible.length ? 'space-y-2.5' : 'space-y-7'}>{content}</div>
+      {tabela && selecionados.size > 0 && (
+        <div className="mb-3 flex items-center gap-3 rounded-xl bg-blue-500/8 px-4 py-2 text-[13.5px]" role="status">
+          <span className="font-medium text-ink">{selecionados.size} {selecionados.size === 1 ? 'selecionado' : 'selecionados'}</span>
+          <button type="button" className="text-blue-500 hover:text-blue-400" onClick={limparSelecao}>Limpar seleção</button>
+        </div>
+      )}
+
+      <div className={loading || !visible.length ? 'space-y-2.5' : tabela ? '' : 'space-y-7'}>{content}</div>
     </>
   )
 }

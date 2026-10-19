@@ -20,7 +20,7 @@ export function DraftIcon({ nivel, className }) {
 }
 
 // Cores da próxima ação e dos trechos da barra de etapas.
-const TOM_TEXTO = {
+export const TOM_TEXTO = {
   neutral: 'text-slate-400',
   brand: 'text-ink',
   warn: 'text-yellow-500',
