@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Archive, ArchiveRestore, CirclePlus, FileText, Mail } from 'lucide-react'
 import { ExportIcon, ImportIcon } from '../ui/icons'
@@ -30,8 +30,13 @@ export default function ProcessFicha({ proc, processes, onClose, onEnviarStatus 
   const { confirm } = useDialog()
   const secoesEstado = useSecoesEstado()
   const scrollerRef = useRef(null)
-  // Relógio da ficha: fixado ao abrir (as marcações de horário usam a hora real).
-  const [now] = useState(() => Date.now())
+  // Relógio da ficha: atualiza a cada minuto, porque no painel lateral a ficha
+  // pode ficar aberta por horas ("horário passou" e o Deadline Draft dependem dele).
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000)
+    return () => clearInterval(id)
+  }, [])
   const isImport = proc.type === 'import'
   const archived = proc.status === 'archived'
   const containers = proc.containers || []

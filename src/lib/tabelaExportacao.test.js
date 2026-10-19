@@ -93,6 +93,7 @@ describe('proteção contra fórmula e aspas do CSV', () => {
     expect(csvCell('a;b')).toBe('"a;b"')
     expect(csvCell('diz "oi"')).toBe('"diz ""oi"""')
     expect(csvCell('linha1\nlinha2')).toBe('"linha1\nlinha2"')
+    expect(csvCell('linha1\rlinha2')).toBe('"linha1\rlinha2"')
     expect(csvCell(3)).toBe('3')
     expect(csvCell(null)).toBe('')
     expect(csvCell(undefined)).toBe('')

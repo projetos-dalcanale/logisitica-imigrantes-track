@@ -151,7 +151,11 @@ export default function AppShell() {
       }
       if (e.ctrlKey || e.metaKey || e.altKey || isTyping(document.activeElement)) return
       if (document.querySelector('[role="dialog"]')) return
-      if (e.key === '/') {
+      if (e.key === 'Escape') {
+        // Fecha o painel mesmo com o foco na lista (fora do painel). Esc de um menu
+        // ou janela aberta já foi tratado por eles (defaultPrevented / role dialog).
+        if (!e.defaultPrevented && painelAbertoRef.current) setOpenId(null)
+      } else if (e.key === '/') {
         e.preventDefault()
         searchRef.current?.focus()
       } else if (e.key.toLowerCase() === 'h') {

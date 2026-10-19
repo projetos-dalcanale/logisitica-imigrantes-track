@@ -57,7 +57,7 @@ export default function FichaIndice({ secoes, scrollerRef }) {
     <>
       {/* Ficha estreita (painel, celular): atalhos em linha, fixos no topo. */}
       <nav aria-label="Seções da ficha" className="material-thin hairline-b sticky top-0 z-10 -mx-4 mb-5 flex gap-1.5 overflow-x-auto px-4 py-2 @3xl:hidden sm:-mx-6 sm:px-6">
-        {secoes.map((s) => botao(s, 'shrink-0 rounded-full px-3 py-1 text-[13px] font-medium transition-colors', 'bg-blue-500/12 text-blue-500'))}
+        {secoes.map((s) => botao(s, 'shrink-0 rounded-full px-3 py-1 text-[13px] font-medium transition-colors', 'bg-blue-500/15 text-ink'))}
       </nav>
       {/* Ficha larga: coluna fixa à esquerda. */}
       <nav aria-label="Seções da ficha" className="sticky top-3 hidden self-start @3xl:block">

@@ -237,3 +237,37 @@ test.describe('painel e troca de aba', () => {
     await expect(page.getByRole('dialog')).toHaveCount(0)
   })
 })
+
+test.describe('detalhes dos pontos menores da revisão', () => {
+  test('Esc fecha o painel mesmo com o foco fora dele (na lista)', async ({ page }) => {
+    await page.setViewportSize({ width: 1600, height: 900 })
+    const nome = `Painel Esc ${Date.now()}`
+    await entrar(page)
+    await criarImportacao(page, nome)
+    await page.getByText(nome).click()
+    const painel = page.getByRole('complementary', { name: 'Detalhes do processo' })
+    await expect(painel).toBeVisible()
+
+    // O foco está no cartão da lista (fora do painel): Esc tem que fechar mesmo assim.
+    await page.keyboard.press('Escape')
+    await expect(painel).toHaveCount(0)
+  })
+
+  test('tabela: dar foco na linha (teclado, ou foco devolvido ao fechar a janela) não abre a prévia; só o mouse abre', async ({ page }) => {
+    const nome = `Previa foco ${Date.now()}`
+    await entrar(page)
+    await criarImportacao(page, nome)
+    await page.getByRole('radio', { name: 'Tabela' }).click()
+    await page.mouse.move(5, 5) // mouse longe das linhas
+
+    const linha = page.locator('tr[data-linha]').filter({ hasText: nome })
+    await linha.focus()
+    await expect(linha).toBeFocused()
+    await page.waitForTimeout(900) // mais que o atraso de abertura da prévia (500 ms)
+    await expect(page.locator('.previa-card')).toHaveCount(0)
+
+    // Com o mouse em cima, a prévia continua abrindo.
+    await linha.hover()
+    await expect(page.locator('.previa-card')).toBeVisible()
+  })
+})

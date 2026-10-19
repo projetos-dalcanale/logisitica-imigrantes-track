@@ -65,5 +65,5 @@ export const neutralizarFormula = (texto) => (/^[=+\-@]/.test(texto) ? `'${texto
 export const csvCell = (valor) => {
   if (typeof valor === 'number') return String(valor)
   const texto = neutralizarFormula(valor === null || valor === undefined ? '' : String(valor))
-  return /[;"\n]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto
+  return /[;"\r\n]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto
 }
