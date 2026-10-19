@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { lerTokens, razaoContraste, tokensDoTema } from './contraste'
+import { lerTokens, misturar, razaoContraste, tokensDoTema } from './contraste'
 import { CORES, COR_PADRAO } from './temas'
 
 const css = readFileSync(new URL('../index.css', import.meta.url), 'utf8')
@@ -17,6 +17,14 @@ describe('razão de contraste (WCAG)', () => {
 
   it('cinza do texto terciário claro (117 117 122) sobre branco passa de 4,5', () => {
     expect(razaoContraste([117, 117, 122], [255, 255, 255])).toBeGreaterThan(4.5)
+  })
+})
+
+describe('misturar cores (cor com transparência sobre um fundo)', () => {
+  it('0 devolve o fundo, 1 devolve a cor e 0,5 a média', () => {
+    expect(misturar([200, 100, 0], [0, 0, 100], 0)).toEqual([0, 0, 100])
+    expect(misturar([200, 100, 0], [0, 0, 100], 1)).toEqual([200, 100, 0])
+    expect(misturar([200, 100, 0], [0, 0, 100], 0.5)).toEqual([100, 50, 50])
   })
 })
 
@@ -46,14 +54,25 @@ const PARES = [
   ...SUPERFICIES.map((fundo) => ({ nome: `texto secundário (slate-400) sobre ${fundo}`, fg: 'slate-400', bg: fundo, min: 4.5 })),
   ...SUPERFICIES.map((fundo) => ({ nome: `texto terciário e placeholder (slate-500) sobre ${fundo}`, fg: 'slate-500', bg: fundo, min: 4.5 })),
   ...SUPERFICIES.map((fundo) => ({ nome: `texto de ação (blue-500) sobre ${fundo}`, fg: 'blue-500', bg: fundo, min: 4.5 })),
-  { nome: 'texto de erro (red-500) sobre cartões', fg: 'red-500', bg: 'navy-800', min: 4.5 },
-  { nome: 'texto de sucesso (green) sobre cartões', fg: 'green', bg: 'navy-800', min: 4.5 },
-  { nome: 'texto de aviso (orange) sobre cartões', fg: 'orange', bg: 'navy-800', min: 4.5 },
+  ...SUPERFICIES.map((fundo) => ({ nome: `texto de erro (red-500) sobre ${fundo}`, fg: 'red-500', bg: fundo, min: 4.5 })),
+  ...SUPERFICIES.map((fundo) => ({ nome: `texto de sucesso (green) sobre ${fundo}`, fg: 'green', bg: fundo, min: 4.5 })),
+  ...SUPERFICIES.map((fundo) => ({ nome: `texto de aviso (orange) sobre ${fundo}`, fg: 'orange', bg: fundo, min: 4.5 })),
+  // Campos de texto: o fundo é navy-700 a 55% sobre o cartão (classe .field do CSS).
+  { nome: 'texto principal (ink) sobre o fundo dos campos', fg: 'ink', bg: 'campo', min: 7 },
+  { nome: 'texto secundário (slate-400) sobre o fundo dos campos', fg: 'slate-400', bg: 'campo', min: 4.5 },
+  { nome: 'placeholder (slate-500) sobre o fundo dos campos', fg: 'slate-500', bg: 'campo', min: 4.5 },
+  // Item ativo do índice da ficha: texto principal sobre o destaque a 15% no cartão.
+  { nome: 'texto principal (ink) sobre o item ativo do índice', fg: 'ink', bg: 'indice-ativo', min: 7 },
 ]
 
 describe.each(['light', 'dark'])('contraste no tema %s', (tema) => {
   describe.each([COR_PADRAO, ...CORES.map((c) => c.id).filter((id) => id !== COR_PADRAO)])('com a cor de destaque %s', (cor) => {
-    const tokens = tokensDoTema(css, tema, cor)
+    const base = tokensDoTema(css, tema, cor)
+    const tokens = {
+      ...base,
+      campo: misturar(base['navy-700'], base['navy-800'], 0.55),
+      'indice-ativo': misturar(base['blue-500'], base['navy-800'], 0.15),
+    }
     it.each(PARES)('$nome', ({ fg, bg, min }) => {
       expect(tokens[fg], `token ${fg}`).toBeDefined()
       expect(tokens[bg], `token ${bg}`).toBeDefined()

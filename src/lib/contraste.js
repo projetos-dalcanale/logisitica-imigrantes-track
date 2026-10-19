@@ -38,3 +38,7 @@ export const tokensDoTema = (css, tema, cor) => {
     ...(destaque && escuro ? lerTokens(css, `:root[data-theme="dark"][data-accent="${cor}"]`) : {}),
   }
 }
+
+// Cor com transparência `t` (0 a 1) sobre um fundo opaco: o que o olho vê, por
+// exemplo, num campo com "navy-700 / 55%".
+export const misturar = (cor, fundo, t) => cor.map((c, i) => Math.round(c * t + fundo[i] * (1 - t)))

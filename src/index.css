@@ -68,7 +68,7 @@
   --blue-900: 120 0 8;
   --red-400: 215 0 21;
   --red-500: 215 0 21;
-  --green: 33 130 57; /* 4,5:1 sobre cartões brancos */
+  --green: 31 126 54; /* 4,5:1 sobre cartões brancos e sobre o fundo cinza da janela */
   --orange: 178 80 0;
   --ink: 29 29 31;
   --material: 246 246 248;
@@ -82,7 +82,7 @@
   --slate-200: 245 245 247;
   --slate-300: 229 229 234;
   --slate-400: 152 152 157;
-  --slate-500: 132 132 137; /* contraste de 4,5:1 nos cartões escuros */
+  --slate-500: 140 140 145; /* 4,5:1 nos cartões e nos campos escuros (contraste.test.js) */
   --slate-600: 72 72 74;
   --slate-700: 56 56 58;
   --blue-300: 255 140 130;

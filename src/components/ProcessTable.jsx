@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from 'react'
+import { Fragment, useMemo, useRef, useState } from 'react'
 import * as HoverCard from '@radix-ui/react-hover-card'
 import { ArrowDown, ArrowUp } from 'lucide-react'
 import { useMediaQuery } from '../hooks/useMediaQuery'
@@ -59,6 +59,10 @@ function Etapas({ feitas, total }) {
 }
 
 function Linha({ proc, linha, now, selecionado, marcado, foco, previa, onOpen, onMarcar, onFoco }) {
+  // A prévia só abre com o mouse em cima: o Radix também abre no foco, e o foco
+  // volta para a linha ao fechar a janela da ficha ou ao andar com as setas.
+  const [aberta, setAberta] = useState(false)
+  const mouseSobre = useRef(false)
   const Icon = linha.tipo === 'import' ? ImportIcon : ExportIcon
   const atrasado = linha.prazo !== null && linha.prazo < now
   const vazio = <span className="text-slate-500">—</span>
@@ -83,13 +87,24 @@ function Linha({ proc, linha, now, selecionado, marcado, foco, previa, onOpen, o
     else if (e.key === 'End') mover(e, 'fim')
   }
   return (
-    <HoverCard.Root openDelay={500} closeDelay={100} open={previa && !selecionado ? undefined : false}>
+    <HoverCard.Root
+      openDelay={500}
+      closeDelay={100}
+      open={previa && !selecionado && aberta}
+      onOpenChange={(o) => setAberta(o && mouseSobre.current)}
+    >
     <HoverCard.Trigger asChild>
     <tr
       data-linha={linha.id}
       tabIndex={foco ? 0 : -1}
       aria-selected={marcado}
       aria-current={selecionado ? 'true' : undefined}
+      onPointerEnter={(e) => {
+        mouseSobre.current = e.pointerType === 'mouse'
+      }}
+      onPointerLeave={() => {
+        mouseSobre.current = false
+      }}
       onClick={() => onOpen(linha.id)}
       onFocus={(e) => e.target === e.currentTarget && onFoco(linha.id)}
       onKeyDown={aoTeclar}
