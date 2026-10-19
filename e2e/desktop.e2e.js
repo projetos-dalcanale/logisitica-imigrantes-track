@@ -179,3 +179,37 @@ test.describe('Início em tela grande', () => {
     expect(rola).toBe(false)
   })
 })
+
+test.describe('exportar a lista', () => {
+  test('Excel: baixa um .xlsx de verdade (arquivo zip) com o nome da lista', async ({ page }) => {
+    await entrar(page)
+    await irPara(page, 'Importações')
+    await page.getByRole('button', { name: 'Exportar' }).click()
+    const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /Excel \(\.xlsx\)/ }).click()])
+    expect(download.suggestedFilename()).toMatch(/^logitrack-importacoes-\d{4}-\d{2}-\d{2}\.xlsx$/)
+    const bytes = await (await import('node:fs/promises')).readFile(await download.path())
+    expect(bytes.subarray(0, 2).toString()).toBe('PK') // .xlsx é um arquivo zip
+    await expect(page.getByText(/processo\(s\) exportado\(s\)/)).toBeVisible()
+  })
+
+  test('CSV: continua baixando, agora com a próxima ação e o prazo no fim', async ({ page }) => {
+    await entrar(page)
+    await irPara(page, 'Importações')
+    await page.getByRole('button', { name: 'Exportar' }).click()
+    const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /^CSV/ }).click()])
+    expect(download.suggestedFilename()).toMatch(/\.csv$/)
+    const texto = (await (await import('node:fs/promises')).readFile(await download.path(), 'utf8')).replace(/^﻿/, '')
+    expect(texto.split('\r\n')[0]).toBe('Tipo;Status;Armador;Motorista;Placas;Importador/Exportador;Documento/Booking;Referência;Navio;Terminal de Carregamento;Terminal de Vazio;Destino do Contêiner;Contêineres;Qtd. Contêineres;Observações;Criado em;Próxima ação;Prazo')
+  })
+
+  test('copiar para e-mail: põe a tabela na área de transferência', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+    await entrar(page)
+    await irPara(page, 'Importações')
+    await page.getByRole('button', { name: 'Exportar' }).click()
+    await page.getByRole('button', { name: /Copiar para e-mail/ }).click()
+    await expect(page.getByText(/copiado\(s\): é só colar no e-mail/)).toBeVisible()
+    const texto = await page.evaluate(() => navigator.clipboard.readText())
+    expect(texto.split('\n')[0]).toMatch(/^Tipo\tStatus\tArmador/)
+  })
+})

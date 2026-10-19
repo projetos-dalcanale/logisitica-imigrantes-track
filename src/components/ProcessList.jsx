@@ -17,18 +17,18 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Download, LayoutGrid, Plus, Table2, X } from 'lucide-react'
+import { LayoutGrid, Plus, Table2, X } from 'lucide-react'
 import { filtrarProcessos } from '../lib/processos'
 import { agruparPorUrgencia } from '../lib/etapas'
 import { useCardOrder } from '../hooks/useCardOrder'
 import { useToast } from '../contexts/ToastContext'
-import { exportarProcessosCSV } from '../lib/exportar'
+import { copiarProcessos, exportarProcessosCSV, exportarProcessosXlsx } from '../lib/exportar'
 import ProcessCard, { ProcessCardSkeleton } from './ProcessCard'
 import ProcessTable from './ProcessTable'
 import ResumoBar from './ResumoBar'
 import EmptyState from './ui/EmptyState'
 import Button from './ui/Button'
-import Tooltip from './ui/Tooltip'
+import ExportarMenu from './ExportarMenu'
 import SearchField from './ui/SearchField'
 import Segmented from './ui/Segmented'
 
@@ -111,13 +111,22 @@ export default function ProcessList({ processes, loading, tab, onOpen, searchRef
   }
   const selecionarTodos = (todos, ids) => setSelecao({ chave: chaveSelecao, ids: new Set(todos ? ids : []) })
 
-  const exportarCSV = () => {
-    if (!filtered.length) {
+  // Exporta as linhas selecionadas (modo tabela) ou, sem seleção, a lista toda.
+  const paraExportar = tabela && selecionados.size > 0 ? filtered.filter((p) => selecionados.has(p.id)) : filtered
+  const exportar = async (tipo) => {
+    if (!paraExportar.length) {
       showToast('Não há processos nesta lista para exportar.', 'error')
       return
     }
-    exportarProcessosCSV(filtered, tab)
-    showToast(`${filtered.length} processo(s) exportado(s).`)
+    try {
+      if (tipo === 'xlsx') await exportarProcessosXlsx(paraExportar, tab)
+      else if (tipo === 'csv') exportarProcessosCSV(paraExportar, tab)
+      else await copiarProcessos(paraExportar)
+      showToast(tipo === 'copiar' ? `${paraExportar.length} processo(s) copiado(s): é só colar no e-mail.` : `${paraExportar.length} processo(s) exportado(s).`)
+    } catch (erro) {
+      console.error('Erro ao exportar:', erro)
+      showToast('Não foi possível exportar. Tente de novo.', 'error')
+    }
   }
 
   // Cada grupo tem o seu DndContext, então os dois cards são do mesmo grupo.
@@ -215,11 +224,13 @@ export default function ProcessList({ processes, loading, tab, onOpen, searchRef
             { value: 'tabela', label: 'Tabela', icon: Table2 },
           ]}
         />
-        <Tooltip label="Exportar esta lista para Excel (CSV)">
-          <Button variant="gray" icon={Download} onClick={exportarCSV} aria-label="Exportar para Excel">
-            <span className="hidden sm:inline">Exportar</span>
-          </Button>
-        </Tooltip>
+        <ExportarMenu
+          total={filtered.length}
+          selecionados={tabela ? selecionados.size : 0}
+          onExcel={() => exportar('xlsx')}
+          onCsv={() => exportar('csv')}
+          onCopiar={() => exportar('copiar')}
+        />
       </div>
 
       {tabela && selecionados.size > 0 && (
