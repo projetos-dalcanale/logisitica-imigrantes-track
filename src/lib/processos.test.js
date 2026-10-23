@@ -21,6 +21,7 @@ import {
   terminalDevolucao,
   terminaisDeDevolucao,
   limparTerminaisDevolucao,
+  atualizacaoDosDetalhes,
 } from './processos'
 
 const DIA = 86400000
@@ -344,5 +345,37 @@ describe('terminal de devolução por contêiner', () => {
     const limpa = limparTerminaisDevolucao(lista)
     expect(limpa).toEqual([{ id: 'a', numero: 'X1', termVazio: '' }, { id: 'b', numero: 'X2' }])
     expect(lista[0].termVazio).toBe('Depot Norte')
+  })
+
+  describe('gravação dos Detalhes', () => {
+    const dados = { importador: 'Agro', armador: 'MSC', termVazio: 'Depot Sul', finalizacaoVazio: 'devolucao' }
+
+    it('ao passar para Baixa apaga o terminal do processo e o de cada contêiner', () => {
+      const proc = { containers: [{ id: 'a', termVazio: 'Depot Norte' }, { id: 'b' }] }
+      expect(atualizacaoDosDetalhes(proc, { ...dados, finalizacaoVazio: 'baixa' })).toEqual({
+        ...dados,
+        finalizacaoVazio: 'baixa',
+        termVazio: '',
+        containers: [{ id: 'a', termVazio: '' }, { id: 'b' }],
+      })
+    })
+
+    it('em Baixa sem terminal nos contêineres não regrava os contêineres (evita sobrescrever edições de outra pessoa)', () => {
+      const proc = { containers: [{ id: 'a' }, { id: 'b', termVazio: '' }] }
+      const patch = atualizacaoDosDetalhes(proc, { ...dados, finalizacaoVazio: 'baixa' })
+      expect(patch).toEqual({ ...dados, finalizacaoVazio: 'baixa', termVazio: '' })
+      expect('containers' in patch).toBe(false)
+    })
+
+    it('em Devolução grava os dados como vieram, sem mexer nos contêineres', () => {
+      const proc = { containers: [{ id: 'a', termVazio: 'Depot Norte' }] }
+      const patch = atualizacaoDosDetalhes(proc, dados)
+      expect(patch).toEqual(dados)
+      expect('containers' in patch).toBe(false)
+    })
+
+    it('processo sem contêineres em Baixa só apaga o terminal do processo', () => {
+      expect(atualizacaoDosDetalhes({}, { ...dados, finalizacaoVazio: 'baixa' })).toEqual({ ...dados, finalizacaoVazio: 'baixa', termVazio: '' })
+    })
   })
 })

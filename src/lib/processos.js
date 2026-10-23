@@ -276,6 +276,17 @@ export const terminaisDeDevolucao = (proc) => {
 // Ao passar para "Baixa" não há devolução: zera o terminal de cada contêiner.
 export const limparTerminaisDevolucao = (containers) => containers.map((ct) => (ct.termVazio ? { ...ct, termVazio: '' } : ct))
 
+// O que gravar ao salvar os Detalhes de uma importação. Na Baixa o terminal do
+// processo é apagado e, só se algum contêiner tiver terminal próprio, o dos
+// contêineres também: sem isso o array `containers` não é regravado, para não
+// sobrescrever uma edição que outra pessoa fez no contêiner.
+export const atualizacaoDosDetalhes = (proc, dados) => {
+  if (dados.finalizacaoVazio !== 'baixa') return dados
+  const cts = proc.containers || []
+  const patch = { ...dados, termVazio: '' }
+  return cts.some((ct) => ct.termVazio) ? { ...patch, containers: limparTerminaisDevolucao(cts) } : patch
+}
+
 // A retirada do vazio precisa ser antes do Deadline Draft. true quando as
 // duas datas existem e o vazio ficou para depois (ou na mesma hora).
 export const vazioDepoisDoDraft = (agVazio, deadlineDraft) => {

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { DESTINOS, DOC_TIPOS, ehCargaSolta, limparTerminaisDevolucao } from '../../lib/processos'
+import { DESTINOS, DOC_TIPOS, atualizacaoDosDetalhes, ehCargaSolta } from '../../lib/processos'
 import { atualizarProcesso } from '../../lib/processActions'
 import RegistrySelect from '../RegistrySelect'
 import Segmented from '../ui/Segmented'
@@ -39,10 +39,7 @@ export default function DetalhesGroup({ proc, archived }) {
       const nome = isImport ? 'importador' : 'exportador'
       const dados = { ...form, [nome]: form[nome].trim() }
       // Na baixa não há devolução, então o terminal de vazio é apagado (também o de cada contêiner).
-      await atualizarProcesso(
-        proc.id,
-        dados.finalizacaoVazio === 'baixa' ? { ...dados, termVazio: '', containers: limparTerminaisDevolucao(proc.containers || []) } : dados
-      )
+      await atualizarProcesso(proc.id, atualizacaoDosDetalhes(proc, dados))
       setEditando(false)
     } finally {
       setSaving(false)
