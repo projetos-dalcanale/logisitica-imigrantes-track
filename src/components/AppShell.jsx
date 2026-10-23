@@ -285,7 +285,7 @@ export default function AppShell() {
                 transition={{ duration: 0.2, ease: 'easeOut' }}
               >
                 {activeTab === 'inicio' ? (
-                  <Inicio processes={processes} loading={loading} onOpen={setOpenId} onIr={setActiveTab} onNovo={novo} />
+                  <Inicio processes={processes} loading={loading} onOpen={setOpenId} onIr={setActiveTab} onNovo={novo} pendencias={pendencias} onEditarPendencia={setPendenciaOpen} onAbrirProcesso={abrirProcesso} />
                 ) : activeTab === 'status' ? (
                   <Suspense fallback={null}>
                     <StatusClientes key={statusPedido} processes={processes} loading={loading} procInicial={statusProc} />
