@@ -4,7 +4,7 @@
 // pelo navegador ("Salvar como PDF"). Todo texto digitado é escapado.
 import { EMPRESA, PRODUTO } from '../marca'
 import { ordenarContainers } from './etapas'
-import { chaveEtapa, distintos, ehCargaSolta, etapaFeita, exportSteps, identificacaoUnidade, formatarDataHora, stepsChecklistImport, terminaisDeDevolucao, terminalDevolucao, transportePorContainer } from './processos'
+import { chaveEtapa, distintos, ehCargaSolta, etapaFeita, exportSteps, identificacaoUnidade, formatarDataHora, linhasDePlacas, stepsChecklistImport, terminaisDeDevolucao, terminalDevolucao, transportePorContainer } from './processos'
 
 export const escapeHtml = (valor) =>
   valor === null || valor === undefined
@@ -104,7 +104,7 @@ export const montarHtmlProcesso = (proc, agora = new Date()) => {
     : [documento, ['Armador', proc.armador], ['Referência', proc.referencia], ['Navio', proc.navio]]
   if (!multi) {
     dados.push(['Motorista', distintos(transporte.map((t) => t.motorista)).join(', ')])
-    dados.push(['Placas', distintos(transporte.map((t) => t.placas)).join(', ')])
+    dados.push(...linhasDePlacas(transporte[0]))
   }
 
   const blocos = cts.map((ct, i) => {
@@ -112,7 +112,7 @@ export const montarHtmlProcesso = (proc, agora = new Date()) => {
     const feitas = etapas.filter((e) => e.feito).length
     const info = []
     const t = transporte[gravados.indexOf(ct)]
-    if (multi) info.push(['Motorista', t.motorista], ['Placas', t.placas])
+    if (multi) info.push(['Motorista', t.motorista], ...linhasDePlacas(t))
     if (isImport) {
       info.push(['Agend. carregamento', dataOuVazio(ct.checklist?.ag_carga)])
       if (proc.finalizacaoVazio !== 'baixa' && !solta) info.push(['Agend. vazio', dataOuVazio(ct.checklist?.ag_vazio)])

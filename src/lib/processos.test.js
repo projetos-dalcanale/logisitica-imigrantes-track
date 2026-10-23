@@ -22,6 +22,8 @@ import {
   terminaisDeDevolucao,
   limparTerminaisDevolucao,
   atualizacaoDosDetalhes,
+  linhasDePlacas,
+  temPlacasAntigas,
 } from './processos'
 
 const DIA = 86400000
@@ -264,7 +266,9 @@ describe('datas', () => {
 describe('motorista e placas por contêiner', () => {
   it('com um contêiner, usa o motorista do processo', () => {
     const proc = { motorista: 'João', placas: 'ABC1D23', containers: [{ id: 'c1', numero: 'CSQU 305.438-3' }] }
-    expect(transportePorContainer(proc)).toEqual([{ ctId: 'c1', numero: 'CSQU 305.438-3', motorista: 'João', placas: 'ABC1D23' }])
+    expect(transportePorContainer(proc)).toEqual([
+      { ctId: 'c1', numero: 'CSQU 305.438-3', motorista: 'João', placas: 'ABC1D23', placaCavalo: '', placaCarreta: '', placasAntigas: 'ABC1D23' },
+    ])
   })
 
   it('com vários contêineres, cada um tem o seu e os vazios herdam o do processo', () => {
@@ -377,5 +381,72 @@ describe('terminal de devolução por contêiner', () => {
     it('processo sem contêineres em Baixa só apaga o terminal do processo', () => {
       expect(atualizacaoDosDetalhes({}, { ...dados, finalizacaoVazio: 'baixa' })).toEqual({ ...dados, finalizacaoVazio: 'baixa', termVazio: '' })
     })
+  })
+})
+
+describe('placa cavalo e placa carreta', () => {
+  const proc = (containers, extra = {}) => ({ type: 'import', containers, ...extra })
+  const dos = (p, i = 0) => transportePorContainer(p)[i]
+
+  it('com um contêiner valem as placas do processo, e as do contêiner só se o processo não tiver', () => {
+    const p = proc([{ id: 'a', placaCavalo: 'CCC3C33', placaCarreta: 'DDD4D44' }], { placaCavalo: 'AAA1A11', placaCarreta: 'BBB2B22' })
+    expect(dos(p)).toMatchObject({ placaCavalo: 'AAA1A11', placaCarreta: 'BBB2B22' })
+    const semProcesso = proc([{ id: 'a', placaCavalo: 'CCC3C33', placaCarreta: 'DDD4D44' }])
+    expect(dos(semProcesso)).toMatchObject({ placaCavalo: 'CCC3C33', placaCarreta: 'DDD4D44' })
+  })
+
+  it('com vários contêineres cada um usa as suas e quem não tem usa as do processo', () => {
+    const p = proc([{ id: 'a', placaCavalo: 'CCC3C33', placaCarreta: 'DDD4D44' }, { id: 'b' }], { placaCavalo: 'AAA1A11', placaCarreta: 'BBB2B22' })
+    expect(dos(p, 0)).toMatchObject({ placaCavalo: 'CCC3C33', placaCarreta: 'DDD4D44' })
+    expect(dos(p, 1)).toMatchObject({ placaCavalo: 'AAA1A11', placaCarreta: 'BBB2B22' })
+  })
+
+  it('o texto combinado separa cavalo e carreta, e funciona com só uma das duas', () => {
+    expect(dos(proc([{ id: 'a' }], { placaCavalo: 'ABC1D23', placaCarreta: 'XYZ9K88' })).placas).toBe('ABC1D23 / XYZ9K88')
+    const soCarreta = dos(proc([{ id: 'a' }], { placaCarreta: 'XYZ9K88' }))
+    expect([soCarreta.placas, soCarreta.placaCavalo, soCarreta.placaCarreta]).toEqual(['XYZ9K88', '', 'XYZ9K88'])
+    expect(dos(proc([{ id: 'a' }], { placaCavalo: ' ABC1D23 ' })).placas).toBe('ABC1D23')
+  })
+
+  it('processo só com o texto antigo continua mostrando esse texto', () => {
+    const p = proc([{ id: 'a' }], { placas: 'ABC1D23 / XYZ9K88' })
+    expect(dos(p)).toMatchObject({ placas: 'ABC1D23 / XYZ9K88', placasAntigas: 'ABC1D23 / XYZ9K88', placaCavalo: '', placaCarreta: '' })
+    expect(temPlacasAntigas(p)).toBe(true)
+  })
+
+  it('preenchendo só o cavalo (ou só a carreta) o texto antigo deixa de valer, mas não é apagado', () => {
+    const p = proc([{ id: 'a' }], { placas: 'ABC1D23 / XYZ9K88', placaCavalo: 'AAA1A11' })
+    expect(temPlacasAntigas(p)).toBe(false)
+    expect(dos(p).placas).toBe('AAA1A11')
+    expect(p.placas).toBe('ABC1D23 / XYZ9K88')
+    expect(temPlacasAntigas({ placas: 'x', placaCarreta: 'BBB2B22' })).toBe(false)
+  })
+
+  it('contêiner só com o texto antigo, no processo com vários, usa o dele', () => {
+    const p = proc([{ id: 'a', placas: 'QWE4R56' }, { id: 'b' }], { placaCavalo: 'AAA1A11', placaCarreta: 'BBB2B22' })
+    expect(dos(p, 0).placas).toBe('QWE4R56')
+    expect(dos(p, 1).placas).toBe('AAA1A11 / BBB2B22')
+  })
+
+  it('sem placa em lugar nenhum devolve texto vazio', () => {
+    const t = dos(proc([{ id: 'a' }, { id: 'b' }]))
+    expect([t.placas, t.placaCavalo, t.placaCarreta, t.placasAntigas]).toEqual(['', '', '', ''])
+    expect(temPlacasAntigas({})).toBe(false)
+    expect(temPlacasAntigas(undefined)).toBe(false)
+  })
+
+  it('linhas para tela e PDF: cavalo e carreta, ou "Placas" quando só há o texto antigo', () => {
+    expect(linhasDePlacas({ placaCavalo: 'ABC1D23', placaCarreta: '', placasAntigas: '' })).toEqual([['Placa cavalo', 'ABC1D23'], ['Placa carreta', '']])
+    expect(linhasDePlacas({ placaCavalo: '', placaCarreta: '', placasAntigas: 'ABC1D23' })).toEqual([['Placas', 'ABC1D23']])
+    expect(linhasDePlacas({ placaCavalo: '', placaCarreta: '', placasAntigas: '' })).toEqual([['Placa cavalo', ''], ['Placa carreta', '']])
+  })
+
+  it('a busca encontra a placa nova do processo e a do contêiner', () => {
+    const lista = [
+      { id: 'p', type: 'import', status: 'active', createdAt: '2026-10-01', placaCavalo: 'AAA1A11', containers: [] },
+      { id: 'c', type: 'import', status: 'active', createdAt: '2026-10-02', containers: [{ numero: 'A', placaCarreta: 'ZZZ9Z99' }] },
+    ]
+    expect(filtrarProcessos(lista, 'import', 'aaa1a11').map((x) => x.id)).toEqual(['p'])
+    expect(filtrarProcessos(lista, 'import', 'zzz9z99').map((x) => x.id)).toEqual(['c'])
   })
 })

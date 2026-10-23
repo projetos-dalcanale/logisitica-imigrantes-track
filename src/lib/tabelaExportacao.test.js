@@ -116,3 +116,13 @@ describe('proteção contra fórmula e aspas do CSV', () => {
     expect(csvCell('=HYPERLINK("http://x";"a")')).toBe(`"'=HYPERLINK(""http://x"";""a"")"`)
   })
 })
+
+describe('tabela: placa cavalo e carreta', () => {
+  it('a coluna Placas junta cavalo e carreta de cada contêiner', () => {
+    const p = imp({}, [
+      { id: 'c1', numero: 'MSCU 123.456-6', placaCavalo: 'ABC1D23', placaCarreta: 'XYZ9K88' },
+      { id: 'c2', numero: 'TGHU 765.432-1', placaCavalo: 'DEF2G34', placaCarreta: 'UVW8J77' },
+    ])
+    expect(tabelaProcessos([p], NOW).linhas[0][4]).toBe('ABC1D23 / XYZ9K88 | DEF2G34 / UVW8J77')
+  })
+})

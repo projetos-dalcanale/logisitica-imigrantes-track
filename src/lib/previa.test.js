@@ -71,3 +71,10 @@ describe('prévia: ordem dos contêineres', () => {
     expect(previaDoProcesso(p, NOW).containers.map((c) => c.rotulo)).toEqual(['Contêiner 1', 'Contêiner 2'])
   })
 })
+
+describe('prévia: placa cavalo e carreta', () => {
+  it('mostra cavalo e carreta do contêiner separados por barra', () => {
+    const p = imp({ placas: '' }, [{ id: 'c1', numero: 'A', placaCavalo: 'AAA1A11', placaCarreta: 'BBB2B22' }])
+    expect(previaDoProcesso(p, NOW).containers[0].placas).toBe('AAA-1A11 / BBB-2B22')
+  })
+})
