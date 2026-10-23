@@ -11,7 +11,11 @@ const ids = (lista) => lista.map((x) => x.id)
 describe('dia local', () => {
   it('usa o dia do fuso local, não o de UTC', () => {
     // 23:30 em São Paulo já é o dia seguinte em UTC: a pendência tem que cair no dia local.
-    expect(diaLocal(new Date(2026, 9, 22, 23, 30).getTime())).toBe('2026-10-22')
+    const tarde = new Date(2026, 9, 22, 23, 30).getTime()
+    // Pré-condição: os testes rodam no fuso de São Paulo (vite.config.js, test.env.TZ). Em UTC este
+    // horário ainda seria dia 22 e o teste não distinguiria "dia local" de "dia em UTC".
+    expect(new Date(tarde).toISOString().slice(0, 10)).toBe('2026-10-23')
+    expect(diaLocal(tarde)).toBe('2026-10-22')
     expect(diaLocal(new Date(2026, 0, 5, 0, 5).getTime())).toBe('2026-01-05')
   })
 

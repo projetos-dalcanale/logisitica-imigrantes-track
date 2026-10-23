@@ -278,6 +278,18 @@ export const transportePorContainer = (proc) => {
   return cts.length ? cts.map(monta) : [monta({})]
 }
 
+// Sugestão (placeholder) de placa para um contêiner da ficha: só aparece se o
+// contêiner ainda não tem nenhuma placa (cavalo, carreta ou texto antigo), já
+// que nesse caso ele usa as do processo inteiras; campo a campo não há herança.
+// `campo`: 'cavalo' | 'carreta'. Processo antigo (só o texto livre) sugere esse
+// texto no campo do cavalo.
+export const sugestaoDePlaca = (proc, ct, campo) => {
+  if (temPlacas(placasDe(ct))) return ''
+  const doProcesso = placasDe(proc)
+  if (campo === 'carreta') return doProcesso.carreta
+  return doProcesso.cavalo || (temPlacasAntigas(proc) ? doProcesso.antigas : '')
+}
+
 // Linhas "rótulo / valor" das placas para a ficha em PDF: cavalo e carreta, ou
 // "Placas" quando só existe o texto antigo.
 export const linhasDePlacas = (t) =>

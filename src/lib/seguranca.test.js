@@ -53,7 +53,8 @@ describe('regras do Firestore: pendências', () => {
 
   it('exige título de 1 a 200 caracteres, dia AAAA-MM-DD e feito booleano', () => {
     expect(bloco).toContain('request.resource.data.titulo is string')
-    expect(bloco).toContain('request.resource.data.titulo.size() > 0')
+    // sem os espaços das pontas: um título só com espaços não vale
+    expect(bloco).toContain('request.resource.data.titulo.trim().size() > 0')
     expect(bloco).toContain('request.resource.data.titulo.size() <= 200')
     expect(bloco).toContain(String.raw`request.resource.data.data.matches('^\\d{4}-\\d{2}-\\d{2}$')`)
     expect(bloco).toContain('request.resource.data.feito is bool')

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { agendaDoDia, agruparPorUrgencia, compromissos, etapasDoContainer, etapasProcesso, grupoUrgencia, ordenarContainers, proximaAcao, proximoAgendamento, proximoPrazo, quandoRelativo } from './etapas'
+import { agendaDoDia, agruparPorUrgencia, compromissos, etapasDoContainer, etapasProcesso, grupoUrgencia, ordenarContainers, primeiroAgendamento, proximaAcao, proximoPrazo, quandoRelativo } from './etapas'
 import { novoChecklistImport } from './processos'
 
 // Sexta-feira, 2 out 2026, 10:00 (horário local).
@@ -186,13 +186,14 @@ describe('ordem dos contêineres pelas datas de agendamento', () => {
     expect(ids(imp([{}, {}, { ag_carga: em(1) }]))).toEqual(['c2', 'c0', 'c1'])
   })
 
-  it('agendamento já cumprido não conta: ordena pelo que ainda falta', () => {
-    const proc = imp([{ ag_carga: em(-1), ag_carga_check: 'true', ag_vazio: em(5) }, { ag_carga: em(2) }])
-    expect(ids(proc)).toEqual(['c1', 'c0'])
+  it('marcar uma etapa como feita não muda a ordem: vale só a data agendada', () => {
+    expect(ids(imp([{ ag_carga: em(3) }, { ag_carga: em(0) }]))).toEqual(['c1', 'c0'])
+    expect(ids(imp([{ ag_carga: em(3) }, { ag_carga: em(0), ag_carga_check: 'true' }]))).toEqual(['c1', 'c0'])
+    expect(ids(imp([{ ag_carga: em(3), ag_carga_check: 'true' }, { ag_carga: em(0) }]))).toEqual(['c1', 'c0'])
   })
 
-  it('contêiner com tudo cumprido vai para o fim', () => {
-    expect(ids(imp([tudoFeito, { ag_carga: em(4) }]))).toEqual(['c1', 'c0'])
+  it('contêiner com tudo cumprido continua no lugar da sua data', () => {
+    expect(ids(imp([tudoFeito, { ag_carga: em(4) }]))).toEqual(['c0', 'c1'])
   })
 
   it('empate de data mantém a ordem gravada', () => {
@@ -213,11 +214,12 @@ describe('ordem dos contêineres pelas datas de agendamento', () => {
     expect(ids(proc)).toEqual(['b', 'a'])
   })
 
-  it('proximoAgendamento devolve o menor horário pendente ou null', () => {
-    const [a, b] = imp([{ ag_carga: em(3), ag_vazio: em(1) }, {}]).containers
-    const proc = imp([{ ag_carga: em(3), ag_vazio: em(1) }, {}])
-    expect(proximoAgendamento(proc, a)).toBe(new Date(2026, 9, 3, 14, 0).getTime())
-    expect(proximoAgendamento(proc, b)).toBeNull()
+  it('primeiroAgendamento devolve o menor horário agendado (cumprido ou não) ou null', () => {
+    const proc = imp([{ ag_carga: em(3), ag_vazio: em(1) }, {}, { ag_carga: em(-1), ag_carga_check: 'true', ag_vazio: em(5) }])
+    const [a, b, c] = proc.containers
+    expect(primeiroAgendamento(proc, a)).toBe(new Date(2026, 9, 3, 14, 0).getTime())
+    expect(primeiroAgendamento(proc, b)).toBeNull()
+    expect(primeiroAgendamento(proc, c)).toBe(new Date(2026, 9, 1, 14, 0).getTime())
   })
 
   it('um contêiner só e processo sem contêineres não quebram', () => {

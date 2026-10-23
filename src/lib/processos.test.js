@@ -24,6 +24,7 @@ import {
   atualizacaoDosDetalhes,
   linhasDePlacas,
   temPlacasAntigas,
+  sugestaoDePlaca,
 } from './processos'
 
 const DIA = 86400000
@@ -448,5 +449,33 @@ describe('placa cavalo e placa carreta', () => {
     ]
     expect(filtrarProcessos(lista, 'import', 'aaa1a11').map((x) => x.id)).toEqual(['p'])
     expect(filtrarProcessos(lista, 'import', 'zzz9z99').map((x) => x.id)).toEqual(['c'])
+  })
+})
+
+describe('sugestão de placa no contêiner (placeholder da ficha)', () => {
+  const ct = (extra = {}) => ({ id: 'a', ...extra })
+
+  it('processo antigo com vários contêineres: o texto antigo do processo aparece como sugestão no cavalo', () => {
+    const proc = { placas: 'ABC1D23 / XYZ9K88' }
+    expect(sugestaoDePlaca(proc, ct(), 'cavalo')).toBe('ABC1D23 / XYZ9K88')
+    expect(sugestaoDePlaca(proc, ct(), 'carreta')).toBe('')
+  })
+
+  it('processo com cavalo e carreta: cada campo sugere o do processo', () => {
+    const proc = { placaCavalo: 'AAA1A11', placaCarreta: 'BBB2B22', placas: 'texto antigo' }
+    expect(sugestaoDePlaca(proc, ct(), 'cavalo')).toBe('AAA1A11')
+    expect(sugestaoDePlaca(proc, ct(), 'carreta')).toBe('BBB2B22')
+  })
+
+  it('contêiner que já tem alguma placa (nova ou antiga) não mostra sugestão: não herda campo a campo', () => {
+    const proc = { placaCavalo: 'AAA1A11', placaCarreta: 'BBB2B22' }
+    expect(sugestaoDePlaca(proc, ct({ placaCarreta: 'CCC3C33' }), 'cavalo')).toBe('')
+    expect(sugestaoDePlaca(proc, ct({ placaCavalo: 'CCC3C33' }), 'carreta')).toBe('')
+    expect(sugestaoDePlaca(proc, ct({ placas: 'QWE4R56' }), 'cavalo')).toBe('')
+  })
+
+  it('sem placa em lugar nenhum não sugere nada', () => {
+    expect(sugestaoDePlaca({}, ct(), 'cavalo')).toBe('')
+    expect(sugestaoDePlaca({}, ct(), 'carreta')).toBe('')
   })
 })
