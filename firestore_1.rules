@@ -84,6 +84,21 @@ service cloud.firestore {
                             && request.resource.data.destino.size() > 0;
     }
 
+    // Pendências do dia a dia (guia "Pendências"), compartilhadas com toda a
+    // equipe: qualquer usuário autenticado consulta, cria, edita, marca como
+    // feita e exclui. Exige título de 1 a 200 caracteres, dia no formato
+    // AAAA-MM-DD e o campo "feito" booleano.
+    match /pendencias/{pendenciaId} {
+      allow read, delete: if request.auth != null;
+      allow create, update: if request.auth != null
+                            && request.resource.data.titulo is string
+                            && request.resource.data.titulo.size() > 0
+                            && request.resource.data.titulo.size() <= 200
+                            && request.resource.data.data is string
+                            && request.resource.data.data.matches('^\\d{4}-\\d{2}-\\d{2}$')
+                            && request.resource.data.feito is bool;
+    }
+
     // Registro de erros do app (src/lib/erros.js): qualquer usuário logado
     // grava um erro em nome próprio, com campos e tamanhos limitados. Ninguém
     // lê, altera ou apaga pelo app; a consulta é pelo Console do Firebase.
