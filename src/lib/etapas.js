@@ -196,3 +196,24 @@ export const proximoPrazo = (proc) => {
   const pendentes = compromissos(proc).filter((c) => c.pendente).map((c) => c.t)
   return pendentes.length ? Math.min(...pendentes) : null
 }
+
+// ORDEM DOS CONTÊINERES: o menor horário, entre os agendamentos ainda não
+// cumpridos deste contêiner (carregamento e devolução na importação; vazio,
+// estufagem e depósito do cheio na exportação). Deadlines não entram. null se
+// não há data pendente.
+export const proximoAgendamento = (proc, ct) => {
+  const datas = passos(proc)
+    .filter((p) => p.agendamento && !p.feita(ct))
+    .map((p) => dataValida(p.data(ct)))
+    .filter((t) => t !== null)
+  return datas.length ? Math.min(...datas) : null
+}
+
+// Cópia dos contêineres em ordem de data (quem tem agendamento mais próximo
+// primeiro; sem data pendente no fim; empate mantém a ordem gravada). Só para
+// exibição: o que está gravado no processo não muda.
+export const ordenarContainers = (proc) =>
+  (proc.containers || [])
+    .map((ct, i) => ({ ct, i, t: proximoAgendamento(proc, ct) ?? Infinity }))
+    .sort((a, b) => (a.t === b.t ? a.i - b.i : a.t - b.t))
+    .map(({ ct }) => ct)

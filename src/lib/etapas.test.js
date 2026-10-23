@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { agendaDoDia, agruparPorUrgencia, compromissos, etapasDoContainer, etapasProcesso, grupoUrgencia, proximaAcao, proximoPrazo, quandoRelativo } from './etapas'
+import { agendaDoDia, agruparPorUrgencia, compromissos, etapasDoContainer, etapasProcesso, grupoUrgencia, ordenarContainers, proximaAcao, proximoAgendamento, proximoPrazo, quandoRelativo } from './etapas'
 import { novoChecklistImport } from './processos'
 
 // Sexta-feira, 2 out 2026, 10:00 (horário local).
@@ -168,5 +168,61 @@ describe('próximo prazo', () => {
   it('exportação: o Deadline Draft pendente conta; o Deadline Carga (informativo) não', () => {
     expect(proximoPrazo(exp([{ deadlineDraft: em(1) }]), NOW)).toBe(t(em(1)))
     expect(proximoPrazo(exp([{ deadlineCarga: em(1) }]), NOW)).toBeNull()
+  })
+})
+
+describe('ordem dos contêineres pelas datas de agendamento', () => {
+  const ids = (proc) => ordenarContainers(proc).map((c) => c.id)
+
+  it('quem carrega hoje vem antes de quem carrega na segunda, sem alterar a ordem gravada', () => {
+    const proc = imp([{ ag_carga: em(3) }, { ag_carga: em(0) }])
+    expect(ids(proc)).toEqual(['c1', 'c0'])
+    expect(proc.containers.map((c) => c.id)).toEqual(['c0', 'c1'])
+    expect(ordenarContainers(proc)).not.toBe(proc.containers)
+  })
+
+  it('contêiner sem data vai para o fim e os sem data mantêm a ordem gravada', () => {
+    expect(ids(imp([{}, { ag_carga: em(1) }]))).toEqual(['c1', 'c0'])
+    expect(ids(imp([{}, {}, { ag_carga: em(1) }]))).toEqual(['c2', 'c0', 'c1'])
+  })
+
+  it('agendamento já cumprido não conta: ordena pelo que ainda falta', () => {
+    const proc = imp([{ ag_carga: em(-1), ag_carga_check: 'true', ag_vazio: em(5) }, { ag_carga: em(2) }])
+    expect(ids(proc)).toEqual(['c1', 'c0'])
+  })
+
+  it('contêiner com tudo cumprido vai para o fim', () => {
+    expect(ids(imp([tudoFeito, { ag_carga: em(4) }]))).toEqual(['c1', 'c0'])
+  })
+
+  it('empate de data mantém a ordem gravada', () => {
+    expect(ids(imp([{ ag_carga: em(1) }, { ag_carga: em(1) }, { ag_carga: em(0) }]))).toEqual(['c2', 'c0', 'c1'])
+  })
+
+  it('na baixa a devolução do vazio não entra na conta', () => {
+    const cts = [{ ag_vazio: em(0) }, { ag_carga: em(2) }]
+    expect(ids(imp(cts, { finalizacaoVazio: 'baixa' }))).toEqual(['c1', 'c0'])
+    expect(ids(imp(cts))).toEqual(['c0', 'c1'])
+  })
+
+  it('exportação usa vazio, estufagem e depósito do cheio; o Deadline Draft não influencia', () => {
+    const proc = exp([
+      { id: 'a', agVazio: em(5), agVazioCheck: 'true', estufagem: em(3), deadlineDraft: em(-9) },
+      { id: 'b', agCheio: em(1) },
+    ])
+    expect(ids(proc)).toEqual(['b', 'a'])
+  })
+
+  it('proximoAgendamento devolve o menor horário pendente ou null', () => {
+    const [a, b] = imp([{ ag_carga: em(3), ag_vazio: em(1) }, {}]).containers
+    const proc = imp([{ ag_carga: em(3), ag_vazio: em(1) }, {}])
+    expect(proximoAgendamento(proc, a)).toBe(new Date(2026, 9, 3, 14, 0).getTime())
+    expect(proximoAgendamento(proc, b)).toBeNull()
+  })
+
+  it('um contêiner só e processo sem contêineres não quebram', () => {
+    expect(ids(imp([{}]))).toEqual(['c0'])
+    expect(ordenarContainers({ type: 'import' })).toEqual([])
+    expect(ordenarContainers({ type: 'export', containers: [] })).toEqual([])
   })
 })
