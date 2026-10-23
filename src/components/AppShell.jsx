@@ -1,17 +1,20 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Archive, House, Mail, Plus, ReceiptText, Route, Search } from 'lucide-react'
+import { Archive, ClipboardList, House, Mail, Plus, ReceiptText, Route, Search } from 'lucide-react'
 import { ExportIcon, ImportIcon } from './ui/icons'
 import { useAuth } from '../contexts/AuthContext'
+import { useToast } from '../contexts/ToastContext'
 import { useTheme } from '../hooks/useTheme'
 import { useMediaQuery, usePainelLateral } from '../hooks/useMediaQuery'
 import { usePreferencia } from '../hooks/usePreferencia'
 import { useProcesses } from '../hooks/useProcesses'
 import { useFretes } from '../hooks/useFretes'
 import { usePedagios } from '../hooks/usePedagios'
+import { usePendencias } from '../hooks/usePendencias'
 import ProcessList from './ProcessList'
 import FreteList from './FreteList'
 import PedagioList from './PedagioList'
+import PendenciaList from './PendenciaList'
 import Inicio from './Inicio'
 import { saudacao } from '../lib/status'
 import Sidebar from './Sidebar'
@@ -25,6 +28,7 @@ const ProcessModal = lazy(() => import('./ProcessModal'))
 const ProcessPanel = lazy(() => import('./ProcessPanel'))
 const FreteModal = lazy(() => import('./FreteModal'))
 const PedagioModal = lazy(() => import('./PedagioModal'))
+const PendenciaModal = lazy(() => import('./PendenciaModal'))
 const NewProcessSheet = lazy(() => import('./NewProcessSheet'))
 const RegistriesModal = lazy(() => import('./RegistriesModal'))
 const CommandPalette = lazy(() => import('./CommandPalette'))
@@ -34,24 +38,28 @@ export const TABS = [
   { value: 'import', label: 'Importações', short: 'Importação', icon: ImportIcon },
   { value: 'export', label: 'Exportações', short: 'Exportação', icon: ExportIcon },
   { value: 'archive', label: 'Arquivados', short: 'Arquivados', icon: Archive },
+  { value: 'pendencias', label: 'Pendências', short: 'Pendências', icon: ClipboardList },
   { value: 'status', label: 'Status para clientes', short: 'Status', icon: Mail },
   { value: 'fretes', label: 'Fretes para CTE', short: 'Fretes CTE', icon: ReceiptText },
   { value: 'pedagios', label: 'Rotas e Valores de Pedágio', short: 'Pedágios', icon: Route },
   // Página inicial: abre pela casinha (fora das seções da barra lateral).
   { value: 'inicio', label: 'Início', short: 'Início', icon: House },
 ]
+// A ordem de TABS (menos o Início) é a da barra lateral: os números dos atalhos (1 a 7) seguem essa ordem.
 const SECTIONS = [
   { title: 'Processos', tabs: TABS.slice(0, 3) },
-  { title: 'Status', tabs: TABS.slice(3, 4) },
-  { title: 'Comercial', tabs: TABS.slice(4, 6) }, // Fretes para CTE e pedágios
+  { title: 'Pendências', tabs: TABS.slice(3, 4) },
+  { title: 'Status', tabs: TABS.slice(4, 5) },
+  { title: 'Comercial', tabs: TABS.slice(5, 7) }, // Fretes para CTE e pedágios
 ]
 // No celular a barra inferior não comporta todas: "Status" abre pela ficha
-// do processo (botão Status) ou pela busca.
-const TABS_CELULAR = TABS.filter((t) => t.value !== 'status' && t.value !== 'inicio')
+// do processo (botão Status) ou pela busca, e as pendências ficam para o PC.
+const TABS_CELULAR = TABS.filter((t) => !['status', 'pendencias', 'inicio'].includes(t.value))
 const SUBTITULOS = {
   import: 'Processos de importação em andamento',
   export: 'Processos de exportação em andamento',
   archive: 'Processos concluídos e arquivados',
+  pendencias: 'Tarefas do dia a dia da equipe',
   status: 'Atualização de um processo por e-mail, pronta para colar',
   fretes: 'Valores e peculiaridades de cada cliente',
   pedagios: 'Rotas e valores de pedágio por número de eixos',
@@ -66,6 +74,7 @@ const isTyping = (el) => el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'S
 // título grande. Celular: barra superior compacta + barra de abas inferior.
 export default function AppShell() {
   const { user, logout, nome, nomeExibido } = useAuth()
+  const showToast = useToast()
   // Na saudação, só o primeiro nome, e só se a pessoa escolheu um (não o e-mail).
   const primeiroNome = nome.split(' ')[0]
   const { isDark, toggleTheme, accent, setAccent } = useTheme()
@@ -81,6 +90,7 @@ export default function AppShell() {
   const { processes, loading, loadingArquivo } = useProcesses(user.uid, activeTab === 'archive' || paletteOpen)
   const { fretes, loading: loadingFretes, erro: erroFretes } = useFretes()
   const { pedagios, loading: loadingPedagios, erro: erroPedagios } = usePedagios()
+  const { pendencias, loading: loadingPendencias, erro: erroPendencias } = usePendencias()
   const [openId, setOpenId] = useState(null)
   // Trocar de aba com o painel aberto fecha o painel; senão o mesmo processo
   // reapareceria em janela na aba nova (Início, por exemplo).
@@ -93,6 +103,7 @@ export default function AppShell() {
   const [statusPedido, setStatusPedido] = useState(0)
   const [freteOpen, setFreteOpen] = useState(null) // null | 'new' | id do frete
   const [pedagioOpen, setPedagioOpen] = useState(null) // null | 'new' | id da rota
+  const [pendenciaOpen, setPendenciaOpen] = useState(null) // null | id da pendência
   const [newOpen, setNewOpen] = useState(false)
   const [registriesOpen, setRegistriesOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
@@ -100,6 +111,7 @@ export default function AppShell() {
   const scrollRef = useRef(null)
   const isFretes = activeTab === 'fretes'
   const isPedagios = activeTab === 'pedagios'
+  const isPendencias = activeTab === 'pendencias'
   const tab = TABS.find((t) => t.value === activeTab)
 
   // Lista em tabela: só no PC (abaixo de lg sempre cartões); a escolha fica guardada.
@@ -127,8 +139,18 @@ export default function AppShell() {
     const aba = activeTabRef.current
     if (aba === 'fretes') setFreteOpen('new')
     else if (aba === 'pedagios') setPedagioOpen('new')
+    else if (aba === 'pendencias') document.getElementById('pend-rapida')?.focus() // a pendência nasce no campo rápido
     else setNewOpen(true)
   }, [])
+  // Abre o processo vinculado a uma pendência; se ele não está na lista (arquivado,
+  // excluído ou de outro usuário) avisa em vez de não fazer nada.
+  const abrirProcesso = useCallback(
+    (id) => {
+      if (processes.some((p) => p.id === id)) setOpenId(id)
+      else showToast('Este processo não está na sua lista (arquivado, excluído ou de outro usuário).', 'error')
+    },
+    [processes, showToast]
+  )
   useEffect(() => {
     activeTabRef.current = activeTab
     scrollRef.current?.scrollTo({ top: 0 })
@@ -141,7 +163,7 @@ export default function AppShell() {
   }
 
   // ATALHOS DE TECLADO: Ctrl/⌘+K busca rápida, "/" filtra a lista,
-  // N novo processo (ou novo frete / nova rota, nas abas de Fretes e Pedágios), 1 a 6 trocam de aba.
+  // N novo processo (ou novo frete / nova rota / nova pendência, nas abas de Fretes, Pedágios e Pendências), 1 a 7 trocam de aba (na ordem da barra lateral).
   useEffect(() => {
     const onKey = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -163,7 +185,7 @@ export default function AppShell() {
       } else if (e.key.toLowerCase() === 'n') {
         e.preventDefault()
         novo()
-      } else if (['1', '2', '3', '4', '5', '6'].includes(e.key)) {
+      } else if (/^[1-7]$/.test(e.key)) {
         setActiveTab(TABS[Number(e.key) - 1].value)
       }
     }
@@ -237,7 +259,7 @@ export default function AppShell() {
             <IconButton icon={Search} label="Buscar" shortcut="Ctrl K" className="lg:hidden" onClick={() => setPaletteOpen(true)} />
             <div className="hidden lg:block">
               <Button icon={Plus} onClick={novo}>
-                {isFretes ? 'Novo cliente' : isPedagios ? 'Nova rota' : 'Novo processo'}
+                {isFretes ? 'Novo cliente' : isPedagios ? 'Nova rota' : isPendencias ? 'Nova pendência' : 'Novo processo'}
               </Button>
             </div>
             <div className="lg:hidden">{accountMenu}</div>
@@ -272,6 +294,8 @@ export default function AppShell() {
                   <FreteList fretes={fretes} loading={loadingFretes} erro={erroFretes} onOpen={setFreteOpen} onNew={() => setFreteOpen('new')} searchRef={searchRef} />
                 ) : isPedagios ? (
                   <PedagioList pedagios={pedagios} loading={loadingPedagios} erro={erroPedagios} onOpen={setPedagioOpen} onNew={() => setPedagioOpen('new')} searchRef={searchRef} />
+                ) : isPendencias ? (
+                  <PendenciaList pendencias={pendencias} loading={loadingPendencias} erro={erroPendencias} onEditar={setPendenciaOpen} onAbrirProcesso={abrirProcesso} searchRef={searchRef} />
                 ) : (
                   <ProcessList processes={processes} loading={activeTab === 'archive' ? loadingArquivo : loading} tab={activeTab} onOpen={setOpenId} searchRef={searchRef} onNew={novo} selecionadoId={painel ? openId : null} tabela={tabela} modo={modoLista} onModo={setModoLista} />
                 )}
@@ -311,6 +335,11 @@ export default function AppShell() {
         <AnimatePresence>
           {(pedagioOpen === 'new' || pedagios.some((p) => p.id === pedagioOpen)) && (
             <PedagioModal key="pedagio" rota={pedagioOpen === 'new' ? null : pedagios.find((p) => p.id === pedagioOpen)} onClose={() => setPedagioOpen(null)} />
+          )}
+        </AnimatePresence>
+        <AnimatePresence>
+          {pendencias.some((p) => p.id === pendenciaOpen) && (
+            <PendenciaModal key="pendencia" pendencia={pendencias.find((p) => p.id === pendenciaOpen)} processes={processes} onClose={() => setPendenciaOpen(null)} />
           )}
         </AnimatePresence>
         <AnimatePresence>
@@ -356,6 +385,12 @@ export default function AppShell() {
                 aba: (t) => {
                   setPaletteOpen(false)
                   setActiveTab(t)
+                },
+                // Troca para a aba e leva o cursor ao campo rápido (depois da transição de aba).
+                novaPendencia: () => {
+                  setPaletteOpen(false)
+                  setActiveTab('pendencias')
+                  setTimeout(() => document.getElementById('pend-rapida')?.focus(), 350)
                 },
                 sair: logout,
               }}
