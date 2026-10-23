@@ -10,6 +10,7 @@ import {
   getDraftDeadlineInfo,
   mascaraNumeroContainer,
   stepsChecklistImport,
+  temPlacasAntigas,
   validarNumeroContainer,
   vazioDepoisDoDraft,
 } from '../../lib/processos'
@@ -148,9 +149,18 @@ export default function ContainerGroup({ proc, ct, index, processes, disabled, m
             <Row label="Motorista">
               <AutoSaveInput type="text" placeholder={proc.motorista || 'Nome'} maxLength={150} value={ct.motorista} disabled={disabled} onSave={save('motorista')} className={plainRight} />
             </Row>
-            <Row label="Placas">
-              <AutoSaveInput type="text" placeholder={proc.placas || 'ABC1D23'} maxLength={150} value={ct.placas} disabled={disabled} onSave={save('placas')} className={plainRight} />
+            <Row label="Placa cavalo">
+              <AutoSaveInput type="text" placeholder={proc.placaCavalo || 'ABC1D23'} maxLength={20} value={ct.placaCavalo} disabled={disabled} onSave={save('placaCavalo')} className={plainRight} />
             </Row>
+            <Row label="Placa carreta">
+              <AutoSaveInput type="text" placeholder={proc.placaCarreta || 'XYZ9K88'} maxLength={20} value={ct.placaCarreta} disabled={disabled} onSave={save('placaCarreta')} className={plainRight} />
+            </Row>
+            {/* Texto antigo de placas: aparece só enquanto cavalo e carreta do contêiner estão vazios. */}
+            {temPlacasAntigas(ct) && (
+              <Row label="Placas (antigo)">
+                <AutoSaveInput type="text" placeholder="ABC1D23" maxLength={150} value={ct.placas} disabled={disabled} onSave={save('placas')} className={plainRight} />
+              </Row>
+            )}
           </>
         )}
 

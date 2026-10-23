@@ -13,14 +13,14 @@ import Segmented from './ui/Segmented'
 import { Group, Row } from './ui/List'
 
 const EMPTY = {
-  armador: '', motorista: '', placas: '', observacoes: '',
+  armador: '', motorista: '', placaCavalo: '', placaCarreta: '', observacoes: '',
   importador: '', documentoTipo: '', documentoNumero: '', termCarga: '', termVazio: '', finalizacaoVazio: 'devolucao',
   modalidade: 'conteiner', carga: '',
   exportador: '', referencia: '', booking: '', navio: '',
 }
 
 let unidadeSeq = 0
-const novaUnidade = () => ({ key: ++unidadeSeq, numero: '', tipo: '', motorista: '', placas: '' })
+const novaUnidade = () => ({ key: ++unidadeSeq, numero: '', tipo: '', motorista: '', placaCavalo: '', placaCarreta: '' })
 
 // NOVO PROCESSO: folha no estilo iOS (Cancelar · título · Criar) com o
 // formulário em listas agrupadas. Contêineres são opcionais.
@@ -65,7 +65,8 @@ export default function NewProcessSheet({ uid, processes, onClose, onCreated }) 
       createdAt: new Date().toISOString(),
       armador: form.armador,
       motorista: form.motorista,
-      placas: form.placas,
+      placaCavalo: form.placaCavalo.trim(),
+      placaCarreta: form.placaCarreta.trim(),
       observacoes: form.observacoes,
       ...(isImport
         ? {
@@ -86,7 +87,7 @@ export default function NewProcessSheet({ uid, processes, onClose, onCreated }) 
         ? [novoContainer(type, `c_${Date.now()}_0`, '', '')]
         : unidades.map((u, i) => ({
             ...novoContainer(type, `c_${Date.now()}_${i}`, u.numero.trim(), u.tipo.trim()),
-            ...(multi && { motorista: u.motorista.trim(), placas: u.placas.trim() }),
+            ...(multi && { motorista: u.motorista.trim(), placaCavalo: u.placaCavalo.trim(), placaCarreta: u.placaCarreta.trim() }),
           })),
     }
 
@@ -175,7 +176,8 @@ export default function NewProcessSheet({ uid, processes, onClose, onCreated }) 
                 {!multi && (
                   <>
                     <Row label="Motorista" htmlFor="np-motorista">{text('motorista', 'Nome')}</Row>
-                    <Row label="Placas" htmlFor="np-placas">{text('placas', 'ABC1D23')}</Row>
+                    <Row label="Placa cavalo" htmlFor="np-placaCavalo">{text('placaCavalo', 'ABC1D23', { maxLength: 20 })}</Row>
+                    <Row label="Placa carreta" htmlFor="np-placaCarreta">{text('placaCarreta', 'XYZ9K88', { maxLength: 20 })}</Row>
                   </>
                 )}
                 {isImport && (
@@ -252,12 +254,20 @@ export default function NewProcessSheet({ uid, processes, onClose, onCreated }) 
                         />
                         <Truck className="size-4 shrink-0 text-slate-500" strokeWidth={2} />
                         <input
-                          value={u.placas}
-                          onChange={(e) => setUnidade(u.key, 'placas', e.target.value)}
-                          maxLength={150}
-                          placeholder="Placas"
-                          aria-label={`Placas do contêiner ${i + 1}`}
-                          className="field-plain w-28 shrink-0 text-[14px]"
+                          value={u.placaCavalo}
+                          onChange={(e) => setUnidade(u.key, 'placaCavalo', e.target.value)}
+                          maxLength={20}
+                          placeholder="Cavalo"
+                          aria-label={`Placa cavalo do contêiner ${i + 1}`}
+                          className="field-plain w-24 shrink-0 text-[14px]"
+                        />
+                        <input
+                          value={u.placaCarreta}
+                          onChange={(e) => setUnidade(u.key, 'placaCarreta', e.target.value)}
+                          maxLength={20}
+                          placeholder="Carreta"
+                          aria-label={`Placa carreta do contêiner ${i + 1}`}
+                          className="field-plain w-24 shrink-0 text-[14px]"
                         />
                       </div>
                     )}

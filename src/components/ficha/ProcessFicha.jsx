@@ -4,7 +4,7 @@ import { Archive, ArchiveRestore, CirclePlus, FileText, Mail } from 'lucide-reac
 import { ExportIcon, ImportIcon } from '../ui/icons'
 import { useToast } from '../../contexts/ToastContext'
 import { useDialog } from '../../contexts/DialogContext'
-import { draftAlertConfig, ehCargaSolta, formatarDataHoraCurta, formatarPlacas, getDraftDeadlineInfo, getProcessProgress } from '../../lib/processos'
+import { draftAlertConfig, ehCargaSolta, formatarDataHoraCurta, formatarPlacas, getDraftDeadlineInfo, getProcessProgress, temPlacasAntigas, transportePorContainer } from '../../lib/processos'
 import { ordenarContainers } from '../../lib/etapas'
 import { adicionarContainer, atualizarProcesso, excluirProcesso } from '../../lib/processActions'
 import { exportarProcessoPDF } from '../../lib/exportar'
@@ -76,7 +76,8 @@ export default function ProcessFicha({ proc, processes, onClose, onEnviarStatus 
     }, 700)
   }
 
-  const resumoTransporte = [proc.motorista, formatarPlacas(proc.placas)].filter(Boolean).join(' · ')
+  const transporte = transportePorContainer(proc)[0]
+  const resumoTransporte = [transporte.motorista, formatarPlacas(transporte.placas)].filter(Boolean).join(' · ')
   const agCarga = formatarDataHoraCurta(containers[0]?.checklist?.ag_carga)
   const resumoObservacoes = (proc.observacoes || '').replace(/\s+/g, ' ').trim().slice(0, 70)
 
@@ -123,7 +124,12 @@ export default function ProcessFicha({ proc, processes, onClose, onEnviarStatus 
               {containers.length <= 1 && (
                 <SecaoFicha id="transporte" kind="transporte" titulo="Transporte" resumo={resumoTransporte}>
                   <Row label="Motorista"><AutoSaveInput type="text" placeholder="Nome" maxLength={150} value={proc.motorista} disabled={archived} onSave={saveProcField('motorista')} className={plainRight} /></Row>
-                  <Row label="Placas"><AutoSaveInput type="text" placeholder="ABC1D23" maxLength={150} value={proc.placas} disabled={archived} onSave={saveProcField('placas')} className={plainRight} /></Row>
+                  <Row label="Placa cavalo"><AutoSaveInput type="text" placeholder="ABC1D23" maxLength={20} value={proc.placaCavalo} disabled={archived} onSave={saveProcField('placaCavalo')} className={plainRight} /></Row>
+                  <Row label="Placa carreta"><AutoSaveInput type="text" placeholder="XYZ9K88" maxLength={20} value={proc.placaCarreta} disabled={archived} onSave={saveProcField('placaCarreta')} className={plainRight} /></Row>
+                  {/* Texto antigo de placas: aparece só enquanto cavalo e carreta estão vazios. */}
+                  {temPlacasAntigas(proc) && (
+                    <Row label="Placas (antigo)"><AutoSaveInput type="text" placeholder="ABC1D23" maxLength={150} value={proc.placas} disabled={archived} onSave={saveProcField('placas')} className={plainRight} /></Row>
+                  )}
                 </SecaoFicha>
               )}
 
