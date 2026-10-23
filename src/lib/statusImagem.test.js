@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { crc32, dadosDosContainers, etapasDaImagem, opcoesDeStatus, pngComDpi, quebrarLinhas } from './statusImagem'
+import { agendamentosDosContainers, crc32, dadosDosContainers, etapasDaImagem, filtrosDeAgendamento, gradeDeAgendamentos, gradeDosContainers, opcoesDeStatus, pngComDpi, quebrarLinhas } from './statusImagem'
 
 describe('imagem de status', () => {
   it('etapas e situações por tipo de processo', () => {
@@ -48,5 +48,113 @@ describe('dados do contêiner (exportação)', () => {
       { numero: 'MSCU 999.888-7', tara: '3.800 kg', lacre: 'L123' },
       { numero: '—', tara: '3.750 kg', lacre: '—' },
     ])
+  })
+})
+
+describe('status dos agendamentos', () => {
+  const imp = (cts, extra = {}) => ({
+    type: 'import',
+    containers: cts.map((c, i) => ({ id: `c${i}`, numero: `N${i}`, ...c, checklist: c.checklist || {} })),
+    ...extra,
+  })
+  const exp = (cts) => ({ type: 'export', containers: cts.map((c, i) => ({ id: `c${i}`, numero: `N${i}`, ...c })) })
+  const rotulos = (r) => r.colunas.map((c) => c.rotulo)
+  const numeros = (r) => r.linhas.map((l) => l.numero)
+
+  it('existe nos dois tipos, antes de "Atualização do processo", sem barra de progresso', () => {
+    for (const type of ['import', 'export']) {
+      const ids = opcoesDeStatus({ type }).map((o) => o.id)
+      expect(ids.indexOf('agendamentos')).toBeGreaterThan(-1)
+      expect(ids.indexOf('agendamentos')).toBe(ids.indexOf('outro') - 1)
+      expect(opcoesDeStatus({ type }).find((o) => o.id === 'agendamentos')).toMatchObject({ titulo: 'Status dos agendamentos', etapa: null, agendamentos: true })
+    }
+  })
+
+  it('importação: cheios é o carregamento e vazios é a devolução do vazio', () => {
+    const p = imp([{}])
+    expect(rotulos(agendamentosDosContainers(p, 'ambos'))).toEqual(['Carregamento', 'Devolução do vazio'])
+    expect(rotulos(agendamentosDosContainers(p, 'cheios'))).toEqual(['Carregamento'])
+    expect(rotulos(agendamentosDosContainers(p, 'vazios'))).toEqual(['Devolução do vazio'])
+  })
+
+  it('exportação: vazios é a retirada do vazio e cheios é o depósito do cheio, sem estufagem', () => {
+    const p = exp([{}])
+    expect(rotulos(agendamentosDosContainers(p, 'ambos'))).toEqual(['Retirada do vazio', 'Depósito do cheio'])
+    expect(rotulos(agendamentosDosContainers(p, 'cheios'))).toEqual(['Depósito do cheio'])
+    expect(rotulos(agendamentosDosContainers(p, 'vazios'))).toEqual(['Retirada do vazio'])
+    expect(agendamentosDosContainers(p, 'ambos').colunas.map((c) => c.id)).not.toContain('estufagem')
+  })
+
+  it('ordena pela menor data entre as colunas exibidas', () => {
+    const p = imp([
+      { checklist: { ag_carga: '2026-10-10T10:00', ag_vazio: '2026-10-12T10:00' } },
+      { checklist: { ag_carga: '2026-10-11T10:00', ag_vazio: '2026-10-09T10:00' } },
+    ])
+    expect(numeros(agendamentosDosContainers(p, 'cheios'))).toEqual(['N0', 'N1'])
+    expect(numeros(agendamentosDosContainers(p, 'vazios'))).toEqual(['N1', 'N0'])
+    expect(numeros(agendamentosDosContainers(p, 'ambos'))).toEqual(['N1', 'N0'])
+  })
+
+  it('sem nenhuma data vai para o fim e o empate mantém a ordem gravada', () => {
+    const p = imp([{}, { checklist: { ag_carga: '2026-10-10T10:00' } }, {}, { checklist: { ag_carga: '2026-10-10T10:00' } }])
+    expect(numeros(agendamentosDosContainers(p, 'cheios'))).toEqual(['N1', 'N3', 'N0', 'N2'])
+  })
+
+  it('datas no formato curto, traço quando falta data ou número', () => {
+    const p = imp([{ numero: '', checklist: { ag_carga: '2026-10-03T14:00' } }])
+    expect(agendamentosDosContainers(p, 'ambos').linhas).toEqual([{ numero: '—', valores: ['03/10 14:00', '—'] }])
+    const e = exp([{ numero: 'MAEU 1', agVazio: '2026-10-04T08:30' }])
+    expect(agendamentosDosContainers(e, 'ambos').linhas).toEqual([{ numero: 'MAEU 1', valores: ['04/10 08:30', '—'] }])
+  })
+
+  it('filtros disponíveis: Cheios, Vazios e Os dois, e só Cheios na baixa e na carga solta', () => {
+    const tres = [['cheios', 'Cheios'], ['vazios', 'Vazios'], ['ambos', 'Os dois']]
+    expect(filtrosDeAgendamento(imp([{}])).map((f) => [f.value, f.label])).toEqual(tres)
+    expect(filtrosDeAgendamento(exp([{}])).map((f) => [f.value, f.label])).toEqual(tres)
+    expect(filtrosDeAgendamento(imp([{}], { finalizacaoVazio: 'baixa' })).map((f) => f.value)).toEqual(['cheios'])
+    expect(filtrosDeAgendamento(imp([{}], { modalidade: 'solta' })).map((f) => f.value)).toEqual(['cheios'])
+  })
+
+  it('na baixa e na carga solta não existe coluna de vazios, mesmo pedindo "os dois" ou "vazios"', () => {
+    for (const extra of [{ finalizacaoVazio: 'baixa' }, { modalidade: 'solta', carga: '104 caixas' }]) {
+      const p = imp([{}], extra)
+      expect(rotulos(agendamentosDosContainers(p, 'ambos'))).toEqual(['Carregamento'])
+      expect(rotulos(agendamentosDosContainers(p, 'vazios'))).toEqual(['Carregamento'])
+    }
+  })
+
+  it('processo sem contêineres devolve só as colunas', () => {
+    expect(agendamentosDosContainers({ type: 'import' }, 'ambos')).toEqual({
+      colunas: [{ id: 'ag_carga', rotulo: 'Carregamento' }, { id: 'ag_vazio', rotulo: 'Devolução do vazio' }],
+      linhas: [],
+    })
+  })
+})
+
+describe('tabelas da imagem de status', () => {
+  const contiguas = (colunas) => colunas.every((c, i) => c.ini === (i === 0 ? 0 : colunas[i - 1].fim)) && colunas.at(-1).fim === 1
+
+  it('dados do contêiner mantêm as proporções de antes (45% / 25% / 30%)', () => {
+    const proc = { containers: [{ numero: 'MSCU 999.888-7', tara: '3800', lacre: 'L123' }] }
+    const g = gradeDosContainers(proc)
+    expect(g.colunas.map((c) => [c.rotulo, c.ini, c.fim])).toEqual([['Contêiner', 0, 0.45], ['Tara', 0.45, 0.7], ['Lacre', 0.7, 1]])
+    expect(g.linhas).toEqual([['MSCU 999.888-7', '3.800 kg', 'L123']])
+  })
+
+  it('agendamentos: contêiner + uma coluna por data, ocupando toda a largura', () => {
+    const proc = { type: 'import', containers: [{ id: 'a', numero: 'MSCU 1', checklist: { ag_carga: '2026-10-03T14:00' } }] }
+    const dois = gradeDeAgendamentos(proc, 'ambos')
+    expect(dois.colunas.map((c) => c.rotulo)).toEqual(['Contêiner', 'Carregamento', 'Devolução do vazio'])
+    expect(contiguas(dois.colunas)).toBe(true)
+    expect(dois.linhas).toEqual([['MSCU 1', '03/10 14:00', '—']])
+    const um = gradeDeAgendamentos(proc, 'cheios')
+    expect(um.colunas.map((c) => c.rotulo)).toEqual(['Contêiner', 'Carregamento'])
+    expect(contiguas(um.colunas)).toBe(true)
+  })
+
+  it('agendamentos sem contêineres tem as colunas e nenhuma linha', () => {
+    const g = gradeDeAgendamentos({ type: 'export' }, 'ambos')
+    expect(g.linhas).toEqual([])
+    expect(g.colunas).toHaveLength(3)
   })
 })

@@ -214,11 +214,11 @@ export const filtrarProcessos = (processes, tab, searchQuery) => {
   if (q) {
     filtered = filtered.filter((proc) => {
       const campos = [
-        proc.armador, proc.motorista, proc.placas,
+        proc.armador, proc.motorista, proc.placas, proc.placaCavalo, proc.placaCarreta,
         proc.importador, proc.exportador,
         proc.documentoNumero, proc.documento, proc.booking, proc.referencia, proc.navio,
         proc.observacoes, proc.carga,
-        ...(proc.containers || []).flatMap((c) => [c.numero, c.motorista, c.placas]),
+        ...(proc.containers || []).flatMap((c) => [c.numero, c.motorista, c.placas, c.placaCavalo, c.placaCarreta]),
       ].filter(Boolean).join(' ').toLowerCase()
       return campos.includes(q)
     })
@@ -238,21 +238,95 @@ export const DESTINOS = [
   { value: 'baixa', label: 'Baixa' },
 ]
 
+// PLACAS: cavalo e carreta em campos separados (placaCavalo, placaCarreta). O
+// campo antigo `placas` (texto livre) continua guardado e só aparece enquanto
+// cavalo e carreta estiverem vazios no mesmo lugar (processo ou contêiner).
+const placasDe = (origem) => ({
+  cavalo: (origem?.placaCavalo || '').trim(),
+  carreta: (origem?.placaCarreta || '').trim(),
+  antigas: (origem?.placas || '').trim(),
+})
+const temPlacas = (p) => Boolean(p.cavalo || p.carreta || p.antigas)
+
+export const temPlacasAntigas = (origem) => {
+  const p = placasDe(origem)
+  return Boolean(p.antigas) && !p.cavalo && !p.carreta
+}
+
 // MOTORISTA E PLACAS POR CONTÊINER. Com um contêiner só, valem os campos do
-// processo. Com mais de um, cada contêiner pode ter o seu motorista; quem
-// ainda não tem usa o do processo (dados antigos continuam aparecendo).
+// processo. Com mais de um, cada contêiner pode ter o seu motorista e as suas
+// placas; quem ainda não tem usa os do processo (dados antigos continuam
+// aparecendo). `placas` é o texto compacto para listas: "cavalo / carreta" ou,
+// sem nenhum dos dois, o texto antigo.
 export const transportePorContainer = (proc) => {
   const cts = proc.containers || []
-  if (cts.length <= 1) {
-    const ct = cts[0] || {}
-    return [{ ctId: ct.id, numero: ct.numero || '', motorista: proc.motorista || ct.motorista || '', placas: proc.placas || ct.placas || '' }]
+  const multi = cts.length > 1
+  const monta = (ct) => {
+    const doProcesso = placasDe(proc)
+    const doContainer = placasDe(ct)
+    const p = multi ? (temPlacas(doContainer) ? doContainer : doProcesso) : temPlacas(doProcesso) ? doProcesso : doContainer
+    return {
+      ctId: ct.id,
+      numero: ct.numero || '',
+      motorista: (multi ? ct.motorista || proc.motorista : proc.motorista || ct.motorista) || '',
+      placas: p.cavalo || p.carreta ? [p.cavalo, p.carreta].filter(Boolean).join(' / ') : p.antigas,
+      placaCavalo: p.cavalo,
+      placaCarreta: p.carreta,
+      placasAntigas: p.antigas,
+    }
   }
-  return cts.map((ct) => ({
-    ctId: ct.id,
-    numero: ct.numero || '',
-    motorista: ct.motorista || proc.motorista || '',
-    placas: ct.placas || proc.placas || '',
-  }))
+  return cts.length ? cts.map(monta) : [monta({})]
+}
+
+// Sugestão (placeholder) de placa para um contêiner da ficha: só aparece se o
+// contêiner ainda não tem nenhuma placa (cavalo, carreta ou texto antigo), já
+// que nesse caso ele usa as do processo inteiras; campo a campo não há herança.
+// `campo`: 'cavalo' | 'carreta'. Processo antigo (só o texto livre) sugere esse
+// texto no campo do cavalo.
+export const sugestaoDePlaca = (proc, ct, campo) => {
+  if (temPlacas(placasDe(ct))) return ''
+  const doProcesso = placasDe(proc)
+  if (campo === 'carreta') return doProcesso.carreta
+  return doProcesso.cavalo || (temPlacasAntigas(proc) ? doProcesso.antigas : '')
+}
+
+// Linhas "rótulo / valor" das placas para a ficha em PDF: cavalo e carreta, ou
+// "Placas" quando só existe o texto antigo.
+export const linhasDePlacas = (t) =>
+  !t.placaCavalo && !t.placaCarreta && t.placasAntigas
+    ? [['Placas', t.placasAntigas]]
+    : [['Placa cavalo', t.placaCavalo || ''], ['Placa carreta', t.placaCarreta || '']]
+
+// TERMINAL DE DEVOLUÇÃO DO VAZIO (importação), mesma regra de motorista e
+// placas: com um contêiner só vale o do processo; com mais de um, cada
+// contêiner pode ter o seu e quem não tem usa o do processo. Baixa, carga
+// solta e exportação não têm devolução (a exportação guarda os terminais no
+// próprio contêiner, em termVazioExp e termCheioExp).
+export const terminalDevolucao = (proc, ct) => {
+  if (proc.type !== 'import' || proc.finalizacaoVazio === 'baixa' || ehCargaSolta(proc)) return ''
+  const doProcesso = (proc.termVazio || '').trim()
+  const doContainer = (ct?.termVazio || '').trim()
+  return (proc.containers || []).length > 1 ? doContainer || doProcesso : doProcesso || doContainer
+}
+
+// Terminais de devolução distintos do processo (CSV e PDF).
+export const terminaisDeDevolucao = (proc) => {
+  const cts = proc.containers || []
+  return distintos(cts.length ? cts.map((ct) => terminalDevolucao(proc, ct)) : [terminalDevolucao(proc, null)])
+}
+
+// Ao passar para "Baixa" não há devolução: zera o terminal de cada contêiner.
+export const limparTerminaisDevolucao = (containers) => containers.map((ct) => (ct.termVazio ? { ...ct, termVazio: '' } : ct))
+
+// O que gravar ao salvar os Detalhes de uma importação. Na Baixa o terminal do
+// processo é apagado e, só se algum contêiner tiver terminal próprio, o dos
+// contêineres também: sem isso o array `containers` não é regravado, para não
+// sobrescrever uma edição que outra pessoa fez no contêiner.
+export const atualizacaoDosDetalhes = (proc, dados) => {
+  if (dados.finalizacaoVazio !== 'baixa') return dados
+  const cts = proc.containers || []
+  const patch = { ...dados, termVazio: '' }
+  return cts.some((ct) => ct.termVazio) ? { ...patch, containers: limparTerminaisDevolucao(cts) } : patch
 }
 
 // A retirada do vazio precisa ser antes do Deadline Draft. true quando as

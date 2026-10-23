@@ -2,7 +2,7 @@
 // para copiar e colar no e-mail do cliente (ou baixar como PNG).
 import { EMPRESA } from '../marca'
 import { dadosDoProcesso } from './status'
-import { ehCargaSolta } from './processos'
+import { ehCargaSolta, formatarDataHoraCurta, identificacaoUnidade } from './processos'
 
 // Etapas da barra de progresso por tipo de processo.
 export const etapasDaImagem = (proc) => {
@@ -24,6 +24,7 @@ export const opcoesDeStatus = (proc) => {
       { id: 'dados', titulo: 'Dados do contêiner', etapa: null, tabela: true, detalhes: 'Segue abaixo dados do container e fotos em anexo para conferência.' },
       { id: 'rota', titulo: 'Veículo em rota', etapa: 2 },
       { id: 'terminal', titulo: 'Cheio entregue no terminal', etapa: 3 },
+      { id: 'agendamentos', titulo: 'Status dos agendamentos', etapa: null, agendamentos: true, detalhes: 'Segue a programação dos agendamentos.' },
       { id: 'outro', titulo: 'Atualização do processo', etapa: null },
     ]
   }
@@ -33,6 +34,7 @@ export const opcoesDeStatus = (proc) => {
     { id: 'rota', titulo: 'Veículo em rota', etapa: 1 },
     { id: 'entregue', titulo: 'Carga entregue', etapa: 2 },
     { id: 'devolvido', titulo: 'Contêiner devolvido', etapa: 3 },
+    { id: 'agendamentos', titulo: 'Status dos agendamentos', etapa: null, agendamentos: true, detalhes: 'Segue a programação dos agendamentos.' },
     { id: 'outro', titulo: 'Atualização do processo', etapa: null },
   ]
   return proc.finalizacaoVazio === 'baixa' || ehCargaSolta(proc) ? opcoes.filter((o) => o.id !== 'devolvido') : opcoes
@@ -48,6 +50,70 @@ export const dadosDosContainers = (proc) =>
       lacre: String(ct.lacre || '').trim() || '—',
     }
   })
+
+// STATUS DOS AGENDAMENTOS: tabela de contêineres e datas. "Cheios" é o
+// carregamento (importação) ou o depósito do cheio (exportação); "vazios" é a
+// devolução do vazio (importação) ou a retirada do vazio (exportação). Na
+// baixa e na carga solta não existe devolução, então só há cheios.
+const semVazios = (proc) => proc.type === 'import' && (proc.finalizacaoVazio === 'baixa' || ehCargaSolta(proc))
+
+const COLUNAS_AGENDAMENTO = {
+  import: { cheios: { id: 'ag_carga', rotulo: 'Carregamento' }, vazios: { id: 'ag_vazio', rotulo: 'Devolução do vazio' }, ordem: ['cheios', 'vazios'] },
+  export: { cheios: { id: 'agCheio', rotulo: 'Depósito do cheio' }, vazios: { id: 'agVazio', rotulo: 'Retirada do vazio' }, ordem: ['vazios', 'cheios'] },
+}
+
+// Opções do seletor "Incluir" (cheios, vazios ou os dois) para o processo.
+export const filtrosDeAgendamento = (proc) =>
+  semVazios(proc)
+    ? [{ value: 'cheios', label: 'Cheios' }]
+    : [{ value: 'cheios', label: 'Cheios' }, { value: 'vazios', label: 'Vazios' }, { value: 'ambos', label: 'Os dois' }]
+
+// Colunas pedidas e uma linha por contêiner, da menor data (entre as colunas
+// exibidas) para a maior; sem data no fim, empate na ordem gravada.
+export const agendamentosDosContainers = (proc, filtro) => {
+  const cfg = COLUNAS_AGENDAMENTO[proc.type === 'export' ? 'export' : 'import']
+  const pedido = semVazios(proc) ? 'cheios' : filtro
+  const colunas = cfg.ordem.filter((k) => pedido === 'ambos' || pedido === k).map((k) => ({ id: cfg[k].id, rotulo: cfg[k].rotulo }))
+  const dataDe = (ct, id) => (proc.type === 'export' ? ct[id] : ct.checklist?.[id])
+  const linhas = (proc.containers || [])
+    .map((ct, i) => {
+      const tempos = colunas.map((c) => new Date(dataDe(ct, c.id) || '').getTime())
+      const validos = tempos.filter((t) => !isNaN(t))
+      return {
+        i,
+        t: validos.length ? Math.min(...validos) : Infinity,
+        numero: ehCargaSolta(proc) ? identificacaoUnidade(proc, ct) : String(ct.numero || '').trim() || '—',
+        valores: colunas.map((c) => formatarDataHoraCurta(dataDe(ct, c.id)) || '—'),
+      }
+    })
+    .sort((a, b) => (a.t === b.t ? a.i - b.i : a.t - b.t))
+    .map(({ numero, valores }) => ({ numero, valores }))
+  return { colunas, linhas }
+}
+
+// TABELAS DA IMAGEM: cada coluna ocupa uma fatia da largura (`ini` e `fim`,
+// de 0 a 1) e cada linha é a lista de textos na ordem das colunas.
+export const gradeDosContainers = (proc) => ({
+  colunas: [
+    { rotulo: 'Contêiner', ini: 0, fim: 0.45 },
+    { rotulo: 'Tara', ini: 0.45, fim: 0.7 },
+    { rotulo: 'Lacre', ini: 0.7, fim: 1 },
+  ],
+  linhas: dadosDosContainers(proc).map((l) => [l.numero, l.tara, l.lacre]),
+})
+
+export const gradeDeAgendamentos = (proc, filtro) => {
+  const { colunas, linhas } = agendamentosDosContainers(proc, filtro)
+  const primeira = 0.34
+  const fatia = (1 - primeira) / Math.max(colunas.length, 1)
+  return {
+    colunas: [
+      { rotulo: 'Contêiner', ini: 0, fim: primeira },
+      ...colunas.map((c, k) => ({ rotulo: c.rotulo, ini: primeira + k * fatia, fim: k === colunas.length - 1 ? 1 : primeira + (k + 1) * fatia })),
+    ],
+    linhas: linhas.map((l) => [l.numero, ...l.valores]),
+  }
+}
 
 // Quebra um texto em linhas que caibam na largura (medida injetável para teste).
 export const quebrarLinhas = (texto, largura, medir) => {
@@ -139,9 +205,11 @@ const retanguloArredondado = (ctx, x, y, w, h, r) => {
 }
 
 // Calcula a altura e desenha o cartão. `canvas` é redimensionado.
-export const desenharStatus = (canvas, { proc, titulo, detalhes, etapa, tabela = false, data = new Date() }) => {
+export const desenharStatus = (canvas, { proc, titulo, detalhes, etapa, tabela = false, grade = null, data = new Date() }) => {
   const ctx = canvas.getContext('2d')
   const { cliente, documento, containers, rotuloUnidade } = dadosDoProcesso(proc)
+  // Tabela abaixo das caixas de dados: a `grade` pedida ou, com `tabela`, a de numeração/tara/lacre.
+  const quadro = grade || (tabela ? gradeDosContainers(proc) : null)
   const M = 36 // margem interna
   const W = LARGURA
   const etapas = etapa === null ? null : etapasDaImagem(proc)
@@ -158,10 +226,10 @@ export const desenharStatus = (canvas, { proc, titulo, detalhes, etapa, tabela =
     [documento?.rotulo || 'Documento', documento?.numero || '—'],
     // Um contêiner por linha, para o número não quebrar no meio. Com a
     // tabela de dados, os contêineres aparecem nela.
-    !tabela && [rotuloUnidade, containers.join('\n') || '—'],
+    !quadro && [rotuloUnidade, containers.join('\n') || '—'],
   ].filter(Boolean)
-  const linhasTabela = tabela ? dadosDosContainers(proc) : []
-  const alturaTabela = tabela ? 38 + Math.max(linhasTabela.length, 1) * 40 + 6 : 0
+  const linhasTabela = quadro ? quadro.linhas : []
+  const alturaTabela = quadro ? 38 + Math.max(linhasTabela.length, 1) * 40 + 6 : 0
   const colunas = info.length
   const larguraColuna = (W - 2 * M - (colunas - 1) * 12) / colunas
   const linhasInfo = info.map(([, v]) => quebrarLinhas(v, larguraColuna - 28, medir(fonte(600, 15))))
@@ -172,7 +240,7 @@ export const desenharStatus = (canvas, { proc, titulo, detalhes, etapa, tabela =
   if (etapas) altura += 30 + 62
   if (linhasDetalhes.length) altura += 22 + linhasDetalhes.length * 25
   altura += 28 + alturaInfo + 28 + 1 + 44
-  if (tabela) altura += 12 + alturaTabela
+  if (quadro) altura += 12 + alturaTabela
 
   canvas.width = W * ESCALA
   canvas.height = Math.ceil(altura) * ESCALA
@@ -327,24 +395,19 @@ export const desenharStatus = (canvas, { proc, titulo, detalhes, etapa, tabela =
   })
   y += alturaInfo
 
-  // Tabela com numeração, tara e lacre de cada contêiner.
-  if (tabela) {
+  // Tabela (numeração, tara e lacre; ou os agendamentos de cada contêiner).
+  if (quadro) {
     y += 12
     const largura = W - 2 * M
     const util = largura - 32
     ctx.fillStyle = COR.fundoInfo
     retanguloArredondado(ctx, M, y, largura, alturaTabela, 12)
     ctx.fill()
-    // [rótulo, campo, início da coluna (fração), fim da coluna (fração)]
-    const cols = [
-      ['Contêiner', 'numero', 0, 0.45],
-      ['Tara', 'tara', 0.45, 0.7],
-      ['Lacre', 'lacre', 0.7, 1],
-    ]
+    const cols = quadro.colunas // { rotulo, ini, fim }: fatia da largura útil, de 0 a 1
     ctx.font = fonte(600, 11)
     ctx.fillStyle = COR.cinzaClaro
     ctx.letterSpacing = '1px'
-    cols.forEach(([rotulo, , ini]) => ctx.fillText(rotulo.toUpperCase(), M + 16 + ini * util, y + 25))
+    cols.forEach((c) => ctx.fillText(c.rotulo.toUpperCase(), M + 16 + c.ini * util, y + 25))
     ctx.letterSpacing = '0px'
     ctx.font = fonte(600, 15)
     linhasTabela.forEach((linha, i) => {
@@ -352,12 +415,12 @@ export const desenharStatus = (canvas, { proc, titulo, detalhes, etapa, tabela =
       ctx.fillStyle = COR.linha
       ctx.fillRect(M + 16, ly, util, 1)
       ctx.fillStyle = COR.tinta
-      cols.forEach(([, campo, ini, fim]) => {
+      cols.forEach((c, k) => {
         // Corta com "…" se não couber na coluna.
-        const max = (fim - ini) * util - 12
-        let texto = linha[campo]
+        const max = (c.fim - c.ini) * util - 12
+        let texto = String(linha[k])
         while (texto.length > 1 && ctx.measureText(texto).width > max) texto = `${texto.slice(0, -2)}…`
-        ctx.fillText(texto, M + 16 + ini * util, ly + 26)
+        ctx.fillText(texto, M + 16 + c.ini * util, ly + 26)
       })
     })
     y += alturaTabela

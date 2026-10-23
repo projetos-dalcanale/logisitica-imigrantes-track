@@ -68,3 +68,106 @@ describe('PDF do processo', () => {
     expect(html).toContain('Deadline Draft')
   })
 })
+
+describe('PDF: terminal de devolução', () => {
+  const caixa = (rotulo, valor) => `<span class="pf-rot">${rotulo}</span><span class="pf-val">${valor}</span>`
+  const dois = (extra = {}) => ({
+    ...imp,
+    termVazio: 'Depot Sul',
+    containers: [
+      { id: 'a', numero: 'OOCU 704.568-8', termVazio: 'Depot Norte', checklist: {} },
+      { id: 'b', numero: 'TGHU 765.432-1', checklist: {} },
+    ],
+    ...extra,
+  })
+
+  it('com um contêiner, o terminal vai na linha de destino', () => {
+    const html = montarHtmlProcesso({ ...imp, termVazio: 'Depot Sul' })
+    expect(html).toContain(caixa('Destino do contêiner', 'Devolução · Depot Sul'))
+    expect(html).not.toContain('Terminal de devolução')
+  })
+
+  it('com 2 contêineres, cada bloco mostra o terminal do contêiner e o destino fica sem terminal', () => {
+    const html = montarHtmlProcesso(dois())
+    expect(html).toContain(caixa('Destino do contêiner', 'Devolução'))
+    expect(html).toContain(caixa('Terminal de devolução', 'Depot Norte'))
+    expect(html).toContain(caixa('Terminal de devolução', 'Depot Sul'))
+  })
+
+  it('na baixa não aparece terminal nenhum', () => {
+    const html = montarHtmlProcesso(dois({ finalizacaoVazio: 'baixa' }))
+    expect(html).not.toContain('Terminal de devolução')
+    expect(html).not.toContain('Depot')
+  })
+})
+
+describe('PDF: ordem dos contêineres', () => {
+  const ct = (id, numero, motorista, placas, data) => ({ id, numero, motorista, placas, checklist: { ag_carga: data } })
+  const proc = {
+    ...imp,
+    motorista: '',
+    placas: '',
+    containers: [
+      ct('a', 'OOCU 704.568-8', 'Ana', 'AAA1A11', '2026-10-05T10:00'),
+      ct('b', 'TGHU 765.432-1', 'Bia', 'BBB2B22', '2026-10-03T10:00'),
+    ],
+  }
+  const blocos = (html) => html.split('<div class="pf-ct">').slice(1)
+
+  it('os blocos saem na ordem das datas, numerados pela ordem exibida', () => {
+    const [primeiro, segundo] = blocos(montarHtmlProcesso(proc))
+    expect(primeiro).toContain('Contêiner 1')
+    expect(primeiro).toContain('TGHU 765.432-1')
+    expect(segundo).toContain('Contêiner 2')
+    expect(segundo).toContain('OOCU 704.568-8')
+  })
+
+  it('motorista e placas acompanham o contêiner, não a posição', () => {
+    const [primeiro, segundo] = blocos(montarHtmlProcesso(proc))
+    expect(primeiro).toContain('Bia')
+    expect(primeiro).toContain('BBB2B22')
+    expect(primeiro).not.toContain('Ana')
+    expect(segundo).toContain('Ana')
+    expect(segundo).toContain('AAA1A11')
+    expect(segundo).not.toContain('Bia')
+  })
+
+  it('sem datas mantém a ordem gravada', () => {
+    const semDatas = { ...proc, containers: proc.containers.map((c) => ({ ...c, checklist: {} })) }
+    const [primeiro] = blocos(montarHtmlProcesso(semDatas))
+    expect(primeiro).toContain('OOCU 704.568-8')
+  })
+})
+
+describe('PDF: placa cavalo e carreta', () => {
+  const caixa = (rotulo, valor) => `<span class="pf-rot">${rotulo}</span><span class="pf-val">${valor}</span>`
+  const blocos = (html) => html.split('<div class="pf-ct">').slice(1)
+
+  it('com um contêiner, as duas placas aparecem como caixas separadas do processo', () => {
+    const html = montarHtmlProcesso({ ...imp, placas: '', placaCavalo: 'ABC1D23', placaCarreta: 'XYZ9K88' })
+    expect(html).toContain(caixa('Placa cavalo', 'ABC1D23'))
+    expect(html).toContain(caixa('Placa carreta', 'XYZ9K88'))
+  })
+
+  it('com vários contêineres, cada bloco traz as placas do seu contêiner', () => {
+    const proc = {
+      ...imp,
+      placas: '',
+      containers: [
+        { id: 'a', numero: 'OOCU 704.568-8', placaCavalo: 'AAA1A11', placaCarreta: 'BBB2B22', checklist: {} },
+        { id: 'b', numero: 'TGHU 765.432-1', placaCavalo: 'CCC3C33', placaCarreta: 'DDD4D44', checklist: {} },
+      ],
+    }
+    const [um, dois] = blocos(montarHtmlProcesso(proc))
+    expect(um).toContain(caixa('Placa cavalo', 'AAA1A11'))
+    expect(um).toContain(caixa('Placa carreta', 'BBB2B22'))
+    expect(dois).toContain(caixa('Placa cavalo', 'CCC3C33'))
+    expect(dois).toContain(caixa('Placa carreta', 'DDD4D44'))
+  })
+
+  it('dado antigo (só o texto) continua aparecendo como "Placas"', () => {
+    const html = montarHtmlProcesso({ ...imp, placas: 'ABC1D23' })
+    expect(html).toContain(caixa('Placas', 'ABC1D23'))
+    expect(html).not.toContain('Placa cavalo')
+  })
+})

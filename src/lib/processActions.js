@@ -13,7 +13,7 @@ export const excluirProcesso = (id) => deleteDoc(processRef(id))
 
 // Contêiner "zerado" para o tipo de processo.
 export const novoContainer = (type, id, numero = '', tipo = '') => {
-  const ct = { id, numero, tipo, motorista: '', placas: '', checklist: {} }
+  const ct = { id, numero, tipo, motorista: '', placaCavalo: '', placaCarreta: '', checklist: {} }
   if (type === 'import') {
     ct.checklist = novoChecklistImport()
   } else {

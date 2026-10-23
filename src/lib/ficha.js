@@ -1,10 +1,10 @@
 // SEÇÕES DA FICHA DO PROCESSO: lista (para o índice) do que a ficha mostra
 // para um processo e o resumo que aparece quando uma seção está recolhida.
 import { ehCargaSolta } from './processos'
-import { etapasDoContainer } from './etapas'
+import { etapasDoContainer, ordenarContainers } from './etapas'
 
 export const secoesDaFicha = (proc) => {
-  const cts = proc.containers || []
+  const cts = ordenarContainers(proc)
   const secoes = [{ id: 'detalhes', kind: 'detalhes', label: 'Detalhes' }]
   // Com mais de um contêiner, transporte e agendamentos ficam em cada um.
   if (cts.length <= 1) secoes.push({ id: 'transporte', kind: 'transporte', label: 'Transporte' })

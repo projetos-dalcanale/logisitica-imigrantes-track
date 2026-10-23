@@ -44,6 +44,19 @@ describe('tabela de exportação', () => {
     ])
   })
 
+  it('terminal de vazio: lista o de cada contêiner quando diferem e uma vez só quando são iguais', () => {
+    const dif = imp({}, [
+      { id: 'c1', numero: 'MSCU 123.456-6', termVazio: 'Depot Norte' },
+      { id: 'c2', numero: 'TGHU 765.432-1' },
+    ])
+    expect(tabelaProcessos([dif], NOW).linhas[0][10]).toBe('Depot Norte | Depot Sul')
+    const iguais = imp({}, [
+      { id: 'c1', numero: 'MSCU 123.456-6', termVazio: 'Depot Sul' },
+      { id: 'c2', numero: 'TGHU 765.432-1' },
+    ])
+    expect(tabelaProcessos([iguais], NOW).linhas[0][10]).toBe('Depot Sul')
+  })
+
   it('exportação: booking como documento, sem terminais e sem destino', () => {
     const p = { id: 'e1', type: 'export', status: 'archived', createdAt: '2026-10-01T10:00', exportador: 'Café Sul', booking: 'BKG777', navio: 'Alfa', armador: 'Maersk', containers: [{ id: 'c1', numero: 'MAEU 765.432-1' }] }
     const [l] = tabelaProcessos([p], NOW).linhas
@@ -101,5 +114,15 @@ describe('proteção contra fórmula e aspas do CSV', () => {
 
   it('csvCell neutraliza fórmula e ainda coloca aspas se precisar', () => {
     expect(csvCell('=HYPERLINK("http://x";"a")')).toBe(`"'=HYPERLINK(""http://x"";""a"")"`)
+  })
+})
+
+describe('tabela: placa cavalo e carreta', () => {
+  it('a coluna Placas junta cavalo e carreta de cada contêiner', () => {
+    const p = imp({}, [
+      { id: 'c1', numero: 'MSCU 123.456-6', placaCavalo: 'ABC1D23', placaCarreta: 'XYZ9K88' },
+      { id: 'c2', numero: 'TGHU 765.432-1', placaCavalo: 'DEF2G34', placaCarreta: 'UVW8J77' },
+    ])
+    expect(tabelaProcessos([p], NOW).linhas[0][4]).toBe('ABC1D23 / XYZ9K88 | DEF2G34 / UVW8J77')
   })
 })

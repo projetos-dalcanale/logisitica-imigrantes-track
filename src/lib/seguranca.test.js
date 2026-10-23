@@ -40,3 +40,27 @@ describe('cabeçalhos de segurança (vercel.json)', () => {
     expect(csp).not.toMatch(/worker-src[^;]*(blob:|'unsafe)/)
   })
 })
+
+describe('regras do Firestore: pendências', () => {
+  const regras = readFileSync(new URL('firestore_1.rules', raiz), 'utf8').replace(/\r\n/g, '\n')
+  const bloco = regras.match(/match \/pendencias\/\{pendenciaId\} \{[\s\S]*?\n    \}/)?.[0] || ''
+
+  it('tem o bloco da coleção, aberto só para quem está logado', () => {
+    expect(bloco, 'faltou o bloco match /pendencias/{pendenciaId}').not.toBe('')
+    expect(bloco).toContain('allow read, delete: if request.auth != null')
+    expect(bloco).toContain('allow create, update: if request.auth != null')
+  })
+
+  it('exige título de 1 a 200 caracteres, dia AAAA-MM-DD e feito booleano', () => {
+    expect(bloco).toContain('request.resource.data.titulo is string')
+    // sem os espaços das pontas: um título só com espaços não vale
+    expect(bloco).toContain('request.resource.data.titulo.trim().size() > 0')
+    expect(bloco).toContain('request.resource.data.titulo.size() <= 200')
+    expect(bloco).toContain(String.raw`request.resource.data.data.matches('^\\d{4}-\\d{2}-\\d{2}$')`)
+    expect(bloco).toContain('request.resource.data.feito is bool')
+  })
+
+  it('o fim do arquivo continua negando tudo o que não foi liberado', () => {
+    expect(regras).toMatch(/match \/\{document=\*\*\} \{\s*allow read, write: if false;/)
+  })
+})

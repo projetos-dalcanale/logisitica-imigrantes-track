@@ -19,6 +19,9 @@ export default defineConfig(({ mode }) => {
     // Versão (commit) gravada junto com os erros registrados; a Vercel informa o commit no build.
     define: { 'import.meta.env.VITE_VERSAO': JSON.stringify((process.env.VERCEL_GIT_COMMIT_SHA || 'local').slice(0, 7)) },
     preview: { headers: cabecalhosProducao },
+    // Os testes de datas rodam sempre no fuso da equipe (São Paulo), na máquina de quem
+    // desenvolve e no GitHub (que usa UTC): sem isso, "dia local" e "dia em UTC" não se distinguem.
+    test: { env: { TZ: 'America/Sao_Paulo' } },
     build: {
       // O Firestore passa de 500 kB, mas só é baixado depois do login (AreaLogada).
       chunkSizeWarningLimit: 600,

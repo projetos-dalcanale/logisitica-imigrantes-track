@@ -3,7 +3,8 @@
 // (com o horário em que cada uma foi marcada). Montada como HTML e impressa
 // pelo navegador ("Salvar como PDF"). Todo texto digitado é escapado.
 import { EMPRESA, PRODUTO } from '../marca'
-import { chaveEtapa, distintos, ehCargaSolta, etapaFeita, exportSteps, identificacaoUnidade, formatarDataHora, stepsChecklistImport, transportePorContainer } from './processos'
+import { ordenarContainers } from './etapas'
+import { chaveEtapa, distintos, ehCargaSolta, etapaFeita, exportSteps, identificacaoUnidade, formatarDataHora, linhasDePlacas, stepsChecklistImport, terminaisDeDevolucao, terminalDevolucao, transportePorContainer } from './processos'
 
 export const escapeHtml = (valor) =>
   valor === null || valor === undefined
@@ -80,7 +81,9 @@ export const montarHtmlProcesso = (proc, agora = new Date()) => {
   const isImport = proc.type === 'import'
   const solta = ehCargaSolta(proc)
   const transporte = transportePorContainer(proc)
-  const cts = proc.containers || []
+  const gravados = proc.containers || []
+  // Blocos na ordem das datas de agendamento; o transporte é buscado pelo contêiner (não pela posição).
+  const cts = ordenarContainers(proc)
   const multi = cts.length > 1
   const titulo = (isImport ? proc.importador : proc.exportador) || 'Sem nome'
   const documento = isImport
@@ -96,22 +99,24 @@ export const montarHtmlProcesso = (proc, agora = new Date()) => {
         ['Terminal de carregamento', proc.termCarga],
         solta
           ? ['Carga solta', identificacaoUnidade(proc)]
-          : ['Destino do contêiner', proc.finalizacaoVazio === 'baixa' ? 'Baixa (sem devolução)' : `Devolução${proc.termVazio ? ` · ${proc.termVazio}` : ''}`],
+          : ['Destino do contêiner', proc.finalizacaoVazio === 'baixa' ? 'Baixa (sem devolução)' : `Devolução${!multi && terminaisDeDevolucao(proc)[0] ? ` · ${terminaisDeDevolucao(proc)[0]}` : ''}`],
       ]
     : [documento, ['Armador', proc.armador], ['Referência', proc.referencia], ['Navio', proc.navio]]
   if (!multi) {
     dados.push(['Motorista', distintos(transporte.map((t) => t.motorista)).join(', ')])
-    dados.push(['Placas', distintos(transporte.map((t) => t.placas)).join(', ')])
+    dados.push(...linhasDePlacas(transporte[0]))
   }
 
   const blocos = cts.map((ct, i) => {
     const etapas = etapasDoContainer(proc, ct)
     const feitas = etapas.filter((e) => e.feito).length
     const info = []
-    if (multi) info.push(['Motorista', transporte[i].motorista], ['Placas', transporte[i].placas])
+    const t = transporte[gravados.indexOf(ct)]
+    if (multi) info.push(['Motorista', t.motorista], ...linhasDePlacas(t))
     if (isImport) {
       info.push(['Agend. carregamento', dataOuVazio(ct.checklist?.ag_carga)])
       if (proc.finalizacaoVazio !== 'baixa' && !solta) info.push(['Agend. vazio', dataOuVazio(ct.checklist?.ag_vazio)])
+      if (multi && proc.finalizacaoVazio !== 'baixa' && !solta) info.push(['Terminal de devolução', terminalDevolucao(proc, ct)])
     } else {
       info.push(['Tara', ct.tara], ['Lacre', ct.lacre], ['Deadline Draft', dataOuVazio(ct.deadlineDraft)], ['Deadline Carga', dataOuVazio(ct.deadlineCarga)])
     }

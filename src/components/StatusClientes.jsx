@@ -5,9 +5,10 @@ import { Check, ChevronDown, Copy, Download, Image as ImageIcon, Plus, Search, T
 import { ExportIcon, ImportIcon } from './ui/icons'
 import { useToast } from '../contexts/ToastContext'
 import { dadosDoProcesso, montarStatus } from '../lib/status'
-import { dadosDosContainers, desenharStatus, htmlDaImagem, imagemDoCanvas, imagemReduzida, opcoesDeStatus } from '../lib/statusImagem'
+import { agendamentosDosContainers, dadosDosContainers, desenharStatus, filtrosDeAgendamento, gradeDeAgendamentos, htmlDaImagem, imagemDoCanvas, imagemReduzida, opcoesDeStatus } from '../lib/statusImagem'
 import Button from './ui/Button'
 import EmptyState from './ui/EmptyState'
+import Segmented from './ui/Segmented'
 
 const RASCUNHO = 'logitrack-status-rascunho'
 const FRASES_DETALHES = ['Previsão de entrega às __h.', 'Previsão de chegada ao terminal às __h.', 'Motorista: __.']
@@ -142,17 +143,22 @@ export default function StatusClientes({ processes, loading, procInicial }) {
   const [statusId, setStatusId] = useState(() => rascunho.statusId || '')
   const [titulo, setTitulo] = useState(() => rascunho.titulo || '')
   const [detalhes, setDetalhes] = useState(() => rascunho.detalhes || '')
+  const [filtroAgend, setFiltroAgend] = useState(() => rascunho.filtroAgend || 'ambos')
   const [fontesProntas, setFontesProntas] = useState(false)
 
   const proc = ativos.find((p) => p.id === procId)
   const opcoes = proc ? opcoesDeStatus(proc) : []
   const opcao = opcoes.find((o) => o.id === statusId) || null
+  // "Status dos agendamentos": cheios, vazios ou os dois. Se a escolha guardada não existe
+  // para este processo (ex.: Vazios numa baixa), vale a última opção (Os dois, ou Cheios).
+  const filtros = proc ? filtrosDeAgendamento(proc) : []
+  const filtro = filtros.some((f) => f.value === filtroAgend) ? filtroAgend : filtros.at(-1)?.value || 'cheios'
 
   useEffect(() => {
     try {
-      localStorage.setItem(RASCUNHO, JSON.stringify({ procId, statusId, titulo, detalhes }))
+      localStorage.setItem(RASCUNHO, JSON.stringify({ procId, statusId, titulo, detalhes, filtroAgend }))
     } catch { /* navegador sem localStorage */ }
-  }, [procId, statusId, titulo, detalhes])
+  }, [procId, statusId, titulo, detalhes, filtroAgend])
 
   // A imagem usa a fonte do app; espera ela carregar antes de desenhar.
   useEffect(() => {
@@ -167,8 +173,15 @@ export default function StatusClientes({ processes, loading, procInicial }) {
 
   useEffect(() => {
     if (!proc || !opcao || !canvasRef.current) return
-    desenharStatus(canvasRef.current, { proc, titulo: titulo.trim() || opcao.titulo, detalhes: detalhes.trim(), etapa: opcao.etapa, tabela: !!opcao.tabela })
-  }, [proc, opcao, titulo, detalhes, fontesProntas])
+    desenharStatus(canvasRef.current, {
+      proc,
+      titulo: titulo.trim() || opcao.titulo,
+      detalhes: detalhes.trim(),
+      etapa: opcao.etapa,
+      tabela: !!opcao.tabela,
+      grade: opcao.agendamentos ? gradeDeAgendamentos(proc, filtro) : null,
+    })
+  }, [proc, opcao, titulo, detalhes, filtro, fontesProntas])
 
   // Situações com texto pronto (ex.: Dados do contêiner) preenchem os
   // detalhes; ao sair delas, o texto pronto que não foi mexido é limpo.
@@ -205,9 +218,13 @@ export default function StatusClientes({ processes, loading, procInicial }) {
   }
 
   const textoParaEmail = () => {
-    const tabela = opcao.tabela
-      ? dadosDosContainers(proc).map((c) => `Contêiner ${c.numero} · Tara: ${c.tara} · Lacre: ${c.lacre}`).join('\n')
-      : ''
+    let tabela = ''
+    if (opcao.tabela) {
+      tabela = dadosDosContainers(proc).map((c) => `Contêiner ${c.numero} · Tara: ${c.tara} · Lacre: ${c.lacre}`).join('\n')
+    } else if (opcao.agendamentos) {
+      const { colunas, linhas } = agendamentosDosContainers(proc, filtro)
+      tabela = linhas.map((l) => [`Contêiner ${l.numero}`, ...colunas.map((c, k) => `${c.rotulo}: ${l.valores[k]}`)].join(' · ')).join('\n')
+    }
     return montarStatus(proc, [titulo.trim() || opcao.titulo, detalhes.trim(), tabela].filter(Boolean).join('\n\n'))
   }
 
@@ -290,6 +307,13 @@ export default function StatusClientes({ processes, loading, procInicial }) {
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {opcao?.agendamentos && filtros.length > 1 && (
+          <div>
+            <label className="label">Incluir</label>
+            <Segmented size="sm" className="max-w-xs" options={filtros} value={filtro} onChange={setFiltroAgend} />
           </div>
         )}
 
