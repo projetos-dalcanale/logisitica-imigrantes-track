@@ -68,3 +68,35 @@ describe('PDF do processo', () => {
     expect(html).toContain('Deadline Draft')
   })
 })
+
+describe('PDF: terminal de devolução', () => {
+  const caixa = (rotulo, valor) => `<span class="pf-rot">${rotulo}</span><span class="pf-val">${valor}</span>`
+  const dois = (extra = {}) => ({
+    ...imp,
+    termVazio: 'Depot Sul',
+    containers: [
+      { id: 'a', numero: 'OOCU 704.568-8', termVazio: 'Depot Norte', checklist: {} },
+      { id: 'b', numero: 'TGHU 765.432-1', checklist: {} },
+    ],
+    ...extra,
+  })
+
+  it('com um contêiner, o terminal vai na linha de destino', () => {
+    const html = montarHtmlProcesso({ ...imp, termVazio: 'Depot Sul' })
+    expect(html).toContain(caixa('Destino do contêiner', 'Devolução · Depot Sul'))
+    expect(html).not.toContain('Terminal de devolução')
+  })
+
+  it('com 2 contêineres, cada bloco mostra o terminal do contêiner e o destino fica sem terminal', () => {
+    const html = montarHtmlProcesso(dois())
+    expect(html).toContain(caixa('Destino do contêiner', 'Devolução'))
+    expect(html).toContain(caixa('Terminal de devolução', 'Depot Norte'))
+    expect(html).toContain(caixa('Terminal de devolução', 'Depot Sul'))
+  })
+
+  it('na baixa não aparece terminal nenhum', () => {
+    const html = montarHtmlProcesso(dois({ finalizacaoVazio: 'baixa' }))
+    expect(html).not.toContain('Terminal de devolução')
+    expect(html).not.toContain('Depot')
+  })
+})

@@ -1,6 +1,6 @@
 // TABELA DE EXPORTAÇÃO: uma única montagem dos dados (cabeçalho + linhas) que
 // alimenta o CSV e a cópia para o e-mail.
-import { distintos, ehCargaSolta, formatarDataHora, identificacaoUnidade, transportePorContainer } from './processos'
+import { distintos, ehCargaSolta, formatarDataHora, identificacaoUnidade, terminaisDeDevolucao, transportePorContainer } from './processos'
 import { proximaAcao, proximoPrazo } from './etapas'
 
 // As 16 primeiras colunas são as do CSV de sempre (planilhas que já leem o
@@ -31,7 +31,7 @@ const linhaDoProcesso = (proc, now) => {
     proc.referencia || '',
     proc.navio || '',
     isImport ? proc.termCarga || '' : '',
-    isImport && proc.finalizacaoVazio !== 'baixa' ? proc.termVazio || '' : '',
+    terminaisDeDevolucao(proc).join(' | '),
     solta ? 'Carga solta' : isImport ? (proc.finalizacaoVazio === 'baixa' ? 'Baixa de Contêiner' : 'Devolução de Vazio') : '',
     solta ? identificacaoUnidade(proc) : (proc.containers || [])
       .map((c, i) => {
