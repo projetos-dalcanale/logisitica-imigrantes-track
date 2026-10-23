@@ -3,6 +3,7 @@
 // (com o horário em que cada uma foi marcada). Montada como HTML e impressa
 // pelo navegador ("Salvar como PDF"). Todo texto digitado é escapado.
 import { EMPRESA, PRODUTO } from '../marca'
+import { ordenarContainers } from './etapas'
 import { chaveEtapa, distintos, ehCargaSolta, etapaFeita, exportSteps, identificacaoUnidade, formatarDataHora, stepsChecklistImport, terminaisDeDevolucao, terminalDevolucao, transportePorContainer } from './processos'
 
 export const escapeHtml = (valor) =>
@@ -80,7 +81,9 @@ export const montarHtmlProcesso = (proc, agora = new Date()) => {
   const isImport = proc.type === 'import'
   const solta = ehCargaSolta(proc)
   const transporte = transportePorContainer(proc)
-  const cts = proc.containers || []
+  const gravados = proc.containers || []
+  // Blocos na ordem das datas de agendamento; o transporte é buscado pelo contêiner (não pela posição).
+  const cts = ordenarContainers(proc)
   const multi = cts.length > 1
   const titulo = (isImport ? proc.importador : proc.exportador) || 'Sem nome'
   const documento = isImport
@@ -108,7 +111,8 @@ export const montarHtmlProcesso = (proc, agora = new Date()) => {
     const etapas = etapasDoContainer(proc, ct)
     const feitas = etapas.filter((e) => e.feito).length
     const info = []
-    if (multi) info.push(['Motorista', transporte[i].motorista], ['Placas', transporte[i].placas])
+    const t = transporte[gravados.indexOf(ct)]
+    if (multi) info.push(['Motorista', t.motorista], ['Placas', t.placas])
     if (isImport) {
       info.push(['Agend. carregamento', dataOuVazio(ct.checklist?.ag_carga)])
       if (proc.finalizacaoVazio !== 'baixa' && !solta) info.push(['Agend. vazio', dataOuVazio(ct.checklist?.ag_vazio)])

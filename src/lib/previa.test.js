@@ -50,3 +50,24 @@ describe('prévia do processo', () => {
     expect(v).toMatchObject({ titulo: 'Sem nome', containers: [], restantes: 0 })
   })
 })
+
+describe('prévia: ordem dos contêineres', () => {
+  const com = (data) => ({ checklist: { ...novoChecklistImport(), ag_carga: data } })
+
+  it('lista na ordem das datas e cada contêiner leva o seu motorista e as suas placas', () => {
+    const p = imp({}, [
+      { id: 'c1', numero: 'A', motorista: 'Ana', placas: 'AAA1A11', ...com('2026-10-05T10:00') },
+      { id: 'c2', numero: 'B', motorista: 'Bia', placas: 'BBB2B22', ...com('2026-10-03T10:00') },
+    ])
+    const v = previaDoProcesso(p, NOW)
+    expect(v.containers.map((c) => [c.rotulo, c.motorista, c.placas])).toEqual([
+      ['B', 'Bia', 'BBB-2B22'],
+      ['A', 'Ana', 'AAA-1A11'],
+    ])
+  })
+
+  it('contêiner sem número usa a posição na ordem exibida', () => {
+    const p = imp({}, [{ id: 'c1', ...com('2026-10-05T10:00') }, { id: 'c2', ...com('2026-10-03T10:00') }])
+    expect(previaDoProcesso(p, NOW).containers.map((c) => c.rotulo)).toEqual(['Contêiner 1', 'Contêiner 2'])
+  })
+})

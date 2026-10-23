@@ -100,3 +100,41 @@ describe('PDF: terminal de devolução', () => {
     expect(html).not.toContain('Depot')
   })
 })
+
+describe('PDF: ordem dos contêineres', () => {
+  const ct = (id, numero, motorista, placas, data) => ({ id, numero, motorista, placas, checklist: { ag_carga: data } })
+  const proc = {
+    ...imp,
+    motorista: '',
+    placas: '',
+    containers: [
+      ct('a', 'OOCU 704.568-8', 'Ana', 'AAA1A11', '2026-10-05T10:00'),
+      ct('b', 'TGHU 765.432-1', 'Bia', 'BBB2B22', '2026-10-03T10:00'),
+    ],
+  }
+  const blocos = (html) => html.split('<div class="pf-ct">').slice(1)
+
+  it('os blocos saem na ordem das datas, numerados pela ordem exibida', () => {
+    const [primeiro, segundo] = blocos(montarHtmlProcesso(proc))
+    expect(primeiro).toContain('Contêiner 1')
+    expect(primeiro).toContain('TGHU 765.432-1')
+    expect(segundo).toContain('Contêiner 2')
+    expect(segundo).toContain('OOCU 704.568-8')
+  })
+
+  it('motorista e placas acompanham o contêiner, não a posição', () => {
+    const [primeiro, segundo] = blocos(montarHtmlProcesso(proc))
+    expect(primeiro).toContain('Bia')
+    expect(primeiro).toContain('BBB2B22')
+    expect(primeiro).not.toContain('Ana')
+    expect(segundo).toContain('Ana')
+    expect(segundo).toContain('AAA1A11')
+    expect(segundo).not.toContain('Bia')
+  })
+
+  it('sem datas mantém a ordem gravada', () => {
+    const semDatas = { ...proc, containers: proc.containers.map((c) => ({ ...c, checklist: {} })) }
+    const [primeiro] = blocos(montarHtmlProcesso(semDatas))
+    expect(primeiro).toContain('OOCU 704.568-8')
+  })
+})

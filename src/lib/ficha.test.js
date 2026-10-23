@@ -60,3 +60,14 @@ describe('resumo do contêiner', () => {
     expect(resumoContainer(proc, proc.containers[0], 0)).toBe('Contêiner 1 · 1 de 3 etapas')
   })
 })
+
+describe('ordem dos contêineres na ficha', () => {
+  it('o índice lista os contêineres na ordem das datas e numera pela ordem exibida', () => {
+    const proc = imp(2)
+    proc.containers[0].checklist.ag_carga = '2026-10-05T10:00'
+    proc.containers[1].checklist.ag_carga = '2026-10-03T10:00'
+    const secoes = secoesDaFicha(proc)
+    expect(secoes.map((s) => s.id)).toEqual(['detalhes', 'observacoes', 'conteiner-c2', 'conteiner-c1'])
+    expect(secoes.filter((s) => s.kind === 'conteiner').map((s) => s.label)).toEqual(['Contêiner 1', 'Contêiner 2'])
+  })
+})

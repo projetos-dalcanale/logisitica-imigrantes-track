@@ -5,6 +5,7 @@ import { ExportIcon, ImportIcon } from '../ui/icons'
 import { useToast } from '../../contexts/ToastContext'
 import { useDialog } from '../../contexts/DialogContext'
 import { draftAlertConfig, ehCargaSolta, formatarDataHoraCurta, formatarPlacas, getDraftDeadlineInfo, getProcessProgress } from '../../lib/processos'
+import { ordenarContainers } from '../../lib/etapas'
 import { adicionarContainer, atualizarProcesso, excluirProcesso } from '../../lib/processActions'
 import { exportarProcessoPDF } from '../../lib/exportar'
 import { secoesDaFicha } from '../../lib/ficha'
@@ -39,7 +40,8 @@ export default function ProcessFicha({ proc, processes, onClose, onEnviarStatus 
   }, [])
   const isImport = proc.type === 'import'
   const archived = proc.status === 'archived'
-  const containers = proc.containers || []
+  // Na ordem das datas de agendamento (só na tela; o gravado não muda).
+  const containers = ordenarContainers(proc)
   const draftInfo = getDraftDeadlineInfo(proc)
   const progress = getProcessProgress(proc)
   const title = isImport ? proc.importador || 'Processo de importação' : proc.exportador || 'Processo de exportação'
