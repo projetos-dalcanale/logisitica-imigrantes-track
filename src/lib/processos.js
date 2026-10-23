@@ -255,6 +255,27 @@ export const transportePorContainer = (proc) => {
   }))
 }
 
+// TERMINAL DE DEVOLUÇÃO DO VAZIO (importação), mesma regra de motorista e
+// placas: com um contêiner só vale o do processo; com mais de um, cada
+// contêiner pode ter o seu e quem não tem usa o do processo. Baixa, carga
+// solta e exportação não têm devolução (a exportação guarda os terminais no
+// próprio contêiner, em termVazioExp e termCheioExp).
+export const terminalDevolucao = (proc, ct) => {
+  if (proc.type !== 'import' || proc.finalizacaoVazio === 'baixa' || ehCargaSolta(proc)) return ''
+  const doProcesso = (proc.termVazio || '').trim()
+  const doContainer = (ct?.termVazio || '').trim()
+  return (proc.containers || []).length > 1 ? doContainer || doProcesso : doProcesso || doContainer
+}
+
+// Terminais de devolução distintos do processo (CSV e PDF).
+export const terminaisDeDevolucao = (proc) => {
+  const cts = proc.containers || []
+  return distintos(cts.length ? cts.map((ct) => terminalDevolucao(proc, ct)) : [terminalDevolucao(proc, null)])
+}
+
+// Ao passar para "Baixa" não há devolução: zera o terminal de cada contêiner.
+export const limparTerminaisDevolucao = (containers) => containers.map((ct) => (ct.termVazio ? { ...ct, termVazio: '' } : ct))
+
 // A retirada do vazio precisa ser antes do Deadline Draft. true quando as
 // duas datas existem e o vazio ficou para depois (ou na mesma hora).
 export const vazioDepoisDoDraft = (agVazio, deadlineDraft) => {

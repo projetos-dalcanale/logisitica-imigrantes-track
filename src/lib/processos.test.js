@@ -18,6 +18,9 @@ import {
   identificacaoUnidade,
   fixarCargaEntregue,
   importChecklistSteps,
+  terminalDevolucao,
+  terminaisDeDevolucao,
+  limparTerminaisDevolucao,
 } from './processos'
 
 const DIA = 86400000
@@ -290,5 +293,56 @@ describe('motorista e placas por contêiner', () => {
     const lista = [{ id: 'x', type: 'import', status: 'active', createdAt: '2026-10-01', containers: [{ numero: 'A', motorista: 'Carlos Lima', placas: 'QWE4R56' }] }]
     expect(filtrarProcessos(lista, 'import', 'carlos').map((p) => p.id)).toEqual(['x'])
     expect(filtrarProcessos(lista, 'import', 'qwe4').map((p) => p.id)).toEqual(['x'])
+  })
+})
+
+describe('terminal de devolução por contêiner', () => {
+  const imp = (containers, extra = {}) => ({
+    type: 'import', finalizacaoVazio: 'devolucao', termVazio: 'Depot Sul', containers, ...extra,
+  })
+
+  it('com 2 contêineres, cada um usa o seu terminal e quem não tem usa o do processo', () => {
+    const p = imp([{ id: 'a', termVazio: 'Depot Norte' }, { id: 'b' }])
+    expect(terminalDevolucao(p, p.containers[0])).toBe('Depot Norte')
+    expect(terminalDevolucao(p, p.containers[1])).toBe('Depot Sul')
+  })
+
+  it('com 1 contêiner vale o do processo; o do contêiner esquecido só entra se o processo não tiver', () => {
+    const esquecido = imp([{ id: 'a', termVazio: 'Depot Norte' }])
+    expect(terminalDevolucao(esquecido, esquecido.containers[0])).toBe('Depot Sul')
+    const semProcesso = imp([{ id: 'a', termVazio: 'Depot Norte' }], { termVazio: '' })
+    expect(terminalDevolucao(semProcesso, semProcesso.containers[0])).toBe('Depot Norte')
+  })
+
+  it('baixa, carga solta e exportação não têm terminal de devolução', () => {
+    const ct = { id: 'a', termVazio: 'Depot Norte' }
+    expect(terminalDevolucao(imp([ct], { finalizacaoVazio: 'baixa' }), ct)).toBe('')
+    expect(terminalDevolucao(imp([ct], { modalidade: 'solta' }), ct)).toBe('')
+    expect(terminalDevolucao(imp([ct], { type: 'export' }), ct)).toBe('')
+  })
+
+  it('sem terminal em lugar nenhum devolve texto vazio, e tira os espaços das pontas', () => {
+    const vazio = imp([{ id: 'a' }, { id: 'b' }], { termVazio: undefined })
+    expect(terminalDevolucao(vazio, vazio.containers[0])).toBe('')
+    expect(typeof terminalDevolucao(vazio, vazio.containers[1])).toBe('string')
+    const espacos = imp([{ id: 'a', termVazio: '  Depot Norte ' }, { id: 'b' }])
+    expect(terminalDevolucao(espacos, espacos.containers[0])).toBe('Depot Norte')
+  })
+
+  it('lista os terminais distintos e preenchidos do processo', () => {
+    const dif = imp([{ id: 'a' }, { id: 'b', termVazio: 'Depot Norte' }])
+    expect(terminaisDeDevolucao(dif)).toEqual(['Depot Sul', 'Depot Norte'])
+    const iguais = imp([{ id: 'a', termVazio: 'Depot Sul' }, { id: 'b' }])
+    expect(terminaisDeDevolucao(iguais)).toEqual(['Depot Sul'])
+    expect(terminaisDeDevolucao(imp([]))).toEqual(['Depot Sul'])
+    expect(terminaisDeDevolucao(imp([], { termVazio: '' }))).toEqual([])
+    expect(terminaisDeDevolucao(imp([{ id: 'a' }], { finalizacaoVazio: 'baixa' }))).toEqual([])
+  })
+
+  it('limpa o terminal dos contêineres sem alterar a lista original nem os outros campos', () => {
+    const lista = [{ id: 'a', numero: 'X1', termVazio: 'Depot Norte' }, { id: 'b', numero: 'X2' }]
+    const limpa = limparTerminaisDevolucao(lista)
+    expect(limpa).toEqual([{ id: 'a', numero: 'X1', termVazio: '' }, { id: 'b', numero: 'X2' }])
+    expect(lista[0].termVazio).toBe('Depot Norte')
   })
 })
