@@ -154,7 +154,7 @@ export default function ContainerGroup({ proc, ct, index, processes, disabled, m
           </>
         )}
 
-        {isImport && multi && <AgendamentosRows proc={proc} ct={ct} disabled={disabled} />}
+        {isImport && multi && <AgendamentosRows proc={proc} ct={ct} disabled={disabled} porContainer />}
 
         {isImport ? (
           <Timeline>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { DESTINOS, DOC_TIPOS, ehCargaSolta } from '../../lib/processos'
+import { DESTINOS, DOC_TIPOS, ehCargaSolta, limparTerminaisDevolucao } from '../../lib/processos'
 import { atualizarProcesso } from '../../lib/processActions'
 import RegistrySelect from '../RegistrySelect'
 import Segmented from '../ui/Segmented'
@@ -11,6 +11,8 @@ import { plainRight, valor } from './comum'
 export default function DetalhesGroup({ proc, archived }) {
   const isImport = proc.type === 'import'
   const solta = ehCargaSolta(proc)
+  // Com 2+ contêineres cada um pode ter o seu terminal de devolução; o do processo vira o padrão.
+  const rotuloVazio = (proc.containers || []).length > 1 ? 'Vazio (padrão)' : 'Vazio'
   const [editando, setEditando] = useState(false)
   const [saving, setSaving] = useState(false)
   const inicial = () =>
@@ -36,8 +38,11 @@ export default function DetalhesGroup({ proc, archived }) {
     try {
       const nome = isImport ? 'importador' : 'exportador'
       const dados = { ...form, [nome]: form[nome].trim() }
-      // Na baixa não há devolução, então o terminal de vazio é apagado.
-      await atualizarProcesso(proc.id, dados.finalizacaoVazio === 'baixa' ? { ...dados, termVazio: '' } : dados)
+      // Na baixa não há devolução, então o terminal de vazio é apagado (também o de cada contêiner).
+      await atualizarProcesso(
+        proc.id,
+        dados.finalizacaoVazio === 'baixa' ? { ...dados, termVazio: '', containers: limparTerminaisDevolucao(proc.containers || []) } : dados
+      )
       setEditando(false)
     } finally {
       setSaving(false)
@@ -69,7 +74,7 @@ export default function DetalhesGroup({ proc, archived }) {
             ) : (
               <>
                 <Row label="Destino">{valor(proc.finalizacaoVazio === 'baixa' ? 'Baixa (sem devolução)' : 'Devolução de vazio')}</Row>
-                {proc.finalizacaoVazio !== 'baixa' && <Row label="Vazio">{valor(proc.termVazio)}</Row>}
+                {proc.finalizacaoVazio !== 'baixa' && <Row label={rotuloVazio}>{valor(proc.termVazio)}</Row>}
               </>
             )}
           </>
@@ -96,7 +101,7 @@ export default function DetalhesGroup({ proc, archived }) {
           <Row label="Carregamento"><RegistrySelect variant="plain" cat="cheio" value={form.termCarga} onChange={set('termCarga')} placeholder="Terminal" /></Row>
           {!solta && <Row label="Destino"><Segmented size="sm" className="w-56" options={DESTINOS} value={form.finalizacaoVazio} onChange={set('finalizacaoVazio')} /></Row>}
           {form.finalizacaoVazio !== 'baixa' && !solta && (
-            <Row label="Vazio"><RegistrySelect variant="plain" cat="vazio" value={form.termVazio} onChange={set('termVazio')} placeholder="Terminal" /></Row>
+            <Row label={rotuloVazio}><RegistrySelect variant="plain" cat="vazio" value={form.termVazio} onChange={set('termVazio')} placeholder="Terminal" /></Row>
           )}
         </>
       ) : (
