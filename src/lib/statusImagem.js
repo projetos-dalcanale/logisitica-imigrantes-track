@@ -1,7 +1,7 @@
 // IMAGEM DE STATUS: cartão nas cores da empresa, desenhado num <canvas>,
 // para copiar e colar no e-mail do cliente (ou baixar como PNG).
 import { EMPRESA } from '../marca'
-import { dadosDoProcesso } from './status'
+import { dadosDoProcesso, rotuloContainer } from './status'
 import { ehCargaSolta, formatarDataHoraCurta, identificacaoUnidade } from './processos'
 
 // Etapas da barra de progresso por tipo de processo.
@@ -45,7 +45,7 @@ export const dadosDosContainers = (proc) =>
   (proc.containers || []).map((ct) => {
     const tara = String(ct.tara || '').trim()
     return {
-      numero: String(ct.numero || '').trim() || '—',
+      numero: rotuloContainer(ct) || '—',
       tara: /^\d+$/.test(tara) ? `${Number(tara).toLocaleString('pt-BR')} kg` : tara || '—',
       lacre: String(ct.lacre || '').trim() || '—',
     }
@@ -82,7 +82,7 @@ export const agendamentosDosContainers = (proc, filtro) => {
       return {
         i,
         t: validos.length ? Math.min(...validos) : Infinity,
-        numero: ehCargaSolta(proc) ? identificacaoUnidade(proc, ct) : String(ct.numero || '').trim() || '—',
+        numero: ehCargaSolta(proc) ? identificacaoUnidade(proc, ct) : rotuloContainer(ct) || '—',
         valores: colunas.map((c) => formatarDataHoraCurta(dataDe(ct, c.id)) || '—'),
       }
     })
@@ -207,7 +207,7 @@ const retanguloArredondado = (ctx, x, y, w, h, r) => {
 // Calcula a altura e desenha o cartão. `canvas` é redimensionado.
 export const desenharStatus = (canvas, { proc, titulo, detalhes, etapa, tabela = false, grade = null, data = new Date() }) => {
   const ctx = canvas.getContext('2d')
-  const { cliente, documento, containers, rotuloUnidade } = dadosDoProcesso(proc)
+  const { cliente, documento, unidades, rotuloUnidade } = dadosDoProcesso(proc)
   // Tabela abaixo das caixas de dados: a `grade` pedida ou, com `tabela`, a de numeração/tara/lacre.
   const quadro = grade || (tabela ? gradeDosContainers(proc) : null)
   const M = 36 // margem interna
@@ -226,7 +226,7 @@ export const desenharStatus = (canvas, { proc, titulo, detalhes, etapa, tabela =
     [documento?.rotulo || 'Documento', documento?.numero || '—'],
     // Um contêiner por linha, para o número não quebrar no meio. Com a
     // tabela de dados, os contêineres aparecem nela.
-    !quadro && [rotuloUnidade, containers.join('\n') || '—'],
+    !quadro && [rotuloUnidade, unidades.join('\n') || '—'],
   ].filter(Boolean)
   const linhasTabela = quadro ? quadro.linhas : []
   const alturaTabela = quadro ? 38 + Math.max(linhasTabela.length, 1) * 40 + 6 : 0
