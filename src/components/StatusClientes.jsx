@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import * as Popover from '@radix-ui/react-popover'
 import { Command } from 'cmdk'
 import { Check, ChevronDown, Copy, Download, Image as ImageIcon, Plus, Search, Type } from 'lucide-react'
 import { ExportIcon, ImportIcon } from './ui/icons'
 import { useToast } from '../contexts/ToastContext'
-import { dadosDoProcesso, montarStatus } from '../lib/status'
+import { comContainers, dadosDoProcesso, montarStatus, rotuloContainer } from '../lib/status'
 import { agendamentosDosContainers, dadosDosContainers, desenharStatus, filtrosDeAgendamento, gradeDeAgendamentos, htmlDaImagem, imagemDoCanvas, imagemReduzida, opcoesDeStatus } from '../lib/statusImagem'
 import Button from './ui/Button'
 import EmptyState from './ui/EmptyState'
@@ -144,9 +144,25 @@ export default function StatusClientes({ processes, loading, procInicial }) {
   const [titulo, setTitulo] = useState(() => rascunho.titulo || '')
   const [detalhes, setDetalhes] = useState(() => rascunho.detalhes || '')
   const [filtroAgend, setFiltroAgend] = useState(() => rascunho.filtroAgend || 'ambos')
+  // Contêineres de que o status fala (ids). null = todos; só importa com 2 ou mais.
+  const [ctIds, setCtIds] = useState(() => (Array.isArray(rascunho.ctIds) ? rascunho.ctIds : null))
   const [fontesProntas, setFontesProntas] = useState(false)
 
-  const proc = ativos.find((p) => p.id === procId)
+  const procCompleto = ativos.find((p) => p.id === procId)
+  const todosIds = (procCompleto?.containers || []).map((c) => c.id)
+  const multi = todosIds.length > 1
+  // Só os ids que ainda existem; sem nenhum (ex.: contêiner removido) vale "todos".
+  const marcadosValidos = multi && ctIds ? todosIds.filter((id) => ctIds.includes(id)) : todosIds
+  const escolhidos = marcadosValidos.length ? marcadosValidos : todosIds
+  const chaveEscolhidos = escolhidos.join('|')
+  // O processo "como o status o vê": só os contêineres escolhidos. Tudo abaixo (imagem, tabelas, texto) usa este.
+  const proc = useMemo(
+    () => (multi ? comContainers(procCompleto, escolhidos) : procCompleto),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `escolhidos` vem de `chaveEscolhidos`
+    [procCompleto, multi, chaveEscolhidos]
+  )
+  const alternarContainer = (id) =>
+    setCtIds(escolhidos.includes(id) ? (escolhidos.length > 1 ? escolhidos.filter((x) => x !== id) : escolhidos) : [...escolhidos, id])
   const opcoes = proc ? opcoesDeStatus(proc) : []
   const opcao = opcoes.find((o) => o.id === statusId) || null
   // "Status dos agendamentos": cheios, vazios ou os dois. Se a escolha guardada não existe
@@ -156,9 +172,9 @@ export default function StatusClientes({ processes, loading, procInicial }) {
 
   useEffect(() => {
     try {
-      localStorage.setItem(RASCUNHO, JSON.stringify({ procId, statusId, titulo, detalhes, filtroAgend }))
+      localStorage.setItem(RASCUNHO, JSON.stringify({ procId, statusId, titulo, detalhes, filtroAgend, ctIds }))
     } catch { /* navegador sem localStorage */ }
-  }, [procId, statusId, titulo, detalhes, filtroAgend])
+  }, [procId, statusId, titulo, detalhes, filtroAgend, ctIds])
 
   // A imagem usa a fonte do app; espera ela carregar antes de desenhar.
   useEffect(() => {
@@ -195,6 +211,7 @@ export default function StatusClientes({ processes, loading, procInicial }) {
 
   const escolherProcesso = (id) => {
     setProcId(id)
+    setCtIds(null) // outro processo: volta a falar de todos os contêineres
     // A lista de situações muda entre importação e exportação.
     const novo = ativos.find((p) => p.id === id)
     if (novo && !opcoesDeStatus(novo).some((o) => o.id === statusId)) {
@@ -291,6 +308,38 @@ export default function StatusClientes({ processes, loading, procInicial }) {
           <label className="label">Processo</label>
           <EscolherProcesso processos={ativos} valor={procId} onChange={escolherProcesso} />
         </div>
+
+        {multi && (
+          <div>
+            <div className="mb-1 flex items-baseline justify-between gap-3">
+              <label className="label !mb-0">Contêineres do status</label>
+              {escolhidos.length < todosIds.length && (
+                <button type="button" className="text-[13px] text-blue-500 hover:text-blue-400" onClick={() => setCtIds(null)}>
+                  Marcar todos
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Contêineres do status">
+              {procCompleto.containers.map((ct) => {
+                const marcado = escolhidos.includes(ct.id)
+                return (
+                  <button
+                    key={ct.id}
+                    type="button"
+                    role="checkbox"
+                    aria-checked={marcado}
+                    onClick={() => alternarContainer(ct.id)}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors ${marcado ? 'bg-blue-500 text-white shadow-sm' : 'bg-navy-700/70 text-slate-300 hover:bg-navy-700 hover:text-ink'}`}
+                  >
+                    {marcado && <Check className="size-3.5" strokeWidth={2.8} aria-hidden="true" />}
+                    {rotuloContainer(ct) || 'Sem número'}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="mt-1.5 text-[12px] text-slate-500">Marque só os contêineres de que vai falar (pelo menos um).</p>
+          </div>
+        )}
 
         {proc && (
           <div>

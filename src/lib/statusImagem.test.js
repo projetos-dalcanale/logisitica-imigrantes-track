@@ -158,3 +158,18 @@ describe('tabelas da imagem de status', () => {
     expect(g.colunas).toHaveLength(3)
   })
 })
+
+describe('tipo do contêiner nas tabelas da imagem', () => {
+  it('dados do contêiner: o tipo vai ao lado da numeração; sem tipo fica como antes', () => {
+    const proc = { containers: [{ numero: 'MSCU 999.888-7', tipo: "40'HC", tara: '3800', lacre: 'L1' }, { numero: 'MSCU 111.222-3', tara: '', lacre: '' }] }
+    expect(dadosDosContainers(proc).map((l) => l.numero)).toEqual(["MSCU 999.888-7 (40'HC)", 'MSCU 111.222-3'])
+    expect(gradeDosContainers(proc).linhas[0][0]).toBe("MSCU 999.888-7 (40'HC)")
+  })
+
+  it('status dos agendamentos: o tipo vai ao lado do número, e carga solta continua com a descrição', () => {
+    const proc = { type: 'import', containers: [{ id: 'a', numero: 'MSCU 1', tipo: "20'DC", checklist: {} }, { id: 'b', numero: 'MSCU 2', checklist: {} }] }
+    expect(agendamentosDosContainers(proc, 'ambos').linhas.map((l) => l.numero)).toEqual(["MSCU 1 (20'DC)", 'MSCU 2'])
+    const solta = { type: 'import', modalidade: 'solta', carga: '104 caixas', containers: [{ id: 'a', numero: '', tipo: "40'HC", checklist: {} }] }
+    expect(agendamentosDosContainers(solta, 'cheios').linhas.map((l) => l.numero)).toEqual(['104 caixas'])
+  })
+})
