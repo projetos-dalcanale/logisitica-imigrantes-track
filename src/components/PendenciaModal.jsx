@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useDialog } from '../contexts/DialogContext'
 import { useToast } from '../contexts/ToastContext'
-import { opcoesDeProcesso, validarPendencia } from '../lib/pendencias'
+import { opcoesDeProcesso, rotuloDoVinculo, validarPendencia, vinculoEscolhido } from '../lib/pendencias'
 import { atualizarPendencia, excluirPendencia } from '../lib/pendenciasDb'
 import Modal, { SheetHeader } from './ui/Modal'
 import Button from './ui/Button'
@@ -14,12 +14,15 @@ function PendenciaForm({ pendencia, processes, onClose, onDelete }) {
   const showToast = useToast()
   const [titulo, setTitulo] = useState(pendencia.titulo || '')
   const [data, setData] = useState(pendencia.data || '')
-  const [rotulo, setRotulo] = useState(pendencia.processoRotulo || '')
-  const [saving, setSaving] = useState(false)
   const opcoes = useMemo(() => opcoesDeProcesso(processes), [processes])
+  // null = o campo não foi mexido: o vínculo segue pelo id do processo (o texto
+  // gravado só aparece se ele não está mais na lista).
+  const [escolha, setEscolha] = useState(null)
+  const rotulo = escolha ?? rotuloDoVinculo(pendencia, opcoes)
+  const [saving, setSaving] = useState(false)
   // O vínculo gravado continua escolhível mesmo que o processo não esteja mais na lista (arquivado, excluído).
   const rotulos = opcoes.map((o) => o.rotulo)
-  if (pendencia.processoRotulo && !rotulos.includes(pendencia.processoRotulo)) rotulos.push(pendencia.processoRotulo)
+  if (pendencia.processoRotulo && !opcoes.some((o) => o.id === pendencia.processoId) && !rotulos.includes(pendencia.processoRotulo)) rotulos.push(pendencia.processoRotulo)
   const erro = validarPendencia({ titulo, data })
 
   const salvar = async (e) => {
@@ -28,13 +31,7 @@ function PendenciaForm({ pendencia, processes, onClose, onDelete }) {
       showToast(erro, 'error')
       return
     }
-    const escolhido = opcoes.find((o) => o.rotulo === rotulo)
-    // Sem escolha: sem vínculo. Rótulo que não está na lista: mantém o vínculo que já estava gravado.
-    const vinculo = !rotulo
-      ? { processoId: null, processoRotulo: null }
-      : escolhido
-        ? { processoId: escolhido.id, processoRotulo: escolhido.rotulo }
-        : { processoId: pendencia.processoId || null, processoRotulo: pendencia.processoRotulo || null }
+    const vinculo = vinculoEscolhido(pendencia, opcoes, escolha)
     setSaving(true)
     try {
       await atualizarPendencia(pendencia.id, { titulo, data, ...vinculo }, user.email)
@@ -62,7 +59,7 @@ function PendenciaForm({ pendencia, processes, onClose, onDelete }) {
             <input id="pend-dia" type="date" value={data} onChange={(e) => setData(e.target.value)} className="field-plain text-right font-medium" />
           </Row>
           <Row label="Processo">
-            <Combobox variant="plain" value={rotulo} options={rotulos} onChange={setRotulo} placeholder="Nenhum" searchPlaceholder="Buscar processo..." />
+            <Combobox variant="plain" value={rotulo} options={rotulos} onChange={setEscolha} placeholder="Nenhum" searchPlaceholder="Buscar processo..." />
           </Row>
         </Group>
         <Group>
