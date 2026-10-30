@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { agendamentosDosContainers, crc32, dadosDosContainers, etapasDaImagem, filtrosDeAgendamento, gradeDeAgendamentos, gradeDosContainers, opcoesDeStatus, pngComDpi, quebrarLinhas } from './statusImagem'
+import { agendamentosDosContainers, crc32, dadosDosContainers, etapasDaImagem, filtrosDeAgendamento, gradeDeAgendamentos, gradeDosContainers, opcoesDeStatus, pngComDpi, quebrarLinhas, rotuloDaUnidade } from './statusImagem'
 
 describe('imagem de status', () => {
   it('etapas e situações por tipo de processo', () => {
@@ -150,6 +150,16 @@ describe('tabelas da imagem de status', () => {
     const um = gradeDeAgendamentos(proc, 'cheios')
     expect(um.colunas.map((c) => c.rotulo)).toEqual(['Contêiner', 'Carregamento'])
     expect(contiguas(um.colunas)).toBe(true)
+  })
+
+  it('na carga solta a primeira coluna é "Carga" e a linha é a carga (não "Contêiner 104 caixas")', () => {
+    const solta = { type: 'import', modalidade: 'solta', carga: '104 caixas', containers: [{ id: 'c0', numero: '', checklist: { ag_carga: '2026-10-03T14:00' } }] }
+    const g = gradeDeAgendamentos(solta, 'cheios')
+    expect(g.colunas.map((c) => c.rotulo)).toEqual(['Carga', 'Carregamento'])
+    expect(g.linhas).toEqual([['104 caixas', '03/10 14:00']])
+    expect(rotuloDaUnidade(solta)).toBe('Carga')
+    expect(rotuloDaUnidade({ type: 'import' })).toBe('Contêiner')
+    expect(rotuloDaUnidade({ type: 'export', modalidade: 'solta' })).toBe('Contêiner')
   })
 
   it('agendamentos sem contêineres tem as colunas e nenhuma linha', () => {

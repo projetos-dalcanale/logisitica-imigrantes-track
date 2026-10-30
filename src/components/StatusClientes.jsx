@@ -5,7 +5,7 @@ import { Check, ChevronDown, Copy, Download, Image as ImageIcon, Plus, Search, T
 import { ExportIcon, ImportIcon } from './ui/icons'
 import { useToast } from '../contexts/ToastContext'
 import { comContainers, dadosDoProcesso, montarStatus, rotuloContainer } from '../lib/status'
-import { agendamentosDosContainers, dadosDosContainers, desenharStatus, filtrosDeAgendamento, gradeDeAgendamentos, htmlDaImagem, imagemDoCanvas, imagemReduzida, opcoesDeStatus } from '../lib/statusImagem'
+import { agendamentosDosContainers, dadosDosContainers, desenharStatus, filtrosDeAgendamento, gradeDeAgendamentos, htmlDaImagem, imagemDoCanvas, imagemReduzida, opcoesDeStatus, rotuloDaUnidade } from '../lib/statusImagem'
 import Button from './ui/Button'
 import EmptyState from './ui/EmptyState'
 import Segmented from './ui/Segmented'
@@ -240,7 +240,7 @@ export default function StatusClientes({ processes, loading, procInicial }) {
       tabela = dadosDosContainers(proc).map((c) => `Contêiner ${c.numero} · Tara: ${c.tara} · Lacre: ${c.lacre}`).join('\n')
     } else if (opcao.agendamentos) {
       const { colunas, linhas } = agendamentosDosContainers(proc, filtro)
-      tabela = linhas.map((l) => [`Contêiner ${l.numero}`, ...colunas.map((c, k) => `${c.rotulo}: ${l.valores[k]}`)].join(' · ')).join('\n')
+      tabela = linhas.map((l) => [`${rotuloDaUnidade(proc)} ${l.numero}`, ...colunas.map((c, k) => `${c.rotulo}: ${l.valores[k]}`)].join(' · ')).join('\n')
     }
     return montarStatus(proc, [titulo.trim() || opcao.titulo, detalhes.trim(), tabela].filter(Boolean).join('\n\n'))
   }
