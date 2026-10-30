@@ -126,7 +126,7 @@ test('edita título e dia, e exclui com confirmação', async ({ page }) => {
   await expect(page.getByText(novo)).toHaveCount(0)
 })
 
-test('vincula a um processo, abre a ficha pelo chip e avisa quando o processo foi arquivado', async ({ page }) => {
+test('vincula a um processo, abre a ficha pelo chip e continua abrindo depois de arquivado', async ({ page }) => {
   const processo = `Vinculo ${Date.now()}`
   const titulo = `Pendência com processo ${Date.now()}`
   await entrar(page)
@@ -153,16 +153,41 @@ test('vincula a um processo, abre a ficha pelo chip e avisa quando o processo fo
   const ficha = page.getByRole('dialog')
   await expect(ficha.getByRole('heading', { name: processo }).last()).toBeVisible() // o título visível da ficha
 
-  // arquiva o processo: o chip continua e o clique avisa em vez de não fazer nada
+  // arquiva o processo: o chip continua e o clique carrega os arquivados e abre a ficha
   await ficha.getByRole('button', { name: 'Arquivar', exact: true }).click()
   await page.getByRole('dialog', { name: 'Arquivar processo?' }).getByRole('button', { name: 'Arquivar' }).click()
   await expect(page.getByText('Processo arquivado.')).toBeVisible()
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await expect(chip).toBeVisible()
   await chip.click()
-  await expect(page.getByText(/Este processo não está na sua lista/)).toBeVisible()
+  const arquivada = page.getByRole('dialog')
+  await expect(arquivada.getByRole('heading', { name: processo }).last()).toBeVisible()
+  await expect(arquivada.getByText('Arquivado', { exact: true })).toBeVisible()
+  await expect(page.getByText(/Este processo não está na sua lista/)).toHaveCount(0)
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
 
   await caixa(page, titulo).click() // deixa nada aberto
+})
+
+test('Enter duas vezes seguidas no campo rápido cria uma pendência só', async ({ page }) => {
+  const titulo = `Pendência sem duplicar ${Date.now()}`
+  await entrar(page)
+  await irParaPendencias(page)
+  const campo = page.getByLabel('Nova pendência')
+  await campo.fill(titulo)
+  // os dois envios no mesmo instante: o pior caso, sem esperar a primeira gravação
+  await campo.evaluate((el) => {
+    el.form.requestSubmit()
+    el.form.requestSubmit()
+  })
+  await expect(grupo(page, 'Hoje').getByText(titulo)).toBeVisible()
+  await expect(campo).toHaveValue('')
+  await page.waitForTimeout(1000) // dá tempo de uma segunda gravação chegar, se houvesse
+  await expect(page.getByText(titulo)).toHaveCount(1)
+
+  await caixa(page, titulo).click() // deixa nada aberto
+  await expect(grupo(page, 'Feitas recentemente').getByText(titulo)).toBeVisible()
 })
 
 test('atalhos: a tecla 4 abre Pendências, N foca o campo rápido e a barra mostra o 4', async ({ page }) => {

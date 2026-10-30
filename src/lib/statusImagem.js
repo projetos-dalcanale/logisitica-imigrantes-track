@@ -68,6 +68,9 @@ export const filtrosDeAgendamento = (proc) =>
     ? [{ value: 'cheios', label: 'Cheios' }]
     : [{ value: 'cheios', label: 'Cheios' }, { value: 'vazios', label: 'Vazios' }, { value: 'ambos', label: 'Os dois' }]
 
+// Nome da primeira coluna: na carga solta a linha é a carga ("104 caixas"), não um contêiner.
+export const rotuloDaUnidade = (proc) => (ehCargaSolta(proc) ? 'Carga' : 'Contêiner')
+
 // Colunas pedidas e uma linha por contêiner, da menor data (entre as colunas
 // exibidas) para a maior; sem data no fim, empate na ordem gravada.
 export const agendamentosDosContainers = (proc, filtro) => {
@@ -108,7 +111,7 @@ export const gradeDeAgendamentos = (proc, filtro) => {
   const fatia = (1 - primeira) / Math.max(colunas.length, 1)
   return {
     colunas: [
-      { rotulo: 'Contêiner', ini: 0, fim: primeira },
+      { rotulo: rotuloDaUnidade(proc), ini: 0, fim: primeira },
       ...colunas.map((c, k) => ({ rotulo: c.rotulo, ini: primeira + k * fatia, fim: k === colunas.length - 1 ? 1 : primeira + (k + 1) * fatia })),
     ],
     linhas: linhas.map((l) => [l.numero, ...l.valores]),

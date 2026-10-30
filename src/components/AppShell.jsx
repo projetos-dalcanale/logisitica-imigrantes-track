@@ -2,6 +2,8 @@ import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Archive, ClipboardList, House, Mail, Plus, ReceiptText, Route, Search } from 'lucide-react'
 import { ExportIcon, ImportIcon } from './ui/icons'
+import { doc, getDoc } from 'firebase/firestore'
+import { db } from '../lib/banco'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { useTheme } from '../hooks/useTheme'
@@ -86,8 +88,9 @@ export default function AppShell() {
     return () => clearInterval(id)
   }, [])
   const [paletteOpen, setPaletteOpen] = useState(false)
-  // Arquivados só carregam quando a aba deles ou a busca rápida é aberta.
-  const { processes, loading, loadingArquivo } = useProcesses(user.uid, activeTab === 'archive' || paletteOpen)
+  // Arquivados só carregam quando a aba deles, a busca rápida ou um processo arquivado de uma pendência é aberto.
+  const [arquivoDaPendencia, setArquivoDaPendencia] = useState(false)
+  const { processes, loading, loadingArquivo } = useProcesses(user.uid, activeTab === 'archive' || paletteOpen || arquivoDaPendencia)
   const { fretes, loading: loadingFretes, erro: erroFretes } = useFretes()
   const { pedagios, loading: loadingPedagios, erro: erroPedagios } = usePedagios()
   const { pendencias, loading: loadingPendencias, erro: erroPendencias } = usePendencias()
@@ -142,14 +145,27 @@ export default function AppShell() {
     else if (aba === 'pendencias') document.getElementById('pend-rapida')?.focus() // a pendência nasce no campo rápido
     else setNewOpen(true)
   }, [])
-  // Abre o processo vinculado a uma pendência; se ele não está na lista (arquivado,
-  // excluído ou de outro usuário) avisa em vez de não fazer nada.
+  // Abre o processo vinculado a uma pendência. Fora da lista e com os arquivados
+  // ainda não carregados, confere no banco se ele existe: se sim (arquivado),
+  // carrega os arquivados e a ficha abre quando ele chegar. Se não existe (ou é
+  // de outro usuário, e a regra recusa a leitura), avisa em vez de não fazer nada.
   const abrirProcesso = useCallback(
-    (id) => {
-      if (processes.some((p) => p.id === id)) setOpenId(id)
-      else showToast('Este processo não está na sua lista (arquivado, excluído ou de outro usuário).', 'error')
+    async (id) => {
+      if (processes.some((p) => p.id === id)) return setOpenId(id)
+      if (loadingArquivo) {
+        try {
+          if ((await getDoc(doc(db, 'processes', id))).exists()) {
+            setArquivoDaPendencia(true)
+            setOpenId(id)
+            return
+          }
+        } catch (err) {
+          if (err.code !== 'permission-denied') console.error('Erro ao buscar o processo da pendência:', err)
+        }
+      }
+      showToast('Este processo não está na sua lista (excluído ou de outro usuário).', 'error')
     },
-    [processes, showToast]
+    [processes, loadingArquivo, showToast]
   )
   useEffect(() => {
     activeTabRef.current = activeTab

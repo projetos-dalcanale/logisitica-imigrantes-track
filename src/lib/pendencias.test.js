@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { agendaPendencias, diaLocal, novaPendencia, opcoesDeProcesso, quandoDia, rotuloProcesso, validarPendencia } from './pendencias'
+import { agendaPendencias, diaLocal, novaPendencia, opcoesDeProcesso, quandoDia, rotuloDoVinculo, rotuloProcesso, validarPendencia, vinculoEscolhido } from './pendencias'
 
 // Quinta-feira, 22 out 2026, 10:00 (horário local).
 const NOW = new Date(2026, 9, 22, 10, 0).getTime()
@@ -120,13 +120,52 @@ describe('processo vinculado', () => {
     expect(rotuloProcesso(imp({ importador: '' }))).toBe('Sem nome · DTA 26/0001')
   })
 
-  it('opções: só processos ativos, e rótulo repetido ganha (2), (3) mantendo os ids', () => {
-    const lista = [imp({ id: 'a' }), imp({ id: 'b' }), imp({ id: 'c', status: 'archived' }), imp({ id: 'd', documentoNumero: '26/0002' }), imp({ id: 'e' })]
+  it('opções: só processos ativos, em ordem alfabética, e rótulo repetido ganha (2), (3) mantendo os ids', () => {
+    const lista = [imp({ id: 'e' }), imp({ id: 'b' }), imp({ id: 'c', status: 'archived' }), imp({ id: 'd', documentoNumero: '26/0002' }), imp({ id: 'a' })]
     expect(opcoesDeProcesso(lista)).toEqual([
       { id: 'a', rotulo: 'Agro Vale · DTA 26/0001' },
       { id: 'b', rotulo: 'Agro Vale · DTA 26/0001 (2)' },
-      { id: 'd', rotulo: 'Agro Vale · DTA 26/0002' },
       { id: 'e', rotulo: 'Agro Vale · DTA 26/0001 (3)' },
+      { id: 'd', rotulo: 'Agro Vale · DTA 26/0002' },
     ])
+  })
+
+  it('ordem alfabética ignora maiúsculas e acentos como no português', () => {
+    const lista = [imp({ id: '1', importador: 'Zeta' }), imp({ id: '2', importador: 'ágil' }), imp({ id: '3', importador: 'Beta' })]
+    expect(opcoesDeProcesso(lista).map((o) => o.id)).toEqual(['2', '3', '1'])
+  })
+
+  describe('vínculo da edição pelo id', () => {
+    const opcoes = [{ id: 'a', rotulo: 'Agro Vale · DTA 26/0001' }, { id: 'b', rotulo: 'Agro Vale · DTA 26/0001 (2)' }, { id: 'n', rotulo: 'Novo Cliente · DTA 9' }]
+
+    it('mostra o rótulo atual do processo, mesmo que o gravado esteja desatualizado', () => {
+      expect(rotuloDoVinculo({ processoId: 'b', processoRotulo: 'Agro Vale · DTA 26/0001' }, opcoes)).toBe('Agro Vale · DTA 26/0001 (2)')
+      expect(rotuloDoVinculo({ processoId: 'n', processoRotulo: 'Cliente Antigo · DTA 9' }, opcoes)).toBe('Novo Cliente · DTA 9')
+    })
+
+    it('processo fora da lista mostra o texto gravado; sem vínculo, vazio', () => {
+      expect(rotuloDoVinculo({ processoId: 'x', processoRotulo: 'Arquivado · DTA 1' }, opcoes)).toBe('Arquivado · DTA 1')
+      expect(rotuloDoVinculo({ processoId: null, processoRotulo: null }, opcoes)).toBe('')
+    })
+
+    it('salvar sem mexer no vínculo mantém o mesmo processo, ainda que o texto gravado seja de outro', () => {
+      // O texto gravado "Agro Vale · DTA 26/0001" hoje é o rótulo do processo "a"; o vínculo é com o "b".
+      const pend = { processoId: 'b', processoRotulo: 'Agro Vale · DTA 26/0001' }
+      expect(vinculoEscolhido(pend, opcoes, null)).toEqual({ processoId: 'b', processoRotulo: 'Agro Vale · DTA 26/0001 (2)' })
+    })
+
+    it('salvar sem mexer: processo fora da lista mantém id e texto; sem vínculo continua sem', () => {
+      const pend = { processoId: 'x', processoRotulo: 'Arquivado · DTA 1' }
+      expect(vinculoEscolhido(pend, opcoes, null)).toEqual({ processoId: 'x', processoRotulo: 'Arquivado · DTA 1' })
+      expect(vinculoEscolhido(pend, opcoes, 'Arquivado · DTA 1')).toEqual({ processoId: 'x', processoRotulo: 'Arquivado · DTA 1' })
+      expect(vinculoEscolhido({ processoId: null, processoRotulo: null }, opcoes, null)).toEqual({ processoId: null, processoRotulo: null })
+    })
+
+    it('escolher outro processo troca o vínculo; limpar remove', () => {
+      const pend = { processoId: 'b', processoRotulo: 'Agro Vale · DTA 26/0001 (2)' }
+      expect(vinculoEscolhido(pend, opcoes, 'Novo Cliente · DTA 9')).toEqual({ processoId: 'n', processoRotulo: 'Novo Cliente · DTA 9' })
+      expect(vinculoEscolhido(pend, opcoes, '')).toEqual({ processoId: null, processoRotulo: null })
+      expect(vinculoEscolhido({ processoId: null, processoRotulo: null }, opcoes, 'Agro Vale · DTA 26/0001')).toEqual({ processoId: 'a', processoRotulo: 'Agro Vale · DTA 26/0001' })
+    })
   })
 })

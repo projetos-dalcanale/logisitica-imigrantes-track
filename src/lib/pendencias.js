@@ -94,15 +94,35 @@ export const rotuloProcesso = (proc) => {
   return [cliente || 'Sem nome', detalhe].filter(Boolean).join(' · ')
 }
 
-// Processos ativos para escolher no vínculo; rótulo repetido ganha (2), (3).
+// Processos ativos para escolher no vínculo, em ordem alfabética; rótulo
+// repetido ganha (2), (3) na ordem do id (estável entre aberturas).
 export const opcoesDeProcesso = (processes) => {
   const usados = new Map()
   return processes
     .filter((proc) => proc.status === 'active')
-    .map((proc) => {
-      const base = rotuloProcesso(proc)
+    .map((proc) => ({ id: proc.id, base: rotuloProcesso(proc) }))
+    .sort((a, b) => a.base.localeCompare(b.base, 'pt-BR') || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+    .map(({ id, base }) => {
       const n = (usados.get(base) || 0) + 1
       usados.set(base, n)
-      return { id: proc.id, rotulo: n === 1 ? base : `${base} (${n})` }
+      return { id, rotulo: n === 1 ? base : `${base} (${n})` }
     })
+}
+
+// Rótulo que a edição mostra para o vínculo gravado: o atual do processo (achado
+// pelo id, mesmo que o cliente ou o documento tenham mudado) ou, se ele não está
+// mais na lista (arquivado, excluído), o texto gravado.
+export const rotuloDoVinculo = ({ processoId, processoRotulo }, opcoes) =>
+  opcoes.find((o) => o.id === processoId)?.rotulo || processoRotulo || ''
+
+// Vínculo a gravar na edição. `rotulo` null = a pessoa não mexeu no campo: o
+// mesmo processo (pelo id), com o rótulo atualizado. Vazio: sem vínculo. Um
+// rótulo da lista: aquele processo. O texto gravado de um processo que saiu da
+// lista: mantém o vínculo como estava.
+export const vinculoEscolhido = (pendencia, opcoes, rotulo) => {
+  const gravado = { processoId: pendencia.processoId || null, processoRotulo: pendencia.processoRotulo || null }
+  if (rotulo === null) return gravado.processoId || gravado.processoRotulo ? { ...gravado, processoRotulo: rotuloDoVinculo(pendencia, opcoes) || null } : gravado
+  if (!rotulo) return { processoId: null, processoRotulo: null }
+  const escolhido = opcoes.find((o) => o.rotulo === rotulo)
+  return escolhido ? { processoId: escolhido.id, processoRotulo: escolhido.rotulo } : gravado
 }
