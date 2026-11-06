@@ -34,7 +34,7 @@ function PendenciaForm({ pendencia, processes, onClose, onDelete }) {
     const vinculo = vinculoEscolhido(pendencia, opcoes, escolha)
     setSaving(true)
     try {
-      await atualizarPendencia(pendencia.id, { titulo, data, ...vinculo }, user.email)
+      await atualizarPendencia(pendencia.id, { titulo, data, ...vinculo }, user.email, pendencia.data)
       onClose()
     } catch (err) {
       console.error('Erro ao salvar pendência:', err)
