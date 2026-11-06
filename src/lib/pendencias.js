@@ -46,7 +46,42 @@ export const validarPendencia = ({ titulo, data }) => {
   return null
 }
 
-const porDiaECriacao = (a, b) => (a.data < b.data ? -1 : a.data > b.data ? 1 : String(a.createdAt || '').localeCompare(String(b.createdAt || '')))
+// Posição escolhida pela equipe dentro do dia (arrastando). Quem nunca foi
+// arrastada (ou mudou de dia) não tem posição e vai para o fim, por criação.
+const posicao = (x) => (Number.isFinite(x.ordem) ? x.ordem : Infinity)
+
+const porDiaECriacao = (a, b) => {
+  if (a.data !== b.data) return a.data < b.data ? -1 : 1
+  const pa = posicao(a)
+  const pb = posicao(b)
+  if (pa !== pb) return pa < pb ? -1 : 1
+  return String(a.createdAt || '').localeCompare(String(b.createdAt || ''))
+}
+
+// Separa uma lista já ordenada em blocos do mesmo dia (Atrasadas e Próximos
+// dias juntam vários dias; a ordem só pode ser trocada dentro de um dia).
+export const blocosPorDia = (itens) => {
+  const blocos = []
+  for (const item of itens) {
+    const ultimo = blocos[blocos.length - 1]
+    if (ultimo && ultimo.dia === item.data) ultimo.itens.push(item)
+    else blocos.push({ dia: item.data, itens: [item] })
+  }
+  return blocos
+}
+
+// Nova ordem de um dia depois de arrastar `deId` para o lugar de `paraId`.
+// Devolve só as pendências cuja posição mudou: [{ id, ordem }] (0, 1, 2...).
+// Arrastar para fora do dia, ou para o mesmo lugar, não muda nada.
+export const reordenarDia = (itensDoDia, deId, paraId) => {
+  const ids = itensDoDia.map((x) => x.id)
+  const de = ids.indexOf(deId)
+  const para = ids.indexOf(paraId)
+  if (de < 0 || para < 0 || de === para) return []
+  ids.splice(para, 0, ids.splice(de, 1)[0])
+  const atual = new Map(itensDoDia.map((x) => [x.id, x.ordem]))
+  return ids.map((id, ordem) => ({ id, ordem })).filter(({ id, ordem }) => atual.get(id) !== ordem)
+}
 
 // Agrupa as pendências para a tela e para o Início. Atrasada = não feita com
 // dia anterior a hoje (a de hoje NÃO é atrasada). Feitas: só as dos últimos

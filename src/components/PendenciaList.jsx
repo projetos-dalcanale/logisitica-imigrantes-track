@@ -1,14 +1,45 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'motion/react'
-import { CircleAlert, Link2, Plus, X } from 'lucide-react'
+import { DndContext, KeyboardSensor, PointerSensor, TouchSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
+import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { CircleAlert, GripVertical, Link2, Plus, X } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
-import { agendaPendencias, diaLocal, quandoDia, validarPendencia } from '../lib/pendencias'
-import { criarPendencia, marcarFeita } from '../lib/pendenciasDb'
+import { agendaPendencias, blocosPorDia, diaLocal, quandoDia, reordenarDia, validarPendencia } from '../lib/pendencias'
+import { criarPendencia, marcarFeita, salvarOrdem } from '../lib/pendenciasDb'
 import Button from './ui/Button'
 import Checkbox from './ui/Checkbox'
 import EmptyState from './ui/EmptyState'
 import SearchField from './ui/SearchField'
+import Tooltip from './ui/Tooltip'
+
+// Textos do arrastar pelo teclado e para leitores de tela (o padrão do dnd-kit é em inglês).
+const ACESSIBILIDADE_ARRASTO = {
+  screenReaderInstructions: {
+    draggable: 'Para mudar a ordem, aperte espaço ou Enter, use as setas para cima e para baixo e aperte espaço ou Enter de novo para soltar. Esc cancela.',
+  },
+  announcements: {
+    onDragStart: () => 'Pendência pega.',
+    onDragOver: () => '',
+    onDragEnd: ({ over }) => (over ? 'Pendência solta na nova posição.' : 'Pendência solta.'),
+    onDragCancel: () => 'Mudança de ordem cancelada.',
+  },
+}
+
+// Pendências de um mesmo dia: dá para arrastar e mudar a ordem (vale para a equipe toda).
+function BlocoDoDia({ itens, sensors, onSoltar, ...linha }) {
+  if (!onSoltar || itens.length < 2) return itens.map((item) => <Linha key={item.id} item={item} {...linha} />)
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} accessibility={ACESSIBILIDADE_ARRASTO} onDragEnd={({ active, over }) => over && onSoltar(itens, active.id, over.id)}>
+      <SortableContext items={itens.map((x) => x.id)} strategy={verticalListSortingStrategy}>
+        {itens.map((item) => (
+          <LinhaArrastavel key={item.id} item={item} {...linha} />
+        ))}
+      </SortableContext>
+    </DndContext>
+  )
+}
 
 const GRUPOS = [
   { id: 'atrasadas', titulo: 'Atrasadas', tom: 'text-red-500' },
@@ -79,7 +110,14 @@ function AdicaoRapida({ now }) {
   )
 }
 
-function Linha({ item, atrasada, now, onEditar, onAbrirProcesso }) {
+// Pendência que pode ser arrastada para mudar a ordem dentro do dia.
+function LinhaArrastavel(props) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.item.id })
+  const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 20 : undefined }
+  return <Linha {...props} innerRef={setNodeRef} style={style} arrastando={isDragging} alca={{ ...attributes, ...listeners }} />
+}
+
+function Linha({ item, atrasada, now, onEditar, onAbrirProcesso, alca, innerRef, style, arrastando }) {
   const { user } = useAuth()
   const showToast = useToast()
   const alternar = async (feito) => {
@@ -91,7 +129,24 @@ function Linha({ item, atrasada, now, onEditar, onAbrirProcesso }) {
     }
   }
   return (
-    <div className="flex items-center gap-3 px-4 py-2.5">
+    <div
+      ref={innerRef}
+      style={style}
+      className={`group relative flex items-center gap-3 px-4 py-2.5 ${arrastando ? 'rounded-xl bg-navy-800 shadow-float' : ''}`}
+    >
+      {/* A alça fica na margem da esquerda: com ou sem ela, as linhas ficam alinhadas. */}
+      {alca && (
+        <Tooltip label="Arrastar para mudar a ordem">
+          <button
+            type="button"
+            {...alca}
+            aria-label={`Mudar a ordem de “${item.titulo}”`}
+            className="absolute left-0 top-1/2 flex h-9 w-4 -translate-y-1/2 touch-none cursor-grab items-center justify-center rounded-md text-slate-500 opacity-40 outline-none transition-opacity hover:text-ink focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-blue-500/50 active:cursor-grabbing group-hover:opacity-100"
+          >
+            <GripVertical className="size-4" aria-hidden="true" />
+          </button>
+        </Tooltip>
+      )}
       <Checkbox id={`pend-${item.id}`} tone="success" checked={!!item.feito} label={`Marcar “${item.titulo}” como feita`} onChange={alternar} />
       <button type="button" onClick={() => onEditar(item.id)} className="min-w-0 flex-1 text-left">
         <span className={`block truncate text-[14.5px] font-medium ${item.feito ? 'text-slate-500 line-through' : 'text-ink'}`}>{item.titulo}</span>
@@ -124,6 +179,25 @@ export default function PendenciaList({ pendencias, loading, erro, onEditar, onA
     const id = setInterval(() => setNow(Date.now()), 60_000)
     return () => clearInterval(id)
   }, [])
+
+  const showToast = useToast()
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+  // Com a busca ligada a lista mostra só parte do dia: a ordem não muda por ela.
+  const podeReordenar = !termo
+  const soltar = async (itensDoDia, deId, paraId) => {
+    const mudancas = reordenarDia(itensDoDia, deId, paraId)
+    if (!mudancas.length) return
+    try {
+      await salvarOrdem(mudancas)
+    } catch (err) {
+      console.error('Erro ao mudar a ordem das pendências:', err)
+      showToast('Não foi possível mudar a ordem. Tente de novo.', 'error')
+    }
+  }
 
   if (erro === 'permission-denied') {
     return (
@@ -169,9 +243,19 @@ export default function PendenciaList({ pendencias, loading, erro, onEditar, onA
                 <h2 className={`font-display text-[17px] font-semibold tracking-[-0.015em] ${g.tom}`}>{g.titulo}</h2>
                 <span className="text-[13px] font-medium tabular-nums text-slate-500">{agenda[g.id].length}</span>
               </div>
-              <div className="card divide-y divide-slate-700/80 overflow-hidden">
-                {agenda[g.id].map((item) => (
-                  <Linha key={item.id} item={item} atrasada={g.id === 'atrasadas'} now={now} onEditar={onEditar} onAbrirProcesso={onAbrirProcesso} />
+              <div className="card divide-y divide-slate-700/80">
+                {/* As feitas vêm por hora de conclusão (não por dia) e não mudam de ordem. */}
+                {(podeReordenar && g.id !== 'feitas' ? blocosPorDia(agenda[g.id]) : [{ dia: 'todas', itens: agenda[g.id] }]).map((bloco) => (
+                  <BlocoDoDia
+                    key={bloco.dia}
+                    itens={bloco.itens}
+                    sensors={sensors}
+                    onSoltar={podeReordenar && g.id !== 'feitas' ? soltar : null}
+                    atrasada={g.id === 'atrasadas'}
+                    now={now}
+                    onEditar={onEditar}
+                    onAbrirProcesso={onAbrirProcesso}
+                  />
                 ))}
               </div>
             </section>

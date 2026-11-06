@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { agendaPendencias, diaLocal, novaPendencia, opcoesDeProcesso, quandoDia, rotuloDoVinculo, rotuloProcesso, validarPendencia, vinculoEscolhido } from './pendencias'
+import { agendaPendencias, blocosPorDia, diaLocal, novaPendencia, opcoesDeProcesso, quandoDia, reordenarDia, rotuloDoVinculo, rotuloProcesso, validarPendencia, vinculoEscolhido } from './pendencias'
 
 // Quinta-feira, 22 out 2026, 10:00 (horário local).
 const NOW = new Date(2026, 9, 22, 10, 0).getTime()
@@ -80,6 +80,17 @@ describe('agenda das pendências', () => {
     const a = p('2026-10-25', { createdAt: '2026-10-20T10:00:00.000Z' })
     const c = p('2026-10-24')
     expect(ids(agendaPendencias([b, a, c], NOW).proximas)).toEqual([c.id, a.id, b.id])
+  })
+
+  it('no mesmo dia, a ordem arrastada vem antes; quem não tem posição fica no fim, por criação', () => {
+    const semOrdemVelha = p('2026-10-22', { createdAt: '2026-10-20T10:00:00.000Z' })
+    const semOrdemNova = p('2026-10-22', { createdAt: '2026-10-21T10:00:00.000Z', ordem: null })
+    const segunda = p('2026-10-22', { createdAt: '2026-10-19T10:00:00.000Z', ordem: 1 })
+    const primeira = p('2026-10-22', { createdAt: '2026-10-21T12:00:00.000Z', ordem: 0 })
+    const ontem = p('2026-10-21', { ordem: 5 })
+    const a = agendaPendencias([semOrdemNova, segunda, semOrdemVelha, primeira, ontem], NOW)
+    expect(ids(a.hoje)).toEqual([primeira.id, segunda.id, semOrdemVelha.id, semOrdemNova.id])
+    expect(ids(a.atrasadas)).toEqual([ontem.id]) // a posição não mistura dias
   })
 
   it('lista vazia devolve os cinco grupos vazios', () => {
@@ -167,5 +178,47 @@ describe('processo vinculado', () => {
       expect(vinculoEscolhido(pend, opcoes, '')).toEqual({ processoId: null, processoRotulo: null })
       expect(vinculoEscolhido({ processoId: null, processoRotulo: null }, opcoes, 'Agro Vale · DTA 26/0001')).toEqual({ processoId: 'a', processoRotulo: 'Agro Vale · DTA 26/0001' })
     })
+  })
+})
+
+describe('ordem dentro do dia', () => {
+  const item = (id, data, ordem) => ({ id, data, ordem })
+
+  it('separa a lista em blocos de um dia só, na ordem recebida', () => {
+    const lista = [item('a', '2026-10-20'), item('b', '2026-10-20'), item('c', '2026-10-21')]
+    expect(blocosPorDia(lista).map((b) => [b.dia, ids(b.itens)])).toEqual([
+      ['2026-10-20', ['a', 'b']],
+      ['2026-10-21', ['c']],
+    ])
+    expect(blocosPorDia([])).toEqual([])
+  })
+
+  it('arrastar numera o dia de 0 em diante e devolve só quem mudou de posição', () => {
+    const dia = [item('a', '2026-10-22', 0), item('b', '2026-10-22', 1), item('c', '2026-10-22', 2), item('d', '2026-10-22', 3)]
+    // c sobe para o lugar de a: c, a, b, d (d continua em 3)
+    expect(reordenarDia(dia, 'c', 'a')).toEqual([
+      { id: 'c', ordem: 0 },
+      { id: 'a', ordem: 1 },
+      { id: 'b', ordem: 2 },
+    ])
+    // a desce para o lugar de b: b, a, c, d
+    expect(reordenarDia(dia, 'a', 'b')).toEqual([
+      { id: 'b', ordem: 0 },
+      { id: 'a', ordem: 1 },
+    ])
+  })
+
+  it('a primeira vez (sem posições gravadas) grava a posição de todas', () => {
+    const dia = [item('a', '2026-10-22'), item('b', '2026-10-22', null)]
+    expect(reordenarDia(dia, 'b', 'a')).toEqual([
+      { id: 'b', ordem: 0 },
+      { id: 'a', ordem: 1 },
+    ])
+  })
+
+  it('soltar no mesmo lugar ou fora do dia não muda nada', () => {
+    const dia = [item('a', '2026-10-22', 0), item('b', '2026-10-22', 1)]
+    expect(reordenarDia(dia, 'a', 'a')).toEqual([])
+    expect(reordenarDia(dia, 'a', 'outro-dia')).toEqual([])
   })
 })

@@ -199,3 +199,38 @@ test('atalhos: a tecla 4 abre Pendências, N foca o campo rápido e a barra most
   await page.keyboard.press('n')
   await expect(page.getByLabel('Nova pendência')).toBeFocused()
 })
+
+test('muda a ordem das pendências do dia arrastando (pelo teclado) e a ordem fica gravada', async ({ page }) => {
+  const marca = Date.now()
+  const [a, b, c] = ['Primeira', 'Segunda', 'Terceira'].map((t) => `${t} ordem ${marca}`)
+  await entrar(page)
+  await irParaPendencias(page)
+  for (const titulo of [a, b, c]) await criar(page, titulo)
+
+  const hoje = grupo(page, 'Hoje')
+  const ordemNaTela = async () => (await hoje.getByText(` ordem ${marca}`).allTextContents()).map((t) => t.trim())
+  await expect.poll(ordemNaTela).toEqual([a, b, c])
+
+  // A terceira sobe duas posições: espaço pega, setas movem, espaço solta.
+  const alca = page.getByRole('button', { name: `Mudar a ordem de “${c}”` })
+  await alca.focus()
+  await page.keyboard.press('Space')
+  await page.keyboard.press('ArrowUp')
+  await page.keyboard.press('ArrowUp')
+  await page.keyboard.press('Space')
+  await expect.poll(ordemNaTela).toEqual([c, a, b])
+
+  // Gravada no banco: continua assim depois de recarregar.
+  await page.reload()
+  await expect(page.getByRole('heading', { level: 1, name: /Bom dia|Boa tarde|Boa noite|Pendências/ })).toBeVisible()
+  if (!(await page.getByLabel('Nova pendência').isVisible())) await irParaPendencias(page)
+  await expect.poll(ordemNaTela).toEqual([c, a, b])
+
+  // Com a busca ligada não dá para arrastar (a lista mostra só parte do dia).
+  await page.getByPlaceholder('Buscar pendência ou processo…').fill(`ordem ${marca}`)
+  await expect(page.getByRole('button', { name: `Mudar a ordem de “${c}”` })).toHaveCount(0)
+  await page.getByPlaceholder('Buscar pendência ou processo…').fill('')
+
+  for (const titulo of [a, b, c]) await caixa(page, titulo).click() // deixa nada aberto
+  await expect(grupo(page, 'Feitas recentemente').getByText(c)).toBeVisible()
+})
