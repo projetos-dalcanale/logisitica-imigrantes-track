@@ -37,10 +37,10 @@ const CommandPalette = lazy(() => import('./CommandPalette'))
 const StatusClientes = lazy(() => import('./StatusClientes'))
 
 export const TABS = [
+  { value: 'pendencias', label: 'Pendências', short: 'Pendências', icon: ClipboardList },
   { value: 'import', label: 'Importações', short: 'Importação', icon: ImportIcon },
   { value: 'export', label: 'Exportações', short: 'Exportação', icon: ExportIcon },
   { value: 'archive', label: 'Arquivados', short: 'Arquivados', icon: Archive },
-  { value: 'pendencias', label: 'Pendências', short: 'Pendências', icon: ClipboardList },
   { value: 'status', label: 'Status para clientes', short: 'Status', icon: Mail },
   { value: 'fretes', label: 'Fretes para CTE', short: 'Fretes CTE', icon: ReceiptText },
   { value: 'pedagios', label: 'Rotas e Valores de Pedágio', short: 'Pedágios', icon: Route },
@@ -49,8 +49,8 @@ export const TABS = [
 ]
 // A ordem de TABS (menos o Início) é a da barra lateral: os números dos atalhos (1 a 7) seguem essa ordem.
 const SECTIONS = [
-  { title: 'Processos', tabs: TABS.slice(0, 3) },
-  { title: 'Pendências', tabs: TABS.slice(3, 4) },
+  { title: 'Pendências', tabs: TABS.slice(0, 1) },
+  { title: 'Processos', tabs: TABS.slice(1, 4) },
   { title: 'Status', tabs: TABS.slice(4, 5) },
   { title: 'Comercial', tabs: TABS.slice(5, 7) }, // Fretes para CTE e pedágios
 ]
@@ -301,7 +301,7 @@ export default function AppShell() {
                 transition={{ duration: 0.2, ease: 'easeOut' }}
               >
                 {activeTab === 'inicio' ? (
-                  <Inicio processes={processes} loading={loading} onOpen={setOpenId} onIr={setActiveTab} onNovo={novo} pendencias={pendencias} onEditarPendencia={setPendenciaOpen} onAbrirProcesso={abrirProcesso} />
+                  <Inicio processes={processes} loading={loading} onOpen={setOpenId} onIr={setActiveTab} pendencias={pendencias} onEditarPendencia={setPendenciaOpen} onAbrirProcesso={abrirProcesso} />
                 ) : activeTab === 'status' ? (
                   <Suspense fallback={null}>
                     <StatusClientes key={statusPedido} processes={processes} loading={loading} procInicial={statusProc} />

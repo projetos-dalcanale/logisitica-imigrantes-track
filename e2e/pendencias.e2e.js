@@ -14,7 +14,7 @@ const entrar = async (page) => {
   await expect(page.getByRole('heading', { level: 1, name: /Bom dia|Boa tarde|Boa noite/ })).toBeVisible()
 }
 
-// A seção da barra lateral também se chama "Pendências": o item é achado pelo título ("Pendências (4)").
+// A seção da barra lateral também se chama "Pendências": o item é achado pelo título ("Pendências (1)").
 const itemPendencias = (page) => page.locator('aside button[title^="Pendências"]')
 const irParaPendencias = (page) => itemPendencias(page).click()
 const caixa = (page, titulo) => page.getByRole('checkbox', { name: `Marcar “${titulo}” como feita` })
@@ -70,17 +70,16 @@ test('marca como feita, vai para "Feitas recentemente" e volta ao desmarcar', as
   await expect(grupo(page, 'Feitas recentemente').getByText(titulo)).toBeVisible()
 })
 
-test('aparece no Início, acima dos compromissos, e se conclui por lá', async ({ page }) => {
+test('aparece no Início, na coluna de pendências, e se conclui por lá', async ({ page }) => {
   const titulo = `Checar devolução ${Date.now()}`
   await entrar(page)
   await irParaPendencias(page)
   await criar(page, titulo)
 
   await page.locator('aside').getByRole('button', { name: 'Início' }).click()
-  const hoje = page.locator('#agenda-hoje')
+  const hoje = page.locator('#pend-hoje')
   await expect(hoje.getByText(titulo)).toBeVisible()
-  await expect(hoje.getByText('Pendência', { exact: true }).first()).toBeVisible()
-  await expect(page.getByRole('button', { name: /Compromissos hoje/ })).not.toContainText(/^\s*0\b/)
+  await expect(page.getByRole('button', { name: /Pendências hoje/ })).not.toContainText(/^\s*0\b/)
 
   await caixa(page, titulo).click()
   await expect(page.getByText(titulo)).toHaveCount(0)
@@ -96,7 +95,7 @@ test('com o dia de ontem fica em Atrasadas e conta no Início', async ({ page })
   await expect(grupo(page, 'Atrasadas').getByText('ontem')).toBeVisible()
 
   await page.locator('aside').getByRole('button', { name: 'Início' }).click()
-  await expect(page.locator('#agenda-atrasados').getByText(titulo)).toBeVisible()
+  await expect(page.locator('#pend-atrasadas').getByText(titulo)).toBeVisible()
   await caixa(page, titulo).click() // conclui pelo Início
   await expect(page.getByText(titulo)).toHaveCount(0)
 })
@@ -190,10 +189,10 @@ test('Enter duas vezes seguidas no campo rápido cria uma pendência só', async
   await expect(grupo(page, 'Feitas recentemente').getByText(titulo)).toBeVisible()
 })
 
-test('atalhos: a tecla 4 abre Pendências, N foca o campo rápido e a barra mostra o 4', async ({ page }) => {
+test('atalhos: a tecla 1 abre Pendências, N foca o campo rápido e a barra mostra o 1', async ({ page }) => {
   await entrar(page)
-  await expect(itemPendencias(page)).toHaveAttribute('title', 'Pendências (4)')
-  await page.keyboard.press('4')
+  await expect(itemPendencias(page)).toHaveAttribute('title', 'Pendências (1)')
+  await page.keyboard.press('1')
   await expect(page.getByRole('heading', { level: 1, name: 'Pendências' })).toBeVisible()
   await expect(page.getByLabel('Nova pendência')).toBeVisible() // a lista aparece depois da transição de aba
   await page.keyboard.press('n')

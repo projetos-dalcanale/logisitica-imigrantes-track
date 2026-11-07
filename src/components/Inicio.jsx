@@ -1,13 +1,17 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
-import { CalendarClock, ChevronRight, ClipboardList, Mail, Plus, ReceiptText, Route, TriangleAlert } from 'lucide-react'
+import { ChevronRight, ClipboardList, TriangleAlert } from 'lucide-react'
 import { ExportIcon, ImportIcon } from './ui/icons'
 import { agendaDoDia } from '../lib/etapas'
-import { agendaPendencias } from '../lib/pendencias'
-import { useMediaQuery } from '../hooks/useMediaQuery'
+import { agendaPendencias, quandoDia } from '../lib/pendencias'
 import Compromisso from './Compromisso'
 import PendenciaCompromisso from './PendenciaCompromisso'
 import SemanaChart from './SemanaChart'
+
+// Quantas pendências de "Próximos dias" e quantos processos atrasados aparecem
+// no Início; o resto fica nas abas.
+const MAX_PROXIMAS = 5
+const MAX_PROCESSOS_ATRASADOS = 6
 
 // Indicador clicável no topo (mesmo visual do resumo das listas).
 function Indicador({ icon: Icon, valor, rotulo, cor, onClick }) {
@@ -28,79 +32,52 @@ function Indicador({ icon: Icon, valor, rotulo, cor, onClick }) {
   )
 }
 
-// Uma seção da agenda (Atrasados, Hoje, Amanhã): as pendências vêm primeiro (não
-// têm horário) e depois os compromissos dos processos. O limite de linhas vale
-// para o total.
-function SecaoAgenda({ id, titulo, tom, itens, pendencias = [], vazio, atrasado, onOpen, onEditarPendencia, onAbrirProcesso, now, max }) {
-  const total = itens.length + pendencias.length
-  if (!total && !vazio) return null
-  const linhasPendencia = pendencias.slice(0, max)
-  const linhasProcesso = itens.slice(0, Math.max(0, max - linhasPendencia.length))
-  const restantes = total - linhasPendencia.length - linhasProcesso.length
+// Um grupo dentro do cartão de pendências (Atrasadas, Hoje, Amanhã, Próximos dias).
+function GrupoPendencias({ id, titulo, tom = 'text-slate-400', itens, vazio, max, quando, atrasada, onVerTodas, onEditar, onAbrirProcesso }) {
+  if (!itens.length && !vazio) return null
+  const visiveis = max ? itens.slice(0, max) : itens
+  const restantes = itens.length - visiveis.length
   return (
-    <section id={id} className="scroll-mt-20">
-      <div className="mb-1.5 flex items-baseline gap-2 px-1">
-        <h2 className={`font-display text-[17px] font-semibold tracking-[-0.015em] ${tom}`}>{titulo}</h2>
-        {total > 0 && <span className="text-[13px] font-medium tabular-nums text-slate-500">{total}</span>}
-      </div>
-      {total ? (
-        <div className="card divide-y divide-slate-700/80 overflow-hidden">
-          {linhasPendencia.map((item) => (
-            <PendenciaCompromisso key={`pend-${item.id}`} item={item} atrasada={atrasado} onEditar={onEditarPendencia} onAbrirProcesso={onAbrirProcesso} />
-          ))}
-          {linhasProcesso.map((item, i) => (
-            <Compromisso key={`${item.proc.id}-${item.rotulo}-${item.numero}-${i}`} item={item} atrasado={atrasado} onOpen={onOpen} now={now} />
+    <section id={id} aria-labelledby={`${id}-titulo`} className="scroll-mt-20">
+      <h3 id={`${id}-titulo`} className={`flex items-baseline gap-2 px-4 pb-1 pt-3 text-[12.5px] font-semibold ${tom}`}>
+        {titulo}
+        {itens.length > 0 && <span className="font-medium tabular-nums text-slate-500">{itens.length}</span>}
+      </h3>
+      {itens.length ? (
+        <div className="divide-y divide-slate-700/80">
+          {visiveis.map((item) => (
+            <PendenciaCompromisso key={item.id} item={item} quando={quando?.(item)} atrasada={atrasada} onEditar={onEditar} onAbrirProcesso={onAbrirProcesso} />
           ))}
           {restantes > 0 && (
-            <p className="px-4 py-2 text-[12.5px] text-slate-500">e mais {restantes} — veja nas listas de Importações e Exportações e na aba Pendências</p>
+            <button type="button" onClick={onVerTodas} className="w-full px-4 py-2 text-left text-[12.5px] text-slate-500 transition-colors hover:text-ink">
+              e mais {restantes} — ver na aba Pendências
+            </button>
           )}
         </div>
       ) : (
-        <div className="card px-4 py-4 text-[14px] text-slate-500">{vazio}</div>
+        <p className="px-4 pb-3 text-[14px] text-slate-500">{vazio}</p>
       )}
     </section>
   )
 }
 
-function Atalho({ icon: Icon, rotulo, descricao, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-navy-700/40 active:bg-navy-700/70"
-    >
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
-        <Icon className="size-4" strokeWidth={2.25} aria-hidden="true" />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-[14.5px] font-medium text-ink">{rotulo}</span>
-        <span className="block truncate text-[12.5px] text-slate-500">{descricao}</span>
-      </span>
-      <ChevronRight className="size-4 shrink-0 text-slate-500/70" strokeWidth={2.4} aria-hidden="true" />
-    </button>
-  )
-}
-
-// PÁGINA INICIAL: visão do dia — quanto está em andamento, o que atrasou,
-// o que acontece hoje e amanhã, a semana e atalhos para o que mais se usa.
-// Em tela larga (xl) são três colunas e tudo cabe sem rolar a página.
-export default function Inicio({ processes, loading, onOpen, onIr, onNovo, pendencias = [], onEditarPendencia, onAbrirProcesso }) {
+// PÁGINA INICIAL: visão do dia. As pendências da equipe ficam em destaque, na
+// coluna maior; ao lado, a semana dos processos e o que deles está atrasado.
+export default function Inicio({ processes, loading, onOpen, onIr, pendencias = [], onEditarPendencia, onAbrirProcesso }) {
   // Relógio da agenda: atualiza a cada minuto com a página aberta.
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 60_000)
     return () => clearInterval(id)
   }, [])
-  // Em tela larga a agenda mostra menos linhas por seção (a semana completa o resto).
-  const telaLarga = useMediaQuery('(min-width: 1280px)')
-  const telaAlta = useMediaQuery('(min-height: 1000px)')
-  const maxPorSecao = telaLarga ? (telaAlta ? 3 : 2) : 6
 
   const ativos = processes.filter((p) => p.status === 'active')
-  const agenda = agendaDoDia(ativos, now)
-  // Pendências da equipe (sem horário): entram nas mesmas seções e nos mesmos contadores.
+  const atrasados = agendaDoDia(ativos, now).atrasados
   const pend = agendaPendencias(pendencias, now)
+  const abertas = pend.atrasadas.length + pend.hoje.length + pend.amanha.length + pend.proximas.length
   const rolarPara = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const verPendencias = () => onIr('pendencias')
+  const acoes = { onEditar: onEditarPendencia, onAbrirProcesso, onVerTodas: verPendencias }
 
   if (loading) {
     return (
@@ -117,33 +94,54 @@ export default function Inicio({ processes, loading, onOpen, onIr, onNovo, pende
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Indicador icon={ImportIcon} valor={ativos.filter((p) => p.type === 'import').length} rotulo="Importações em andamento" cor="bg-blue-500" onClick={() => onIr('import')} />
         <Indicador icon={ExportIcon} valor={ativos.filter((p) => p.type === 'export').length} rotulo="Exportações em andamento" cor="bg-blue-500" onClick={() => onIr('export')} />
-        <Indicador icon={TriangleAlert} valor={agenda.atrasados.length + pend.atrasadas.length} rotulo="Atrasados" cor="bg-red-500" onClick={() => rolarPara('agenda-atrasados')} />
-        <Indicador icon={CalendarClock} valor={agenda.hoje.length + pend.hoje.length} rotulo="Compromissos hoje" cor="bg-yellow-500" onClick={() => rolarPara('agenda-hoje')} />
+        <Indicador
+          icon={TriangleAlert}
+          valor={atrasados.length + pend.atrasadas.length}
+          rotulo="Atrasados"
+          cor="bg-red-500"
+          onClick={() => rolarPara(pend.atrasadas.length || !atrasados.length ? 'pend-atrasadas' : 'processos-atrasados')}
+        />
+        <Indicador icon={ClipboardList} valor={pend.hoje.length} rotulo="Pendências hoje" cor="bg-yellow-500" onClick={() => rolarPara('pend-hoje')} />
       </div>
 
-      <div className="grid grid-cols-1 gap-7 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] xl:grid-cols-[minmax(0,5fr)_minmax(0,4fr)_minmax(0,3fr)] xl:gap-6">
-        <div className="min-w-0 space-y-6 xl:space-y-4 lg:row-span-2 xl:row-span-1">
-          <SecaoAgenda id="agenda-atrasados" titulo="Atrasados" tom="text-red-500" itens={agenda.atrasados} pendencias={pend.atrasadas} atrasado onOpen={onOpen} onEditarPendencia={onEditarPendencia} onAbrirProcesso={onAbrirProcesso} now={now} max={maxPorSecao} />
-          <SecaoAgenda id="agenda-hoje" titulo="Hoje" tom="text-ink" itens={agenda.hoje} pendencias={pend.hoje} vazio="Nada agendado para hoje." onOpen={onOpen} onEditarPendencia={onEditarPendencia} onAbrirProcesso={onAbrirProcesso} now={now} max={maxPorSecao} />
-          <SecaoAgenda id="agenda-amanha" titulo="Amanhã" tom="text-ink" itens={agenda.amanha} pendencias={pend.amanha} vazio="Nada agendado para amanhã." onOpen={onOpen} onEditarPendencia={onEditarPendencia} onAbrirProcesso={onAbrirProcesso} now={now} max={maxPorSecao} />
-        </div>
-
-        <div className="min-w-0 xl:col-start-2 xl:row-start-1">
-          <SemanaChart processes={processes} now={now} onOpen={onOpen} />
-        </div>
-
-        <section className="min-w-0 xl:col-start-3 xl:row-start-1">
-          <div className="mb-1.5 px-1">
-            <h2 className="font-display text-[17px] font-semibold tracking-[-0.015em] text-ink">Atalhos</h2>
+      <div className="grid grid-cols-1 gap-7 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] xl:gap-6">
+        <section aria-labelledby="pendencias-titulo" className="min-w-0">
+          <div className="mb-1.5 flex items-baseline gap-2 px-1">
+            <h2 id="pendencias-titulo" className="font-display text-[17px] font-semibold tracking-[-0.015em] text-ink">Pendências</h2>
+            {abertas > 0 && <span className="text-[13px] font-medium tabular-nums text-slate-500">{abertas} em aberto</span>}
+            <button type="button" onClick={verPendencias} className="ml-auto flex items-center gap-0.5 text-[13px] font-medium text-slate-400 transition-colors hover:text-ink">
+              Abrir Pendências
+              <ChevronRight className="size-3.5" strokeWidth={2.4} aria-hidden="true" />
+            </button>
           </div>
-          <div className="card divide-y divide-slate-700/80 overflow-hidden">
-            <Atalho icon={Plus} rotulo="Novo processo" descricao="Importação ou exportação" onClick={onNovo} />
-            <Atalho icon={ClipboardList} rotulo="Pendências" descricao="Tarefas do dia a dia da equipe" onClick={() => onIr('pendencias')} />
-            <Atalho icon={Mail} rotulo="Status para clientes" descricao="Imagem de status para o e-mail" onClick={() => onIr('status')} />
-            <Atalho icon={ReceiptText} rotulo="Fretes para CTE" descricao="Valores de cada cliente" onClick={() => onIr('fretes')} />
-            <Atalho icon={Route} rotulo="Rotas e Valores de Pedágio" descricao="Pedágio por rota e eixos" onClick={() => onIr('pedagios')} />
+          <div className="card divide-y divide-slate-700/80 overflow-hidden pb-1">
+            <GrupoPendencias id="pend-atrasadas" titulo="Atrasadas" tom="text-red-500" itens={pend.atrasadas} atrasada quando={(x) => quandoDia(x.data, now)} {...acoes} />
+            <GrupoPendencias id="pend-hoje" titulo="Hoje" tom="text-ink" itens={pend.hoje} vazio="Nada para hoje." {...acoes} />
+            <GrupoPendencias id="pend-amanha" titulo="Amanhã" itens={pend.amanha} {...acoes} />
+            <GrupoPendencias id="pend-proximas" titulo="Próximos dias" itens={pend.proximas} max={MAX_PROXIMAS} quando={(x) => quandoDia(x.data, now)} {...acoes} />
           </div>
         </section>
+
+        <div className="min-w-0 space-y-6">
+          <SemanaChart processes={processes} now={now} onOpen={onOpen} />
+
+          {atrasados.length > 0 && (
+            <section id="processos-atrasados" aria-labelledby="processos-atrasados-titulo" className="scroll-mt-20">
+              <div className="mb-1.5 flex items-baseline gap-2 px-1">
+                <h2 id="processos-atrasados-titulo" className="font-display text-[17px] font-semibold tracking-[-0.015em] text-red-500">Processos atrasados</h2>
+                <span className="text-[13px] font-medium tabular-nums text-slate-500">{atrasados.length}</span>
+              </div>
+              <div className="card divide-y divide-slate-700/80 overflow-hidden">
+                {atrasados.slice(0, MAX_PROCESSOS_ATRASADOS).map((item, i) => (
+                  <Compromisso key={`${item.proc.id}-${item.rotulo}-${item.numero}-${i}`} item={item} atrasado onOpen={onOpen} now={now} />
+                ))}
+                {atrasados.length > MAX_PROCESSOS_ATRASADOS && (
+                  <p className="px-4 py-2 text-[12.5px] text-slate-500">e mais {atrasados.length - MAX_PROCESSOS_ATRASADOS} — veja nas listas de Importações e Exportações</p>
+                )}
+              </div>
+            </section>
+          )}
+        </div>
       </div>
     </motion.div>
   )
