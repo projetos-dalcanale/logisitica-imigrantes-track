@@ -14,12 +14,13 @@ const entrar = async (page) => {
 
 const irPara = (page, aba) => page.locator('aside').getByRole('button', { name: new RegExp(aba) }).click()
 
-test('abre no Início com os indicadores e os atalhos', async ({ page }) => {
+test('abre no Início com os indicadores e as pendências (sem atalhos)', async ({ page }) => {
   await entrar(page)
   await expect(page.getByRole('button', { name: /Importações em andamento/ })).toContainText('1')
   await expect(page.getByRole('button', { name: /Exportações em andamento/ })).toContainText('1')
-  await page.getByRole('button', { name: /Rotas e Valores de Pedágio Pedágio por rota/ }).click()
-  await expect(page.getByRole('heading', { level: 1, name: 'Rotas e Valores de Pedágio' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Atalhos' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Abrir Pendências' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Pendências' })).toBeVisible()
   await page.locator('aside').getByRole('button', { name: 'Início' }).click()
   await expect(page.getByRole('heading', { level: 1, name: /Bom dia|Boa tarde|Boa noite/ })).toBeVisible()
 })
