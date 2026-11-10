@@ -25,6 +25,9 @@ import {
   linhasDePlacas,
   temPlacasAntigas,
   sugestaoDePlaca,
+  exportSteps,
+  etapaExportFeita,
+  aplicarEtapasExport,
 } from './processos'
 
 const DIA = 86400000
@@ -164,8 +167,64 @@ describe('progresso do processo', () => {
 
   it('exportação: conta só as etapas marcadas (prazos são informativos)', () => {
     const ct = { deadlineDraft: 'x', deadlineCarga: 'x', agVazio: 'x', agVazioCheck: 'true', estufagem: 'x', agCheio: 'x' }
-    expect(getProcessProgress({ type: 'export', containers: [ct] })).toBe(33)
-    expect(getProcessProgress({ type: 'export', containers: [{ ...ct, estufagemCheck: 'true', agCheioCheck: 'true' }] })).toBe(100)
+    expect(getProcessProgress({ type: 'export', containers: [ct] })).toBe(14) // 1 de 7
+    expect(getProcessProgress({ type: 'export', containers: [{ ...ct, estufagemCheck: 'true', cteCheck: 'true' }] })).toBe(43) // 3 de 7
+  })
+
+  it('exportação de antes dos documentos: com o cheio depositado continua em 100%', () => {
+    const ct = { agVazioCheck: 'true', estufagemCheck: 'true', agCheioCheck: 'true' }
+    expect(getProcessProgress({ type: 'export', containers: [ct] })).toBe(100)
+  })
+})
+
+describe('documentos da exportação', () => {
+  const passo = (id) => exportSteps.find((s) => s.id === id)
+  const NOVO = { cteCheck: '', ciotCheck: '', mdfeCheck: '', encerrarMdfeCheck: '' }
+  const documentos = ['gerar_cte', 'gerar_ciot', 'gerar_mdfe', 'encerrar_mdfe'].map(passo)
+
+  it('ficam entre a estufagem e o depósito; o encerramento vem depois dele', () => {
+    expect(exportSteps.map((s) => s.id)).toEqual(['agVazio', 'estufagem', 'gerar_cte', 'gerar_ciot', 'gerar_mdfe', 'agCheio', 'encerrar_mdfe'])
+  })
+
+  it('contêiner antigo: sem os campos, conta como feito só com o cheio depositado', () => {
+    expect(documentos.every((s) => etapaExportFeita({ agCheioCheck: 'true' }, s))).toBe(true)
+    expect(documentos.some((s) => etapaExportFeita({ agCheioCheck: '' }, s))).toBe(false)
+  })
+
+  it('a regra de contêiner antigo não vale para as etapas que já existiam', () => {
+    expect(etapaExportFeita({ agCheioCheck: 'true' }, passo('estufagem'))).toBe(false)
+  })
+
+  it('com o campo gravado, vale só o que foi marcado', () => {
+    expect(etapaExportFeita({ ...NOVO, agCheioCheck: 'true' }, passo('gerar_cte'))).toBe(false)
+    expect(etapaExportFeita({ ...NOVO, cteCheck: 'true' }, passo('gerar_cte'))).toBe(true)
+  })
+
+  const AGORA_ISO = '2026-11-10T12:00:00.000Z'
+
+  it('marca e desmarca guardando quando foi concluído', () => {
+    const feito = aplicarEtapasExport({ ...NOVO }, [passo('gerar_cte')], true, AGORA_ISO)
+    expect(feito).toMatchObject({ cteCheck: 'true', cteCheckEm: AGORA_ISO })
+    expect(aplicarEtapasExport(feito, [passo('gerar_cte')], false, AGORA_ISO)).toMatchObject({ cteCheck: '', cteCheckEm: '' })
+  })
+
+  it('marcar vários de uma vez mantém o horário de quem já estava feito', () => {
+    const antes = { ...NOVO, cteCheck: 'true', cteCheckEm: 'antes' }
+    const depois = aplicarEtapasExport(antes, ['gerar_cte', 'gerar_ciot', 'gerar_mdfe'].map(passo), true, AGORA_ISO)
+    expect(depois).toMatchObject({ cteCheck: 'true', cteCheckEm: 'antes', ciotCheck: 'true', ciotCheckEm: AGORA_ISO, mdfeCheck: 'true' })
+  })
+
+  it('contêiner antigo em andamento: depositar o cheio não marca os documentos', () => {
+    const antigo = { agVazioCheck: 'true', estufagemCheck: 'true', agCheioCheck: '' }
+    const depois = aplicarEtapasExport(antigo, [passo('agCheio')], true, AGORA_ISO)
+    expect(depois.agCheioCheck).toBe('true')
+    expect(documentos.some((s) => etapaExportFeita(depois, s))).toBe(false)
+  })
+
+  it('contêiner antigo concluído: desmarcar o depósito mantém os documentos feitos', () => {
+    const depois = aplicarEtapasExport({ agCheioCheck: 'true' }, [passo('agCheio')], false, AGORA_ISO)
+    expect(depois.agCheioCheck).toBe('')
+    expect(documentos.every((s) => etapaExportFeita(depois, s))).toBe(true)
   })
 })
 

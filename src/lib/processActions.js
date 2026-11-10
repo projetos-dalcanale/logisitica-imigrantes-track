@@ -1,6 +1,6 @@
 import { addDoc, collection, deleteDoc, doc, updateDoc } from 'firebase/firestore'
 import { db } from './banco'
-import { fixarCargaEntregue, novoChecklistImport } from './processos'
+import { aplicarEtapasExport, fixarCargaEntregue, novoChecklistImport } from './processos'
 import { trackSave } from './saveStatus'
 
 // Gravações no Firestore relacionadas aos processos.
@@ -21,6 +21,7 @@ export const novoContainer = (type, id, numero = '', tipo = '') => {
       tara: '', lacre: '', deadlineDraft: '', deadlineCarga: '',
       agVazio: '', agVazioCheck: '', termVazioExp: '', estufagem: '', estufagemCheck: '',
       agCheio: '', agCheioCheck: '', termCheioExp: '',
+      cteCheck: '', ciotCheck: '', mdfeCheck: '', encerrarMdfeCheck: '',
     })
   }
   return ct
@@ -44,12 +45,10 @@ export const atualizarChecklist = (proc, ctId, stepId, value) =>
     }),
   })
 
-// Marca/desmarca uma etapa da exportação, guardando quando foi concluída.
-export const marcarEtapaExport = (proc, ctId, step, feito) =>
+// Marca/desmarca etapas da exportação numa gravação só.
+export const marcarEtapasExport = (proc, ctId, steps, feito) =>
   atualizarProcesso(proc.id, {
-    containers: proc.containers.map((c) =>
-      c.id === ctId ? { ...c, [step.check]: feito ? 'true' : '', [`${step.check}Em`]: feito ? new Date().toISOString() : '' } : c
-    ),
+    containers: proc.containers.map((c) => (c.id === ctId ? aplicarEtapasExport(c, steps, feito) : c)),
   })
 
 export const adicionarContainer = (proc) =>
