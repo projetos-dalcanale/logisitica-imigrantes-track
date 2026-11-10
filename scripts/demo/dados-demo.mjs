@@ -90,6 +90,7 @@ const containerExport = (r, id, numero, e = {}) => ({
   tara: '', lacre: '', deadlineDraft: '', deadlineCarga: '',
   agVazio: '', agVazioCheck: '', termVazioExp: '', estufagem: '', estufagemCheck: '',
   agCheio: '', agCheioCheck: '', termCheioExp: '',
+  cteCheck: '', ciotCheck: '', mdfeCheck: '', encerrarMdfeCheck: '',
   ...e,
 })
 
@@ -211,7 +212,9 @@ export const gerarProcessos = (userId, agora = new Date()) => {
         tipo: "40'RF", tara: '3750', lacre: 'LC-50321',
         agVazio: r.local(-6, 8, 0), agVazioCheck: 'true', agVazioCheckEm: r.iso(-6, 8, 30), termVazioExp: 'Depósito Vale do Sul',
         estufagem: r.local(-5, 14, 0), estufagemCheck: 'true', estufagemCheckEm: r.iso(-5, 16, 0),
+        cteCheck: 'true', cteCheckEm: r.iso(-5, 16, 30), ciotCheck: 'true', ciotCheckEm: r.iso(-5, 16, 35), mdfeCheck: 'true', mdfeCheckEm: r.iso(-5, 16, 40),
         agCheio: r.local(-3, 7, 0), agCheioCheck: 'true', agCheioCheckEm: r.iso(-3, 8, 15), termCheioExp: 'Terminal Portuário Alfa',
+        encerrarMdfeCheck: 'true', encerrarMdfeCheckEm: r.iso(-3, 8, 30),
         deadlineDraft: r.local(-4, 18, 0), deadlineCarga: r.local(-2, 12, 0),
       })],
     }),
@@ -249,7 +252,9 @@ export const gerarArquivados = (userId, agora = new Date()) => {
         tara: '3790', lacre: 'LC-48110',
         agVazio: r.local(-25, 8, 0), agVazioCheck: 'true', termVazioExp: 'Depósito Baixada',
         estufagem: r.local(-24, 14, 0), estufagemCheck: 'true',
+        cteCheck: 'true', ciotCheck: 'true', mdfeCheck: 'true',
         agCheio: r.local(-22, 7, 0), agCheioCheck: 'true', termCheioExp: 'Terminal Portuário Alfa',
+        encerrarMdfeCheck: 'true',
         deadlineDraft: r.local(-23, 18, 0), deadlineCarga: r.local(-21, 12, 0),
       })],
     },

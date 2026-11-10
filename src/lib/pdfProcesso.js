@@ -4,7 +4,7 @@
 // pelo navegador ("Salvar como PDF"). Todo texto digitado é escapado.
 import { EMPRESA, PRODUTO } from '../marca'
 import { ordenarContainers } from './etapas'
-import { chaveEtapa, distintos, ehCargaSolta, etapaFeita, exportSteps, identificacaoUnidade, formatarDataHora, linhasDePlacas, stepsChecklistImport, terminaisDeDevolucao, terminalDevolucao, transportePorContainer } from './processos'
+import { chaveEtapa, distintos, ehCargaSolta, etapaExportFeita, etapaFeita, exportSteps, identificacaoUnidade, formatarDataHora, linhasDePlacas, stepsChecklistImport, terminaisDeDevolucao, terminalDevolucao, transportePorContainer } from './processos'
 
 export const escapeHtml = (valor) =>
   valor === null || valor === undefined
@@ -28,7 +28,7 @@ export const etapasDoContainer = (proc, ct) => {
   }
   return exportSteps.map((step) => ({
     label: step.label + (step.terminal && ct[step.terminal] ? ` · ${ct[step.terminal]}` : ''),
-    feito: ct[step.check] === 'true',
+    feito: etapaExportFeita(ct, step),
     concluidoEm: dataOuVazio(ct[`${step.check}Em`]),
     agendado: dataOuVazio(ct[step.id]),
   }))

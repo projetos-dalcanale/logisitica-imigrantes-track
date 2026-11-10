@@ -1,6 +1,6 @@
 // ETAPAS, PRÓXIMA AÇÃO E URGÊNCIA — o que os cards e a lista mostram para
 // dizer "em que pé está" cada processo sem precisar abrir a ficha.
-import { draftJaCumprido, etapaFeita, exportSteps, getProcessProgress, identificacaoUnidade, stepsChecklistImport } from './processos'
+import { draftJaCumprido, etapaExportFeita, etapaFeita, exportSteps, getProcessProgress, identificacaoUnidade, stepsChecklistImport } from './processos'
 
 export { etapaFeita }
 
@@ -58,9 +58,9 @@ const passos = (proc) => {
   return exportSteps.map((step) => ({
     id: step.id,
     label: step.label,
-    agendamento: true,
+    agendamento: !step.semData,
     data: (ct) => ct[step.id],
-    feita: (ct) => ct[step.check] === 'true',
+    feita: (ct) => etapaExportFeita(ct, step),
     acao: `Agendar ${step.label.toLowerCase()}`,
     evento: step.label,
   }))
