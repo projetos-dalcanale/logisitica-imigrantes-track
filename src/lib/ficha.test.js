@@ -54,10 +54,10 @@ describe('resumo do contêiner', () => {
     expect(resumoContainer(proc, proc.containers[1], 1)).toBe('Contêiner 2 · 0 de 6 etapas')
   })
 
-  it('exportação conta as 3 etapas', () => {
+  it('exportação conta as 7 etapas', () => {
     const proc = exp(1)
     proc.containers[0].agVazioCheck = 'true'
-    expect(resumoContainer(proc, proc.containers[0], 0)).toBe('Contêiner 1 · 1 de 3 etapas')
+    expect(resumoContainer(proc, proc.containers[0], 0)).toBe('Contêiner 1 · 1 de 7 etapas')
   })
 })
 

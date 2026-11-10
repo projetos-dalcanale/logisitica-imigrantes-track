@@ -44,11 +44,17 @@ describe('PDF do processo', () => {
     expect(etapasDoContainer(solta, imp.containers[0]).map((e) => e.label).at(-1)).toBe('Carga entregue')
   })
 
-  it('exportação usa as três etapas, com terminal no nome', () => {
-    const ct = { agVazio: '2026-10-01T09:00', agVazioCheck: 'true', termVazioExp: 'Depot Cubatão' }
+  it('exportação usa as sete etapas, com terminal no nome', () => {
+    const ct = { agVazio: '2026-10-01T09:00', agVazioCheck: 'true', termVazioExp: 'Depot Cubatão', cteCheck: 'true', cteCheckEm: '2026-10-02T08:30:00' }
     const etapas = etapasDoContainer({ type: 'export' }, ct)
-    expect(etapas.map((e) => e.feito)).toEqual([true, false, false])
+    expect(etapas.map((e) => e.feito)).toEqual([true, false, true, false, false, false, false])
     expect(etapas[0].label).toBe('Retirada do vazio · Depot Cubatão')
+    expect(etapas[2]).toMatchObject({ label: 'Gerar CTe', concluidoEm: '02/10/2026 08:30', agendado: '' })
+  })
+
+  it('exportação de antes dos documentos: com o cheio depositado, saem como feitos', () => {
+    const etapas = etapasDoContainer({ type: 'export' }, { agVazioCheck: 'true', estufagemCheck: 'true', agCheioCheck: 'true' })
+    expect(etapas.every((e) => e.feito)).toBe(true)
   })
 
   it('monta a ficha com a marca, os dados e escapa o que foi digitado', () => {

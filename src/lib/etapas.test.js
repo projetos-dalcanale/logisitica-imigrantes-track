@@ -35,10 +35,10 @@ describe('etapas do processo', () => {
     expect(etapas.find((e) => e.id === 'gerar_cte')).toMatchObject({ feitos: 1, total: 2 })
   })
 
-  it('exportação: retirada do vazio, estufagem e depósito do cheio (prazos não contam)', () => {
+  it('exportação: etapas físicas e documentos, na ordem (prazos não contam)', () => {
     const etapas = etapasProcesso(exp([{ deadlineDraft: em(5), agVazio: em(-1), agVazioCheck: 'true', estufagem: em(1) }]))
-    expect(etapas.map((e) => e.label)).toEqual(['Retirada do vazio', 'Estufagem', 'Depósito do cheio'])
-    expect(etapas.map((e) => e.feitos)).toEqual([1, 0, 0])
+    expect(etapas.map((e) => e.label)).toEqual(['Retirada do vazio', 'Estufagem', 'Gerar CTe', 'Gerar CIOT', 'Gerar MDFE', 'Depósito do cheio', 'Encerrar MDFE'])
+    expect(etapas.map((e) => e.feitos)).toEqual([1, 0, 0, 0, 0, 0, 0])
   })
 })
 
@@ -68,6 +68,17 @@ describe('próxima ação', () => {
     expect(proximaAcao(exp([{ agVazio: em(1) }]), NOW)).toMatchObject({ texto: 'Retirada do vazio amanhã 14:00 · confirmar', tom: 'brand' })
     expect(proximaAcao(exp([{ agVazio: em(-1), agVazioCheck: 'true' }]), NOW).texto).toBe('Agendar estufagem')
     expect(proximaAcao(exp([{ agVazioCheck: 'true', estufagem: em(-1) }]), NOW).tom).toBe('danger')
+  })
+
+  it('exportação: depois da estufagem pede os documentos, sem pedir data', () => {
+    const estufado = { agVazioCheck: 'true', estufagemCheck: 'true' }
+    expect(proximaAcao(exp([estufado]), NOW)).toMatchObject({ texto: 'Gerar CTe', tom: 'neutral' })
+    expect(proximaAcao(exp([{ ...estufado, cteCheck: 'true' }, estufado]), NOW).texto).toBe('Gerar CTe · falta 1 de 2')
+  })
+
+  it('exportação: depois do depósito falta encerrar o MDFE', () => {
+    const ct = { agVazioCheck: 'true', estufagemCheck: 'true', cteCheck: 'true', ciotCheck: 'true', mdfeCheck: 'true', agCheioCheck: 'true', encerrarMdfeCheck: '' }
+    expect(proximaAcao(exp([ct]), NOW).texto).toBe('Encerrar MDFE')
   })
 })
 
@@ -141,9 +152,9 @@ describe('etapas de um contêiner', () => {
     expect(etapasDoContainer(p, p.containers[0])).toEqual({ feitas: 1, total: 6 })
   })
 
-  it('exportação: 3 etapas', () => {
+  it('exportação: 7 etapas', () => {
     const p = exp([{ agVazioCheck: 'true', estufagemCheck: 'true' }])
-    expect(etapasDoContainer(p, p.containers[0])).toEqual({ feitas: 2, total: 3 })
+    expect(etapasDoContainer(p, p.containers[0])).toEqual({ feitas: 2, total: 7 })
   })
 })
 

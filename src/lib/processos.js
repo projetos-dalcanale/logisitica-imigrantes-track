@@ -70,11 +70,46 @@ export const novoChecklistImport = () => {
 // ETAPAS DA EXPORTAÇÃO (nesta ordem). Cada uma tem a data agendada (`id`)
 // e o check (`check`) que marca que aconteceu de fato. Deadline Draft e
 // Deadline Carga são só informativos e não contam como etapa.
+// `semData`: documento, só tem o check. `chip`: aparece agrupado na linha
+// "Documentos" da ficha; nas contas e no PDF é uma etapa como as outras.
 export const exportSteps = [
   { id: 'agVazio', check: 'agVazioCheck', label: 'Retirada do vazio', feito: 'Vazio retirado', terminal: 'termVazioExp', cat: 'vazio' },
   { id: 'estufagem', check: 'estufagemCheck', label: 'Estufagem', feito: 'Estufagem concluída' },
+  { id: 'gerar_cte', check: 'cteCheck', label: 'Gerar CTe', feito: 'CTe gerado', semData: true, chip: 'CTe' },
+  { id: 'gerar_ciot', check: 'ciotCheck', label: 'Gerar CIOT', feito: 'CIOT gerado', semData: true, chip: 'CIOT' },
+  { id: 'gerar_mdfe', check: 'mdfeCheck', label: 'Gerar MDFE', feito: 'MDFE gerado', semData: true, chip: 'MDFE' },
   { id: 'agCheio', check: 'agCheioCheck', label: 'Depósito do cheio', feito: 'Cheio depositado', terminal: 'termCheioExp', cat: 'cheio' },
+  { id: 'encerrar_mdfe', check: 'encerrarMdfeCheck', label: 'Encerrar MDFE', feito: 'MDFE encerrado', semData: true },
 ]
+
+// Contêineres de antes dos documentos não têm os campos: com o cheio já
+// depositado, os documentos contam como feitos.
+const documentoAntigo = (ct, step) => !!step.semData && !(step.check in ct) && ct.agCheioCheck === 'true'
+
+// Uma etapa da exportação está feita neste contêiner?
+export const etapaExportFeita = (ct, step) => ct[step.check] === 'true' || documentoAntigo(ct, step)
+
+// Na primeira marcação de um contêiner antigo, fixa os documentos com o valor
+// que ele já mostrava, para o depósito do cheio não mexer mais neles.
+const fixarDocumentosExport = (ct) => {
+  const fixados = {}
+  exportSteps.forEach((step) => {
+    if (step.semData && !(step.check in ct)) fixados[step.check] = etapaExportFeita(ct, step) ? 'true' : ''
+  })
+  return { ...ct, ...fixados }
+}
+
+// Contêiner com as etapas marcadas/desmarcadas, guardando quando foi concluído.
+// Quem já estava no estado pedido não muda (mantém o horário original).
+export const aplicarEtapasExport = (ct, steps, feito, agora = new Date().toISOString()) => {
+  const novo = fixarDocumentosExport(ct)
+  steps.forEach((step) => {
+    if ((novo[step.check] === 'true') === feito) return
+    novo[step.check] = feito ? 'true' : ''
+    novo[`${step.check}Em`] = feito ? agora : ''
+  })
+  return novo
+}
 
 const pad = (n) => String(n).padStart(2, '0')
 
@@ -195,7 +230,7 @@ export const getProcessProgress = (proc) => {
     proc.containers.forEach((ct) => {
       exportSteps.forEach((step) => {
         total++
-        if (ct[step.check] === 'true') done++
+        if (etapaExportFeita(ct, step)) done++
       })
     })
   }

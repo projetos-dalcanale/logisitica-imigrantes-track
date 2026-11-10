@@ -38,7 +38,7 @@ describe('linha da tabela', () => {
 
   it('exportação usa o booking como documento', () => {
     const p = { id: 'e1', type: 'export', status: 'active', exportador: 'Café Sul', booking: 'BKG777', armador: 'Maersk', containers: [{ id: 'c1', numero: 'MAEU 765.432-1' }] }
-    expect(linhaDaTabela(p, NOW)).toMatchObject({ tipo: 'export', cliente: 'Café Sul', documento: 'Booking BKG777', conteiner: 'MAEU 765.432-1', etapasTotal: 3 })
+    expect(linhaDaTabela(p, NOW)).toMatchObject({ tipo: 'export', cliente: 'Café Sul', documento: 'Booking BKG777', conteiner: 'MAEU 765.432-1', etapasTotal: 7 })
   })
 
   it('carga solta mostra a descrição da carga no lugar do contêiner', () => {
