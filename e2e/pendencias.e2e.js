@@ -214,8 +214,16 @@ test('muda a ordem das pendências do dia arrastando (pelo teclado) e a ordem fi
   const alca = page.getByRole('button', { name: `Mudar a ordem de “${c}”` })
   await alca.focus()
   await page.keyboard.press('Space')
-  await page.keyboard.press('ArrowUp')
-  await page.keyboard.press('ArrowUp')
+  // O dnd-kit só escuta as setas um instante depois de pegar a linha: uma seta
+  // enviada antes disso se perde. A alça fica pressionada quando já pegou.
+  await expect(alca).toHaveAttribute('aria-pressed', 'true')
+  // Cada seta só depois de a lista reagir à anterior: a linha de cima desce.
+  const topo = async (titulo) => (await hoje.getByText(titulo).boundingBox()).y
+  for (const acima of [b, a]) {
+    const antes = await topo(acima)
+    await page.keyboard.press('ArrowUp')
+    await expect.poll(() => topo(acima)).toBeGreaterThan(antes)
+  }
   await page.keyboard.press('Space')
   await expect.poll(ordemNaTela).toEqual([c, a, b])
 
