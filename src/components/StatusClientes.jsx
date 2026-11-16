@@ -5,7 +5,7 @@ import { Check, ChevronDown, Copy, Download, Image as ImageIcon, Plus, Search, T
 import { ExportIcon, ImportIcon } from './ui/icons'
 import { useToast } from '../contexts/ToastContext'
 import { comContainers, dadosDoProcesso, montarStatus, rotuloContainer } from '../lib/status'
-import { agendamentosDosContainers, dadosDosContainers, desenharStatus, filtrosDeAgendamento, gradeDeAgendamentos, htmlDaImagem, imagemDoCanvas, imagemReduzida, opcoesDeStatus, rotuloDaUnidade } from '../lib/statusImagem'
+import { agendamentosDosContainers, caixasDePrevisao, dadosDosContainers, desenharStatus, filtrosDeAgendamento, gradeDeAgendamentos, htmlDaImagem, imagemDoCanvas, imagemReduzida, opcoesDeStatus, rotuloDaUnidade } from '../lib/statusImagem'
 import Button from './ui/Button'
 import EmptyState from './ui/EmptyState'
 import Segmented from './ui/Segmented'
@@ -146,6 +146,9 @@ export default function StatusClientes({ processes, loading, procInicial }) {
   const [filtroAgend, setFiltroAgend] = useState(() => rascunho.filtroAgend || 'ambos')
   // Contêineres de que o status fala (ids). null = todos; só importa com 2 ou mais.
   const [ctIds, setCtIds] = useState(() => (Array.isArray(rascunho.ctIds) ? rascunho.ctIds : null))
+  // Previsões do navio digitadas (texto livre: "18/11 às 08:00").
+  const [gate, setGate] = useState(() => rascunho.gate || '')
+  const [deadline, setDeadline] = useState(() => rascunho.deadline || '')
   const [fontesProntas, setFontesProntas] = useState(false)
 
   const procCompleto = ativos.find((p) => p.id === procId)
@@ -169,12 +172,13 @@ export default function StatusClientes({ processes, loading, procInicial }) {
   // para este processo (ex.: Vazios numa baixa), vale a última opção (Os dois, ou Cheios).
   const filtros = proc ? filtrosDeAgendamento(proc) : []
   const filtro = filtros.some((f) => f.value === filtroAgend) ? filtroAgend : filtros.at(-1)?.value || 'cheios'
+  const caixasExtras = useMemo(() => (opcao?.previsoes && proc ? caixasDePrevisao(proc, { gate, deadline }) : []), [opcao, proc, gate, deadline])
 
   useEffect(() => {
     try {
-      localStorage.setItem(RASCUNHO, JSON.stringify({ procId, statusId, titulo, detalhes, filtroAgend, ctIds }))
+      localStorage.setItem(RASCUNHO, JSON.stringify({ procId, statusId, titulo, detalhes, filtroAgend, ctIds, gate, deadline }))
     } catch { /* navegador sem localStorage */ }
-  }, [procId, statusId, titulo, detalhes, filtroAgend, ctIds])
+  }, [procId, statusId, titulo, detalhes, filtroAgend, ctIds, gate, deadline])
 
   // A imagem usa a fonte do app; espera ela carregar antes de desenhar.
   useEffect(() => {
@@ -196,8 +200,9 @@ export default function StatusClientes({ processes, loading, procInicial }) {
       etapa: opcao.etapa,
       tabela: !!opcao.tabela,
       grade: opcao.agendamentos ? gradeDeAgendamentos(proc, filtro) : null,
+      extras: caixasExtras,
     })
-  }, [proc, opcao, titulo, detalhes, filtro, fontesProntas])
+  }, [proc, opcao, titulo, detalhes, filtro, caixasExtras, fontesProntas])
 
   // Situações com texto pronto (ex.: Dados do contêiner) preenchem os
   // detalhes; ao sair delas, o texto pronto que não foi mexido é limpo.
@@ -212,6 +217,11 @@ export default function StatusClientes({ processes, loading, procInicial }) {
   const escolherProcesso = (id) => {
     setProcId(id)
     setCtIds(null) // outro processo: volta a falar de todos os contêineres
+    if (id !== procId) {
+      // Outro navio: as previsões digitadas não valem mais.
+      setGate('')
+      setDeadline('')
+    }
     // A lista de situações muda entre importação e exportação.
     const novo = ativos.find((p) => p.id === id)
     if (novo && !opcoesDeStatus(novo).some((o) => o.id === statusId)) {
@@ -241,6 +251,8 @@ export default function StatusClientes({ processes, loading, procInicial }) {
     } else if (opcao.agendamentos) {
       const { colunas, linhas } = agendamentosDosContainers(proc, filtro)
       tabela = linhas.map((l) => [`${rotuloDaUnidade(proc)} ${l.numero}`, ...colunas.map((c, k) => `${c.rotulo}: ${l.valores[k]}`)].join(' · ')).join('\n')
+    } else if (caixasExtras.length) {
+      tabela = caixasExtras.map(([r, v]) => `${r}: ${v}`).join('\n')
     }
     return montarStatus(proc, [titulo.trim() || opcao.titulo, detalhes.trim(), tabela].filter(Boolean).join('\n\n'))
   }
@@ -363,6 +375,19 @@ export default function StatusClientes({ processes, loading, procInicial }) {
           <div>
             <label className="label">Incluir</label>
             <Segmented size="sm" className="max-w-xs" options={filtros} value={filtro} onChange={setFiltroAgend} />
+          </div>
+        )}
+
+        {opcao?.previsoes && (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label htmlFor="status-gate" className="label">Abertura do gate</label>
+              <input id="status-gate" type="text" value={gate} maxLength={60} onChange={(e) => setGate(e.target.value)} placeholder="Ex.: 18/11 às 08:00" className="field" />
+            </div>
+            <div>
+              <label htmlFor="status-deadline" className="label">Deadline</label>
+              <input id="status-deadline" type="text" value={deadline} maxLength={60} onChange={(e) => setDeadline(e.target.value)} placeholder="Ex.: 21/11 às 17:00" className="field" />
+            </div>
           </div>
         )}
 
