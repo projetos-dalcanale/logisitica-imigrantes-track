@@ -172,7 +172,7 @@ export default function StatusClientes({ processes, loading, procInicial }) {
   // para este processo (ex.: Vazios numa baixa), vale a última opção (Os dois, ou Cheios).
   const filtros = proc ? filtrosDeAgendamento(proc) : []
   const filtro = filtros.some((f) => f.value === filtroAgend) ? filtroAgend : filtros.at(-1)?.value || 'cheios'
-  const caixasExtras = useMemo(() => (opcao?.previsoes && proc ? caixasDePrevisao(proc, { gate, deadline }) : []), [opcao, proc, gate, deadline])
+  const caixasDestaque = useMemo(() => (opcao?.previsoes && proc ? caixasDePrevisao(proc, { gate, deadline }) : []), [opcao, proc, gate, deadline])
 
   useEffect(() => {
     try {
@@ -200,9 +200,9 @@ export default function StatusClientes({ processes, loading, procInicial }) {
       etapa: opcao.etapa,
       tabela: !!opcao.tabela,
       grade: opcao.agendamentos ? gradeDeAgendamentos(proc, filtro) : null,
-      extras: caixasExtras,
+      destaque: caixasDestaque,
     })
-  }, [proc, opcao, titulo, detalhes, filtro, caixasExtras, fontesProntas])
+  }, [proc, opcao, titulo, detalhes, filtro, caixasDestaque, fontesProntas])
 
   // Situações com texto pronto (ex.: Dados do contêiner) preenchem os
   // detalhes; ao sair delas, o texto pronto que não foi mexido é limpo.
@@ -251,8 +251,8 @@ export default function StatusClientes({ processes, loading, procInicial }) {
     } else if (opcao.agendamentos) {
       const { colunas, linhas } = agendamentosDosContainers(proc, filtro)
       tabela = linhas.map((l) => [`${rotuloDaUnidade(proc)} ${l.numero}`, ...colunas.map((c, k) => `${c.rotulo}: ${l.valores[k]}`)].join(' · ')).join('\n')
-    } else if (caixasExtras.length) {
-      tabela = caixasExtras.map(([r, v]) => `${r}: ${v}`).join('\n')
+    } else if (caixasDestaque.length) {
+      tabela = caixasDestaque.map(([r, v]) => `${r}: ${v}`).join('\n')
     }
     return montarStatus(proc, [titulo.trim() || opcao.titulo, detalhes.trim(), tabela].filter(Boolean).join('\n\n'))
   }
