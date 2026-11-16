@@ -106,4 +106,9 @@ test('gera a imagem de status com os dados do contêiner', async ({ page }) => {
   await expect(imagem).toBeVisible()
   await expect(imagem).toHaveAttribute('width', '1440')
   await expect(page.getByRole('button', { name: 'Copiar imagem' })).toBeEnabled()
+
+  // Previsões do navio: troca o texto pronto (o dos dados, não mexido, sai).
+  await page.getByRole('button', { name: 'Previsões do navio' }).click()
+  await expect(page.locator('#status-detalhes')).toHaveValue('Conforme print em anexo, seguem as previsões do navio, com abertura do gate e deadline.')
+  await expect(imagem).toBeVisible()
 })
