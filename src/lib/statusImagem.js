@@ -22,6 +22,9 @@ export const opcoesDeStatus = (proc) => {
       // no e-mail). Sem barra de progresso: pode ir bem antes do embarque
       // (retirada antecipada para cumprir o Draft).
       { id: 'dados', titulo: 'Dados do contêiner', etapa: null, tabela: true, detalhes: 'Segue abaixo dados do container e fotos em anexo para conferência.' },
+      // Vai junto do print do armador com abertura do gate e deadline; pode
+      // ser mandado mais de uma vez quando as datas mudam, por isso sem barra.
+      { id: 'navio', titulo: 'Previsões do navio', etapa: null, detalhes: 'Conforme print em anexo, seguem as previsões do navio, com abertura do gate e deadline.' },
       { id: 'rota', titulo: 'Veículo em rota', etapa: 2 },
       { id: 'terminal', titulo: 'Cheio entregue no terminal', etapa: 3 },
       { id: 'agendamentos', titulo: 'Status dos agendamentos', etapa: null, agendamentos: true, detalhes: 'Segue a programação dos agendamentos.' },

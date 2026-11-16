@@ -42,6 +42,18 @@ describe('dados do contêiner (exportação)', () => {
     expect(opcoesDeStatus({ type: 'import' }).some((o) => o.id === 'dados')).toBe(false)
   })
 
+  it('previsões do navio: só na exportação, logo depois dos dados, com texto pronto e sem barra', () => {
+    const ids = opcoesDeStatus({ type: 'export' }).map((o) => o.id)
+    expect(ids.indexOf('navio')).toBe(ids.indexOf('dados') + 1)
+    expect(opcoesDeStatus({ type: 'export' }).find((o) => o.id === 'navio')).toEqual({
+      id: 'navio',
+      titulo: 'Previsões do navio',
+      etapa: null,
+      detalhes: 'Conforme print em anexo, seguem as previsões do navio, com abertura do gate e deadline.',
+    })
+    expect(opcoesDeStatus({ type: 'import' }).some((o) => o.id === 'navio')).toBe(false)
+  })
+
   it('numeração, tara (com kg quando só número) e lacre de cada contêiner', () => {
     const proc = { containers: [{ numero: 'MSCU 999.888-7', tara: '3800', lacre: 'L123' }, { numero: '', tara: '3.750 kg', lacre: '' }] }
     expect(dadosDosContainers(proc)).toEqual([
