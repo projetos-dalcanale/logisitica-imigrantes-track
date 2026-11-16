@@ -211,8 +211,8 @@ const retanguloArredondado = (ctx, x, y, w, h, r) => {
   ctx.roundRect(x, y, w, h, r)
 }
 
-// PREVISÕES DO NAVIO: caixas da segunda linha (navio do processo, abertura do
-// gate e deadline digitados). Só entram as preenchidas.
+// PREVISÕES DO NAVIO: caixas em destaque, acima de cliente/booking (navio do
+// processo, abertura do gate e deadline digitados). Só entram as preenchidas.
 export const caixasDePrevisao = (proc, { gate = '', deadline = '' } = {}) =>
   [
     ['Navio', (proc?.navio || '').trim()],
@@ -220,9 +220,11 @@ export const caixasDePrevisao = (proc, { gate = '', deadline = '' } = {}) =>
     ['Deadline', deadline.trim()],
   ].filter(([, v]) => v)
 
-// Calcula a altura e desenha o cartão. `canvas` é redimensionado. `extras`:
-// caixas [rótulo, valor] numa segunda linha, abaixo de cliente/documento.
-export const desenharStatus = (canvas, { proc, titulo, detalhes, etapa, tabela = false, grade = null, extras = [], data = new Date() }) => {
+// Calcula a altura e desenha o cartão. `canvas` é redimensionado. `destaque`:
+// caixas [rótulo, valor] numa fileira ACIMA de cliente/documento (o assunto
+// principal do status, ex.: previsões do navio); com ela, os contêineres
+// saem da fileira de baixo, que fica só com cliente e documento.
+export const desenharStatus = (canvas, { proc, titulo, detalhes, etapa, tabela = false, grade = null, destaque = [], data = new Date() }) => {
   const ctx = canvas.getContext('2d')
   const { cliente, documento, unidades, rotuloUnidade } = dadosDoProcesso(proc)
   // Tabela abaixo das caixas de dados: a `grade` pedida ou, com `tabela`, a de numeração/tara/lacre.
@@ -242,13 +244,13 @@ export const desenharStatus = (canvas, { proc, titulo, detalhes, etapa, tabela =
     ['Cliente', cliente || '—'],
     [documento?.rotulo || 'Documento', documento?.numero || '—'],
     // Um contêiner por linha, para o número não quebrar no meio. Com a
-    // tabela de dados, os contêineres aparecem nela.
-    !quadro && [rotuloUnidade, unidades.join('\n') || '—'],
+    // tabela de dados, os contêineres aparecem nela; com destaque, ficam de fora.
+    !quadro && !destaque.length && [rotuloUnidade, unidades.join('\n') || '—'],
   ].filter(Boolean)
   const linhasTabela = quadro ? quadro.linhas : []
   const alturaTabela = quadro ? 38 + Math.max(linhasTabela.length, 1) * 40 + 6 : 0
   // Cada fileira de caixas divide a largura entre as suas caixas.
-  const fileiras = [info, extras].filter((f) => f.length).map((caixas) => {
+  const fileiras = [destaque, info].filter((f) => f.length).map((caixas) => {
     const larguraColuna = (W - 2 * M - (caixas.length - 1) * 12) / caixas.length
     const linhas = caixas.map(([, v]) => quebrarLinhas(v, larguraColuna - 28, medir(fonte(600, 15))))
     return { caixas, larguraColuna, linhas, altura: 22 + 20 + Math.max(...linhas.map((l) => l.length)) * 21 + 16 }
