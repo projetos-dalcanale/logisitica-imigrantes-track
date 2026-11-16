@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { agendamentosDosContainers, crc32, dadosDosContainers, etapasDaImagem, filtrosDeAgendamento, gradeDeAgendamentos, gradeDosContainers, opcoesDeStatus, pngComDpi, quebrarLinhas, rotuloDaUnidade } from './statusImagem'
+import { agendamentosDosContainers, caixasDePrevisao, crc32, dadosDosContainers, etapasDaImagem, filtrosDeAgendamento, gradeDeAgendamentos, gradeDosContainers, opcoesDeStatus, pngComDpi, quebrarLinhas, rotuloDaUnidade } from './statusImagem'
 
 describe('imagem de status', () => {
   it('etapas e situações por tipo de processo', () => {
@@ -42,16 +42,27 @@ describe('dados do contêiner (exportação)', () => {
     expect(opcoesDeStatus({ type: 'import' }).some((o) => o.id === 'dados')).toBe(false)
   })
 
-  it('previsões do navio: só na exportação, logo depois dos dados, com texto pronto e sem barra', () => {
+  it('previsões do navio: só na exportação, logo depois dos dados, com caixas e sem barra', () => {
     const ids = opcoesDeStatus({ type: 'export' }).map((o) => o.id)
     expect(ids.indexOf('navio')).toBe(ids.indexOf('dados') + 1)
     expect(opcoesDeStatus({ type: 'export' }).find((o) => o.id === 'navio')).toEqual({
       id: 'navio',
       titulo: 'Previsões do navio',
       etapa: null,
-      detalhes: 'Conforme print em anexo, seguem as previsões do navio, com abertura do gate e deadline.',
+      previsoes: true,
+      detalhes: 'Conforme print em anexo, seguem abaixo as previsões do navio.',
     })
     expect(opcoesDeStatus({ type: 'import' }).some((o) => o.id === 'navio')).toBe(false)
+  })
+
+  it('caixas das previsões: navio do processo, gate e deadline digitados; só as preenchidas', () => {
+    expect(caixasDePrevisao({ navio: 'MSC ALFA' }, { gate: ' 18/11 às 08:00 ', deadline: '21/11 às 17:00' })).toEqual([
+      ['Navio', 'MSC ALFA'],
+      ['Abertura do gate', '18/11 às 08:00'],
+      ['Deadline', '21/11 às 17:00'],
+    ])
+    expect(caixasDePrevisao({}, { deadline: '21/11' })).toEqual([['Deadline', '21/11']])
+    expect(caixasDePrevisao({ navio: '  ' })).toEqual([])
   })
 
   it('numeração, tara (com kg quando só número) e lacre de cada contêiner', () => {

@@ -22,9 +22,10 @@ export const opcoesDeStatus = (proc) => {
       // no e-mail). Sem barra de progresso: pode ir bem antes do embarque
       // (retirada antecipada para cumprir o Draft).
       { id: 'dados', titulo: 'Dados do contêiner', etapa: null, tabela: true, detalhes: 'Segue abaixo dados do container e fotos em anexo para conferência.' },
-      // Vai junto do print do armador com abertura do gate e deadline; pode
-      // ser mandado mais de uma vez quando as datas mudam, por isso sem barra.
-      { id: 'navio', titulo: 'Previsões do navio', etapa: null, detalhes: 'Conforme print em anexo, seguem as previsões do navio, com abertura do gate e deadline.' },
+      // Vai junto do print do armador: abertura do gate e deadline digitados
+      // viram caixas na imagem (`previsoes`). Pode ser mandado mais de uma vez
+      // quando as datas mudam, por isso sem barra.
+      { id: 'navio', titulo: 'Previsões do navio', etapa: null, previsoes: true, detalhes: 'Conforme print em anexo, seguem abaixo as previsões do navio.' },
       { id: 'rota', titulo: 'Veículo em rota', etapa: 2 },
       { id: 'terminal', titulo: 'Cheio entregue no terminal', etapa: 3 },
       { id: 'agendamentos', titulo: 'Status dos agendamentos', etapa: null, agendamentos: true, detalhes: 'Segue a programação dos agendamentos.' },
@@ -210,8 +211,18 @@ const retanguloArredondado = (ctx, x, y, w, h, r) => {
   ctx.roundRect(x, y, w, h, r)
 }
 
-// Calcula a altura e desenha o cartão. `canvas` é redimensionado.
-export const desenharStatus = (canvas, { proc, titulo, detalhes, etapa, tabela = false, grade = null, data = new Date() }) => {
+// PREVISÕES DO NAVIO: caixas da segunda linha (navio do processo, abertura do
+// gate e deadline digitados). Só entram as preenchidas.
+export const caixasDePrevisao = (proc, { gate = '', deadline = '' } = {}) =>
+  [
+    ['Navio', (proc?.navio || '').trim()],
+    ['Abertura do gate', gate.trim()],
+    ['Deadline', deadline.trim()],
+  ].filter(([, v]) => v)
+
+// Calcula a altura e desenha o cartão. `canvas` é redimensionado. `extras`:
+// caixas [rótulo, valor] numa segunda linha, abaixo de cliente/documento.
+export const desenharStatus = (canvas, { proc, titulo, detalhes, etapa, tabela = false, grade = null, extras = [], data = new Date() }) => {
   const ctx = canvas.getContext('2d')
   const { cliente, documento, unidades, rotuloUnidade } = dadosDoProcesso(proc)
   // Tabela abaixo das caixas de dados: a `grade` pedida ou, com `tabela`, a de numeração/tara/lacre.
@@ -236,10 +247,13 @@ export const desenharStatus = (canvas, { proc, titulo, detalhes, etapa, tabela =
   ].filter(Boolean)
   const linhasTabela = quadro ? quadro.linhas : []
   const alturaTabela = quadro ? 38 + Math.max(linhasTabela.length, 1) * 40 + 6 : 0
-  const colunas = info.length
-  const larguraColuna = (W - 2 * M - (colunas - 1) * 12) / colunas
-  const linhasInfo = info.map(([, v]) => quebrarLinhas(v, larguraColuna - 28, medir(fonte(600, 15))))
-  const alturaInfo = 22 + 20 + Math.max(...linhasInfo.map((l) => l.length)) * 21 + 16
+  // Cada fileira de caixas divide a largura entre as suas caixas.
+  const fileiras = [info, extras].filter((f) => f.length).map((caixas) => {
+    const larguraColuna = (W - 2 * M - (caixas.length - 1) * 12) / caixas.length
+    const linhas = caixas.map(([, v]) => quebrarLinhas(v, larguraColuna - 28, medir(fonte(600, 15))))
+    return { caixas, larguraColuna, linhas, altura: 22 + 20 + Math.max(...linhas.map((l) => l.length)) * 21 + 16 }
+  })
+  const alturaInfo = fileiras.reduce((s, f) => s + f.altura, 0) + (fileiras.length - 1) * 12
 
   const H_TOPO = 92
   let altura = H_TOPO + 34 + 18 + linhasTitulo.length * 36
@@ -385,21 +399,24 @@ export const desenharStatus = (canvas, { proc, titulo, detalhes, etapa, tabela =
 
   // Dados do processo em caixinhas.
   y += 28
-  info.forEach(([rotulo], i) => {
-    const x = M + i * (larguraColuna + 12)
-    ctx.fillStyle = COR.fundoInfo
-    retanguloArredondado(ctx, x, y, larguraColuna, alturaInfo, 12)
-    ctx.fill()
-    ctx.font = fonte(600, 11)
-    ctx.fillStyle = COR.cinzaClaro
-    ctx.letterSpacing = '1px'
-    ctx.fillText(rotulo.toUpperCase(), x + 14, y + 24)
-    ctx.letterSpacing = '0px'
-    ctx.font = fonte(600, 15)
-    ctx.fillStyle = COR.tinta
-    linhasInfo[i].forEach((linha, j) => ctx.fillText(linha, x + 14, y + 46 + j * 21))
+  fileiras.forEach(({ caixas, larguraColuna, linhas, altura: alturaFileira }, f) => {
+    if (f > 0) y += 12
+    caixas.forEach(([rotulo], i) => {
+      const x = M + i * (larguraColuna + 12)
+      ctx.fillStyle = COR.fundoInfo
+      retanguloArredondado(ctx, x, y, larguraColuna, alturaFileira, 12)
+      ctx.fill()
+      ctx.font = fonte(600, 11)
+      ctx.fillStyle = COR.cinzaClaro
+      ctx.letterSpacing = '1px'
+      ctx.fillText(rotulo.toUpperCase(), x + 14, y + 24)
+      ctx.letterSpacing = '0px'
+      ctx.font = fonte(600, 15)
+      ctx.fillStyle = COR.tinta
+      linhas[i].forEach((linha, j) => ctx.fillText(linha, x + 14, y + 46 + j * 21))
+    })
+    y += alturaFileira
   })
-  y += alturaInfo
 
   // Tabela (numeração, tara e lacre; ou os agendamentos de cada contêiner).
   if (quadro) {

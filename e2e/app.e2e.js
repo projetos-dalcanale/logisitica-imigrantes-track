@@ -107,8 +107,12 @@ test('gera a imagem de status com os dados do contêiner', async ({ page }) => {
   await expect(imagem).toHaveAttribute('width', '1440')
   await expect(page.getByRole('button', { name: 'Copiar imagem' })).toBeEnabled()
 
-  // Previsões do navio: troca o texto pronto (o dos dados, não mexido, sai).
+  // Previsões do navio: troca o texto pronto (o dos dados, não mexido, sai)
+  // e o gate/deadline digitados viram uma fileira a mais de caixas.
   await page.getByRole('button', { name: 'Previsões do navio' }).click()
-  await expect(page.locator('#status-detalhes')).toHaveValue('Conforme print em anexo, seguem as previsões do navio, com abertura do gate e deadline.')
-  await expect(imagem).toBeVisible()
+  await expect(page.locator('#status-detalhes')).toHaveValue('Conforme print em anexo, seguem abaixo as previsões do navio.')
+  const altura = Number(await imagem.getAttribute('height'))
+  await page.getByLabel('Abertura do gate').fill('18/11 às 08:00')
+  await page.getByLabel('Deadline').fill('21/11 às 17:00')
+  await expect.poll(async () => Number(await imagem.getAttribute('height'))).toBeGreaterThan(altura)
 })
